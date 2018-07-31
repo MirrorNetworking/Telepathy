@@ -13,11 +13,29 @@ public static class GoodOldCommon
     // -> immediately returns false in case of disconnects
     public static bool ReadExactly(NetworkStream stream, byte[] buffer, int amount)
     {
-        // simple for loop, reading one byte after another
-        // TODO read more at once later.
-        for (int i = 0; i < amount; ++i)
-            if (stream.Read(buffer, i, 1) == 0)
+        // there might not be enough bytes in the TCP buffer for .Read to read
+        // the whole amount at once, so we need to keep trying until we have all
+        // the bytes (blocking)
+        //
+        // note: this just is a faster version of reading one after another:
+        //     for (int i = 0; i < amount; ++i)
+        //         if (stream.Read(buffer, i, 1) == 0)
+        //             return false;
+        //     return true;
+        int bytesRead = 0;
+        while (bytesRead < amount)
+        {
+            // read up to 'remaining' bytes
+            int remaining = amount - bytesRead;
+            int result = stream.Read(buffer, bytesRead, remaining);
+
+            // .Read returns null if disconnected
+            if (result == 0)
                 return false;
+
+            // otherwise add to bytes read
+            bytesRead += result;
+        }
         return true;
     }
 }
