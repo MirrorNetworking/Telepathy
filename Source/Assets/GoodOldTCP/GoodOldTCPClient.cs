@@ -100,7 +100,7 @@ public static class GoodOldTCPClient
                 return;
             }
 
-            Debug.Log("Client.Send: " + BitConverter.ToString(data));
+            //Debug.Log("Client.Send: " + BitConverter.ToString(data));
             // write size header and data
             writer.Write((ushort)data.Length);
             writer.Write(data);
