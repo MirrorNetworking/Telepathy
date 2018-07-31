@@ -74,7 +74,7 @@ public static class GoodOldTCPServer
                     // wait and accept new client
                     // note: 'using' sucks here because it will try to dispose after
                     // thread was started but we still need it in the thread
-                    TcpClient socket = listener.AcceptTcpClient();
+                    TcpClient client = listener.AcceptTcpClient();
                     if (nextId == uint.MaxValue)
                     {
                         Debug.LogError("Server can't accept any more clients, out of ids.");
@@ -86,7 +86,7 @@ public static class GoodOldTCPServer
                     // Get a stream object for reading
                     // note: 'using' sucks here because it will try to dispose after thread was started
                     // but we still need it in the thread
-                    NetworkStream stream = socket.GetStream();
+                    NetworkStream stream = client.GetStream();
 
                     // spawn a thread for each client to listen to his messages
                     // NOTE: Unity doesn't show compile errors in the thread. need
@@ -144,7 +144,7 @@ public static class GoodOldTCPServer
                     thread.Start();
 
                     // add to dict now
-                    clients.Add(connectionId, socket);
+                    clients.Add(connectionId, client);
 
                     // TODO when to dispose the client?
                 }

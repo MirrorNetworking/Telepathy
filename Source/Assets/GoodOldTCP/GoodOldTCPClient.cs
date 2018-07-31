@@ -7,7 +7,7 @@ using UnityEngine;
 
 public static class GoodOldTCPClient
 {
-    static TcpClient socket;
+    static TcpClient client;
     static Thread listenerThread;
 
     // stream (with BinaryWriter for easier sending)
@@ -19,7 +19,7 @@ public static class GoodOldTCPClient
     // them from Unity's Update function
     static SafeQueue<byte[]> messageQueue = new SafeQueue<byte[]>();
 
-    public static bool Connected { get { return socket != null && socket.Connected; } }
+    public static bool Connected { get { return client != null && client.Connected; } }
 
     // removes and returns the oldest message from the message queue.
     // (might want to call this until it doesn't return anything anymore)
@@ -40,12 +40,12 @@ public static class GoodOldTCPClient
         if (listenerThread == null)
         {
             Debug.Log("Client: connecting");
-            socket = new TcpClient(ip, port);
+            client = new TcpClient(ip, port);
 
             // Get a stream object for reading
             // note: 'using' sucks here because it will try to dispose after thread was started
             // but we still need it in the thread
-            stream = socket.GetStream();
+            stream = client.GetStream();
             writer = new BinaryWriter(stream);
 
             listenerThread = new Thread(() =>
