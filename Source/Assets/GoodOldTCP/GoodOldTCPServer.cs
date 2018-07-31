@@ -57,6 +57,9 @@ public static class GoodOldTCPServer
 
     public static void StartServer(int port)
     {
+        // not if already started
+        if (listenerThread != null) return;
+
         // start the listener thread
         Debug.Log("Server: starting...");
         listenerThread = new Thread(() =>
