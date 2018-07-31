@@ -169,8 +169,28 @@ public static class GoodOldTCPServer
     }
 
     // Send message to client using socket connection.
-    public static void Send(byte[] bytes)
+    public static void Send(uint connectionId, byte[] data)
     {
-        Debug.Log("TODO: to which client?");
+        // find the connection
+        TcpClient client;
+        if (clients.TryGetValue(connectionId, out client))
+        {
+            // create network writer
+            // (TODO cache later if too slow)
+            BinaryWriter writer = new BinaryWriter(client.GetStream());
+
+            // send the data
+            if (data.Length > ushort.MaxValue)
+            {
+                Debug.LogError("Server.Send: message too big(" + data.Length + ") max=" + ushort.MaxValue);
+                return;
+            }
+
+            //Debug.Log("Server.Send: " + BitConverter.ToString(data));
+            // write size header and data
+            writer.Write((ushort)data.Length);
+            writer.Write(data);
+            writer.Flush();
+        }
     }
 }

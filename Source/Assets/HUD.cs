@@ -52,7 +52,8 @@ public class HUD : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GoodOldTCPServer.Send(new byte[]{0xBA, 0xBE});
+                GoodOldTCPServer.Send(0, new byte[]{0xAF, 0xFE});
+                GoodOldTCPServer.Send(0, new byte[]{0xBA, 0xBE});
             }
 
             // any new message?
