@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 using System.IO;
@@ -49,14 +50,6 @@ public static class GoodOldTCPClient
 
             listenerThread = new Thread(() =>
             {
-                // TODO needs to construct his messages too!!!!!!!!
-                /*while (reader != null)
-                {
-                    Message msg = Message.ReadFromStream(reader);
-                    messageQueue.Enqueue(msg);
-                }
-                */
-
                 Debug.Log("Client: started listener thread");
 
                 // store current message in here, not globally, so we can't
@@ -68,53 +61,18 @@ public static class GoodOldTCPClient
                 byte[] buffer = new byte[4096];
                 while ((length = stream.Read(buffer, 0, buffer.Length)) != 0)
                 {
-                    // resize so we don't have any dead bytes ever
-                    //Array.Resize(ref buffer, length);
-
                     // add to unprocessed bytes
                     unprocessedBytes.Write(buffer, 0, length);
-                    //Debug.Log("Server: added to unprocessed: " + length + " unprocessed size is now: " + unprocessedBytes.Position);
+                    //Debug.LogWarning("read raw. unprocessedBytes: " + BitConverter.ToString(unprocessedBytes.ToArray()));
 
-                    // did we just completely receive a message?
-                    // (needs at least the 'ushort size' header
-                    if (unprocessedBytes.Position >= 2)
-                    {
-                        // go to position 0, read the size, go back
-                        long oldPosition = unprocessedBytes.Position;
-                        unprocessedBytes.Position = 0;
+                    // try processing as many messages as possible from unprocessed bytes
+                    List<byte[]> extracted = GooldOldCommon.ExtractMessages(ref unprocessedBytes);
+                    for (int i = 0; i < extracted.Count; ++i)
+                        messageQueue.Enqueue(extracted[i]);
 
-                        byte[] lengthBytes = new byte[2];
-                        unprocessedBytes.Read(lengthBytes, 0, 2);
-                        ushort expectedLength = BitConverter.ToUInt16(lengthBytes, 0);
-                        //Debug.Log("  Server: can now read expected size:" + expectedLength);
-
-                        unprocessedBytes.Position = oldPosition;
-
-                        // does unprocessed bytes contain size+message? (size is short, so +2)
-                        if (unprocessedBytes.Position >= expectedLength + 2)
-                        {
-                            //Debug.Log("  Server: unprocessed copying bytes: " + expectedLength);
-
-                            // set position to after size header, then copy the expected size
-                            unprocessedBytes.Position = 2;
-                            byte[] data = new byte[expectedLength];
-                            unprocessedBytes.Read(data, 0, expectedLength);
-                            messageQueue.Enqueue(data);
-
-                            // show a warning if the message queue gets too big
-                            // because something is off then.
-                            if (messageQueue.Count > 10000)
-                            {
-                                Debug.LogWarning("Client: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                            }
-
-                            // reset unprocessed bytes
-                            unprocessedBytes.Position = 0;
-
-                            // TODO process message
-                            //Debug.Log("Server process msg: length=" + data.Length + " bytes=" + BitConverter.ToString(data));
-                        }
-                    }
+                    //  show warning if it gets too big. something is off then.
+                    if (messageQueue.Count > 10000)
+                        Debug.LogWarning("Client: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
 
                 Debug.Log("Client: finished thread");
@@ -142,6 +100,7 @@ public static class GoodOldTCPClient
                 return;
             }
 
+            Debug.Log("Client.Send: " + BitConverter.ToString(data));
             // write size header and data
             writer.Write((ushort)data.Length);
             writer.Write(data);
