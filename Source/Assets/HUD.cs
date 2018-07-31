@@ -77,26 +77,32 @@ public class HUD : MonoBehaviour
 
         // client
         GUILayout.BeginHorizontal();
+        GUI.enabled = !GoodOldTCPClient.Connected;
         if (GUILayout.Button("Connect Client"))
         {
             GoodOldTCPClient.Connect("localhost", 1337);
         }
+        GUI.enabled = GoodOldTCPClient.Connected;
         if (GUILayout.Button("Disconnect Client"))
         {
             GoodOldTCPClient.Disconnect();
         }
+        GUI.enabled = true;
         GUILayout.EndHorizontal();
 
         // server
         GUILayout.BeginHorizontal();
+        GUI.enabled = !GoodOldTCPServer.Active;
         if (GUILayout.Button("Start Server"))
         {
             GoodOldTCPServer.StartServer(1337);
         }
+        GUI.enabled = GoodOldTCPServer.Active;
         if (GUILayout.Button("Stop Server"))
         {
             GoodOldTCPServer.StopServer();
         }
+        GUI.enabled = true;
         GUILayout.EndHorizontal();
 
         GUILayout.EndArea();
