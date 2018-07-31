@@ -56,9 +56,6 @@ public static class GoodOldTcpServer
 
     public static void StartServer(int port)
     {
-        // update even if window isn't focused, otherwise we don't receive.
-        Application.runInBackground = true;
-
         // start the listener thread
         Debug.Log("Server: starting...");
         listenerThread = new Thread(() =>

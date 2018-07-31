@@ -9,6 +9,12 @@ public class HUD : MonoBehaviour
 
     bool stressTestRunning = false;
 
+    void Awake()
+    {
+        // update even if window isn't focused, otherwise we don't receive.
+        Application.runInBackground = true;
+    }
+
     void Update()
     {
         if (GoodOldTcpClient.Connected)

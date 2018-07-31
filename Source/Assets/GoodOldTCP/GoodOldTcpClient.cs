@@ -36,9 +36,6 @@ public static class GoodOldTcpClient
 
     public static void Connect(string ip, int port)
     {
-        // update even if window isn't focused, otherwise we don't receive.
-        Application.runInBackground = true;
-
         if (listenerThread == null)
         {
             Debug.Log("Client: connecting");
