@@ -1,0 +1,47 @@
+﻿// C#'s ConcurrentQueue is not available in Unity :(
+// Let's create a simple thread safe queue
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SafeQueue<T>
+{
+    Queue<T> queue = new Queue<T>();
+
+    // for statistics. don't call Count and assume that it's the same after the
+    // call.
+    public int Count
+    {
+        get
+        {
+            lock(queue)
+            {
+                return queue.Count;
+            }
+        }
+    }
+
+    public void Enqueue(T item)
+    {
+        lock(queue)
+        {
+            queue.Enqueue(item);
+        }
+    }
+
+    // can't check .Count before doing Dequeue because it might change inbetween,
+    // so we need a TryDequeue
+    public bool TryDequeue(out T result)
+    {
+        lock(queue)
+        {
+            result = default(T);
+            if (queue.Count > 0)
+            {
+                result = queue.Dequeue();
+                return true;
+            }
+            return false;
+        }
+    }
+}
