@@ -2,6 +2,7 @@
 // Let's create a simple thread safe hash set
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class SafeDictionary<TKey,TValue>
@@ -23,6 +24,22 @@ public class SafeDictionary<TKey,TValue>
         lock(dict)
         {
             return dict.TryGetValue(key, out result);
+        }
+    }
+
+    public List<TValue> GetValues()
+    {
+        lock(dict)
+        {
+            return dict.Values.ToList();
+        }
+    }
+
+    public void Clear()
+    {
+        lock(dict)
+        {
+            dict.Clear();
         }
     }
 }

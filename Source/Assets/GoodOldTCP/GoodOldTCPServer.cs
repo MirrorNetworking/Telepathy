@@ -173,6 +173,27 @@ public static class GoodOldTCPServer
         listenerThread.Start();
     }
 
+    public static void StopServer()
+    {
+        // stop listening to connections so that no one can connect while we
+        // close the client connections
+        listener.Stop();
+
+        // close all client connections
+        List<TcpClient> connections = clients.GetValues();
+        foreach (TcpClient client in connections)
+        {
+            // this is supposed to disconnect gracefully, but the blocking Read
+            // calls throw a 'Read failure' exception instead of returning 0.
+            // (maybe it's Unity? maybe Mono?)
+            client.GetStream().Close();
+            client.Close();
+        }
+
+        // clear clients list
+        clients.Clear();
+    }
+
     // Send message to client using socket connection.
     public static void Send(uint connectionId, byte[] data)
     {

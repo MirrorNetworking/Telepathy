@@ -93,6 +93,10 @@ public class HUD : MonoBehaviour
         {
             GoodOldTCPServer.StartServer(1337);
         }
+        if (GUILayout.Button("Stop Server"))
+        {
+            GoodOldTCPServer.StopServer();
+        }
         GUILayout.EndHorizontal();
 
         GUILayout.EndArea();
