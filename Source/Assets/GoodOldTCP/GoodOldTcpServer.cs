@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
-public static class GoodOldTcpServer
+public static class GoodOldTCPServer
 {
     // listener
     static TcpListener listener;

@@ -17,11 +17,11 @@ public class HUD : MonoBehaviour
 
     void Update()
     {
-        if (GoodOldTcpClient.Connected)
+        if (GoodOldTCPClient.Connected)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GoodOldTcpClient.Send(new byte[]{0xAF, 0xFE});
+                GoodOldTCPClient.Send(new byte[]{0xAF, 0xFE});
             }
 
             if (Input.GetKeyDown(KeyCode.S))
@@ -35,22 +35,22 @@ public class HUD : MonoBehaviour
             if (stressTestRunning)
             {
                 for (int i = 0; i < packetsPerTick; ++i)
-                    GoodOldTcpClient.Send(new byte[]{0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01});
+                    GoodOldTCPClient.Send(new byte[]{0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01});
             }
 
             // any new message?
             byte[] data;
-            if (GoodOldTcpClient.GetNextMessage(out data))
+            if (GoodOldTCPClient.GetNextMessage(out data))
             {
                 Debug.Log("received msg: " + BitConverter.ToString(data));
             }
         }
 
-        if (GoodOldTcpServer.Active)
+        if (GoodOldTCPServer.Active)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GoodOldTcpServer.Send(new byte[]{0xBA, 0xBE});
+                GoodOldTCPServer.Send(new byte[]{0xBA, 0xBE});
             }
 
             // any new message?
@@ -59,7 +59,7 @@ public class HUD : MonoBehaviour
             byte[] data;
             uint connectionId;
             int receivedCount = 0;
-            while (GoodOldTcpServer.GetNextMessage(out connectionId, out data))
+            while (GoodOldTCPServer.GetNextMessage(out connectionId, out data))
             {
                 Debug.Log("received connectionId=" + connectionId + " msg: " + BitConverter.ToString(data));
                 ++receivedCount;
@@ -75,12 +75,12 @@ public class HUD : MonoBehaviour
         if (GUILayout.Button("Start Client"))
         {
             //client.Connect();
-            GoodOldTcpClient.Connect("localhost", 1337);
+            GoodOldTCPClient.Connect("localhost", 1337);
         }
 
         if (GUILayout.Button("Start Server"))
         {
-            GoodOldTcpServer.StartServer(1337);
+            GoodOldTCPServer.StartServer(1337);
         }
 
         GUILayout.EndArea();

@@ -4,7 +4,7 @@ using System.Threading;
 using System.IO;
 using UnityEngine;
 
-public static class GoodOldTcpClient
+public static class GoodOldTCPClient
 {
     static TcpClient socket;
     static Thread listenerThread;
