@@ -36,70 +36,70 @@ public static class GoodOldTCPClient
 
     public static void Connect(string ip, int port)
     {
-        if (listenerThread == null)
+        // not if already started
+        if (listenerThread != null) return;
+
+        Debug.Log("Client: connecting");
+        client = new TcpClient(ip, port);
+
+        // Get a stream object for reading
+        // note: 'using' sucks here because it will try to dispose after thread was started
+        // but we still need it in the thread
+        stream = client.GetStream();
+
+        listenerThread = new Thread(() =>
         {
-            Debug.Log("Client: connecting");
-            client = new TcpClient(ip, port);
+            Debug.Log("Client: started listener thread");
 
-            // Get a stream object for reading
-            // note: 'using' sucks here because it will try to dispose after thread was started
-            // but we still need it in the thread
-            stream = client.GetStream();
-
-            listenerThread = new Thread(() =>
+            // let's talk about reading data.
+            // -> normally we would read as much as possible and then
+            //    extract as many <size,content>,<size,content> messages
+            //    as we received this time. this is really complicated
+            //    and expensive to do though
+            // -> instead we use a trick:
+            //      Read(2) -> size
+            //        Read(size) -> content
+            //      repeat
+            //    Read is blocking, but it doesn't matter since the
+            //    best thing to do until the full message arrives,
+            //    is to wait.
+            // => this is the most elegant AND fast solution.
+            //    + no resizing
+            //    + no extra allocations, just one for the content
+            //    + no crazy extraction logic
+            byte[] header = new byte[2]; // only create once to avoid allocations
+            while (true)
             {
-                Debug.Log("Client: started listener thread");
+                // read exactly 2 bytes for header (blocking)
+                if (!GoodOldCommon.ReadExactly(stream, header, 2))
+                    break;
+                ushort size = BitConverter.ToUInt16(header, 0);
+                //Debug.Log("Received size header: " + size);
 
-                // let's talk about reading data.
-                // -> normally we would read as much as possible and then
-                //    extract as many <size,content>,<size,content> messages
-                //    as we received this time. this is really complicated
-                //    and expensive to do though
-                // -> instead we use a trick:
-                //      Read(2) -> size
-                //        Read(size) -> content
-                //      repeat
-                //    Read is blocking, but it doesn't matter since the
-                //    best thing to do until the full message arrives,
-                //    is to wait.
-                // => this is the most elegant AND fast solution.
-                //    + no resizing
-                //    + no extra allocations, just one for the content
-                //    + no crazy extraction logic
-                byte[] header = new byte[2]; // only create once to avoid allocations
-                while (true)
-                {
-                    // read exactly 2 bytes for header (blocking)
-                    if (!GoodOldCommon.ReadExactly(stream, header, 2))
-                        break;
-                    ushort size = BitConverter.ToUInt16(header, 0);
-                    //Debug.Log("Received size header: " + size);
+                // read exactly 'size' bytes for content (blocking)
+                byte[] content = new byte[size];
+                if (!GoodOldCommon.ReadExactly(stream, content, size))
+                    break;
+                //Debug.Log("Received content: " + BitConverter.ToString(content));
 
-                    // read exactly 'size' bytes for content (blocking)
-                    byte[] content = new byte[size];
-                    if (!GoodOldCommon.ReadExactly(stream, content, size))
-                        break;
-                    //Debug.Log("Received content: " + BitConverter.ToString(content));
+                // queue it and show a warning if the queue starts to get big
+                messageQueue.Enqueue(content);
+                if (messageQueue.Count > 10000)
+                    Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+            }
 
-                    // queue it and show a warning if the queue starts to get big
-                    messageQueue.Enqueue(content);
-                    if (messageQueue.Count > 10000)
-                        Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                }
+            Debug.Log("Client: finished thread");
 
-                Debug.Log("Client: finished thread");
-
-                // clean up
-                stream.Close();
-                lock(listenerThread)
-                {
-                    listenerThread = null;
-                }
-                // TODO call onDisconnect(conn) if we got here?
-            });
-            listenerThread.IsBackground = true;
-            listenerThread.Start();
-        }
+            // clean up
+            stream.Close();
+            lock(listenerThread)
+            {
+                listenerThread = null;
+            }
+            // TODO call onDisconnect(conn) if we got here?
+        });
+        listenerThread.IsBackground = true;
+        listenerThread.Start();
     }
 
     public static void Send(byte[] data)
