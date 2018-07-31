@@ -13,7 +13,6 @@ public static class GoodOldTCPClient
     // stream (with BinaryWriter for easier sending)
     static NetworkStream stream;
 
-
     // store incoming messages in a thread safe queue, so we can safely process
     // them from Unity's Update function
     static SafeQueue<byte[]> messageQueue = new SafeQueue<byte[]>();
