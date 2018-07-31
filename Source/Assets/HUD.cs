@@ -74,7 +74,6 @@ public class HUD : MonoBehaviour
 
         if (GUILayout.Button("Start Client"))
         {
-            //client.Connect();
             GoodOldTCPClient.Connect("localhost", 1337);
         }
 
