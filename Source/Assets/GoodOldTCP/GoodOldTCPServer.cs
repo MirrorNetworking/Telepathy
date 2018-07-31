@@ -64,6 +64,8 @@ public static class GoodOldTCPServer
         Debug.Log("Server: starting...");
         listenerThread = new Thread(() =>
         {
+            // absolutely must wrap with try/catch, otherwise thread exceptions
+            // are silent
             try
             {
                 // start listener
