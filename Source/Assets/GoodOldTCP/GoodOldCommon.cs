@@ -6,6 +6,23 @@ using UnityEngine;
 
 public static class GoodOldCommon
 {
+    // send bytes (via stream) with the <size,content> message structure
+    public static void SendBytesAndSize(NetworkStream stream, byte[] data)
+    {
+        //Debug.Log("SendBytesAndSize: " + BitConverter.ToString(data));
+        if (data.Length > ushort.MaxValue)
+        {
+            Debug.LogError("Client.Send: message too big(" + data.Length + ") max=" + ushort.MaxValue);
+            return;
+        }
+
+        // write size header and data
+        BinaryWriter writer = new BinaryWriter(stream); // TODO just use stream?
+        writer.Write((ushort)data.Length);
+        writer.Write(data);
+        writer.Flush();
+    }
+
     // helper function to read EXACTLY 'n' bytes
     // -> default .Read reads up to 'n' bytes. this function reads exactly 'n'
     //    bytes

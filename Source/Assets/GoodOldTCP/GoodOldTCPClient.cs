@@ -12,7 +12,6 @@ public static class GoodOldTCPClient
 
     // stream (with BinaryWriter for easier sending)
     static NetworkStream stream;
-    static BinaryWriter writer;
 
 
     // store incoming messages in a thread safe queue, so we can safely process
@@ -46,7 +45,6 @@ public static class GoodOldTCPClient
             // note: 'using' sucks here because it will try to dispose after thread was started
             // but we still need it in the thread
             stream = client.GetStream();
-            writer = new BinaryWriter(stream);
 
             listenerThread = new Thread(() =>
             {
@@ -108,17 +106,7 @@ public static class GoodOldTCPClient
     {
         if (Connected)
         {
-            if (data.Length > ushort.MaxValue)
-            {
-                Debug.LogError("Client.Send: message too big(" + data.Length + ") max=" + ushort.MaxValue);
-                return;
-            }
-
-            //Debug.Log("Client.Send: " + BitConverter.ToString(data));
-            // write size header and data
-            writer.Write((ushort)data.Length);
-            writer.Write(data);
-            writer.Flush();
+            GoodOldCommon.SendBytesAndSize(stream, data);
         }
         else Debug.LogWarning("Client.Send: not connected!");
     }
