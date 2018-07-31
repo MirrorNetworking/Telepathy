@@ -11,7 +11,7 @@ Database.sqlite
 Database/
 
 # ===================================== #
-# Visual Studio / MonoDevelop generated #
+# Visual Studio / MonoDevelop / Rider   #
 # ===================================== #
 ExportedObj/
 obj/
@@ -28,6 +28,12 @@ Source/Source.sln
 *.user
 *.unityproj
 *.booproj
+.vs/
+.idea/
+
+# ============ #
+# OS generated #
+# ============ #
 
 # ============ #
 # OS generated #
