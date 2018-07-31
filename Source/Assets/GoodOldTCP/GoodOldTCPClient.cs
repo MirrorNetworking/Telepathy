@@ -120,6 +120,19 @@ public static class GoodOldTCPClient
         listenerThread.Start();
     }
 
+    public static void Disconnect()
+    {
+        // this is supposed to disconnect gracefully, but the blocking Read
+        // calls throw a 'Read failure' exception instead of returning 0.
+        // (maybe it's Unity? maybe Mono?)
+        stream.Close();
+        client.Close();
+
+        // clear queue just to be sure that nothing old is processed when
+        // starting again
+        messageQueue.Clear();
+    }
+
     public static void Send(byte[] data)
     {
         if (Connected)

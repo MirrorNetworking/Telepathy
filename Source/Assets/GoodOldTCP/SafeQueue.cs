@@ -44,4 +44,12 @@ public class SafeQueue<T>
             return false;
         }
     }
+
+    public void Clear()
+    {
+        lock(queue)
+        {
+            queue.Clear();
+        }
+    }
 }

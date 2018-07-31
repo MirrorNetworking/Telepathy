@@ -75,15 +75,25 @@ public class HUD : MonoBehaviour
     {
         GUILayout.BeginArea(new Rect(0, 0, 300, 300));
 
-        if (GUILayout.Button("Start Client"))
+        // client
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Connect Client"))
         {
             GoodOldTCPClient.Connect("localhost", 1337);
         }
+        if (GUILayout.Button("Disconnect Client"))
+        {
+            GoodOldTCPClient.Disconnect();
+        }
+        GUILayout.EndHorizontal();
 
+        // server
+        GUILayout.BeginHorizontal();
         if (GUILayout.Button("Start Server"))
         {
             GoodOldTCPServer.StartServer(1337);
         }
+        GUILayout.EndHorizontal();
 
         GUILayout.EndArea();
     }
