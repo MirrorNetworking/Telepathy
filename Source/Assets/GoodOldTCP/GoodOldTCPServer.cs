@@ -153,6 +153,12 @@ public static class GoodOldTCPServer
             {
                 Debug.LogWarning("Server SocketException " + socketException.ToString());
             }
+            catch (ThreadAbortException abortException)
+            {
+                // in the editor, this thread is only stopped via abort exception
+                // after pressing play again the next time. and that's okay.
+                Debug.Log("Server thread aborted. That's okay. " + abortException.ToString());
+            }
             catch (Exception exception)
             {
                 Debug.LogWarning("Server Exception: " + exception);
