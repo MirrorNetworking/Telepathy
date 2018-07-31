@@ -97,35 +97,47 @@ public static class GoodOldTCPServer
                     {
                         Debug.Log("Server: started listener thread for connectionId=" + connectionId);
 
-                        // store current message in here, not globally, so we can't
-                        // access it and risk any deadlocks etc.
-                        MemoryStream unprocessedBytes = new MemoryStream();
-
-                        // keep reading
-                        int length;
-                        byte[] buffer = new byte[4096];
-                        while ((length = stream.Read(buffer, 0, buffer.Length)) != 0)
+                        // let's talk about reading data.
+                        // -> normally we would read as much as possible and then
+                        //    extract as many <size,content>,<size,content> messages
+                        //    as we received this time. this is really complicated
+                        //    and expensive to do though
+                        // -> instead we use a trick:
+                        //      Read(2) -> size
+                        //        Read(size) -> content
+                        //      repeat
+                        //    Read is blocking, but it doesn't matter since the
+                        //    best thing to do until the full message arrives,
+                        //    is to wait.
+                        // => this is the most elegant AND fast solution.
+                        //    + no resizing
+                        //    + no extra allocations, just one for the content
+                        //    + no crazy extraction logic
+                        byte[] header = new byte[2]; // only create once to avoid allocations
+                        while (true)
                         {
-                            // add to unprocessed bytes
-                            unprocessedBytes.Write(buffer, 0, length);
-                            //Debug.LogWarning("read raw. unprocessedBytes: " + BitConverter.ToString(unprocessedBytes.ToArray()));
+                            // read exactly 2 bytes for header (blocking)
+                            if (!GoodOldCommon.ReadExactly(stream, header, 2))
+                                break;
+                            ushort size = BitConverter.ToUInt16(header, 0);
+                            //Debug.Log("Received size header: " + size);
 
-                            // try processing as many messages as possible from unprocessed bytes
-                            List<byte[]> extracted = GooldOldCommon.ExtractMessages(ref unprocessedBytes);
-                            for (int i = 0; i < extracted.Count; ++i)
-                                messageQueue.Enqueue(new ConnectionMessage(connectionId, extracted[i]));
+                            // read exactly 'size' bytes for content (blocking)
+                            byte[] content = new byte[size];
+                            if (!GoodOldCommon.ReadExactly(stream, content, size))
+                                break;
+                            //Debug.Log("Received content: " + BitConverter.ToString(content));
 
-                            //  show warning if it gets too big. something is off then.
+                            // queue it and show a warning if the queue starts to get big
+                            messageQueue.Enqueue(new ConnectionMessage(connectionId, content));
                             if (messageQueue.Count > 10000)
                                 Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-
                         }
 
                         Debug.Log("Server: finished client thread for connectionId=" + connectionId);
 
                         // clean up
                         stream.Close();
-
 
                         // TODO call onDisconnect(conn) if we got here?
                     });
