@@ -151,11 +151,11 @@ public static class GoodOldTCPServer
             }
             catch (SocketException socketException)
             {
-                Debug.LogWarning("SocketException " + socketException.ToString());
+                Debug.LogWarning("Server SocketException " + socketException.ToString());
             }
             catch (Exception exception)
             {
-                Debug.LogWarning("other exception: " + exception);
+                Debug.LogWarning("Server Exception: " + exception);
             }
         });
         listenerThread.IsBackground = true;
