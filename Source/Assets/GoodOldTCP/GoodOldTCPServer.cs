@@ -50,7 +50,7 @@ public static class GoodOldTCPServer
         return false;
     }
 
-    public static bool Active { get { return listener != null; } }
+    public static bool Active { get { return listenerThread != null; } }
 
     // Runs in background TcpServerThread; Handles incomming TcpClient requests
     // IMPORTANT: Debug.Log is only shown in log file, not in console
