@@ -48,54 +48,73 @@ public static class GoodOldTCPClient
 
         listenerThread = new Thread(() =>
         {
-            Debug.Log("Client: started listener thread");
-
-            // let's talk about reading data.
-            // -> normally we would read as much as possible and then
-            //    extract as many <size,content>,<size,content> messages
-            //    as we received this time. this is really complicated
-            //    and expensive to do though
-            // -> instead we use a trick:
-            //      Read(2) -> size
-            //        Read(size) -> content
-            //      repeat
-            //    Read is blocking, but it doesn't matter since the
-            //    best thing to do until the full message arrives,
-            //    is to wait.
-            // => this is the most elegant AND fast solution.
-            //    + no resizing
-            //    + no extra allocations, just one for the content
-            //    + no crazy extraction logic
-            byte[] header = new byte[2]; // only create once to avoid allocations
-            while (true)
+            // absolutely must wrap with try/catch, otherwise thread exceptions
+            // are silent
+            try
             {
-                // read exactly 2 bytes for header (blocking)
-                if (!GoodOldCommon.ReadExactly(stream, header, 2))
-                    break;
-                ushort size = BitConverter.ToUInt16(header, 0);
-                //Debug.Log("Received size header: " + size);
+                Debug.Log("Client: started listener thread");
 
-                // read exactly 'size' bytes for content (blocking)
-                byte[] content = new byte[size];
-                if (!GoodOldCommon.ReadExactly(stream, content, size))
-                    break;
-                //Debug.Log("Received content: " + BitConverter.ToString(content));
+                // let's talk about reading data.
+                // -> normally we would read as much as possible and then
+                //    extract as many <size,content>,<size,content> messages
+                //    as we received this time. this is really complicated
+                //    and expensive to do though
+                // -> instead we use a trick:
+                //      Read(2) -> size
+                //        Read(size) -> content
+                //      repeat
+                //    Read is blocking, but it doesn't matter since the
+                //    best thing to do until the full message arrives,
+                //    is to wait.
+                // => this is the most elegant AND fast solution.
+                //    + no resizing
+                //    + no extra allocations, just one for the content
+                //    + no crazy extraction logic
+                byte[] header = new byte[2]; // only create once to avoid allocations
+                while (true)
+                {
+                    // read exactly 2 bytes for header (blocking)
+                    if (!GoodOldCommon.ReadExactly(stream, header, 2))
+                        break;
+                    ushort size = BitConverter.ToUInt16(header, 0);
+                    //Debug.Log("Received size header: " + size);
 
-                // queue it and show a warning if the queue starts to get big
-                messageQueue.Enqueue(content);
-                if (messageQueue.Count > 10000)
-                    Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                    // read exactly 'size' bytes for content (blocking)
+                    byte[] content = new byte[size];
+                    if (!GoodOldCommon.ReadExactly(stream, content, size))
+                        break;
+                    //Debug.Log("Received content: " + BitConverter.ToString(content));
+
+                    // queue it and show a warning if the queue starts to get big
+                    messageQueue.Enqueue(content);
+                    if (messageQueue.Count > 10000)
+                        Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                }
+
+                Debug.Log("Client: finished thread");
+
+                // clean up
+                stream.Close();
+                lock(listenerThread)
+                {
+                    listenerThread = null;
+                }
+                // TODO call onDisconnect(conn) if we got here?
             }
-
-            Debug.Log("Client: finished thread");
-
-            // clean up
-            stream.Close();
-            lock(listenerThread)
+            catch (SocketException socketException)
             {
-                listenerThread = null;
+                Debug.LogWarning("Client SocketException " + socketException.ToString());
             }
-            // TODO call onDisconnect(conn) if we got here?
+            catch (ThreadAbortException abortException)
+            {
+                // in the editor, this thread is only stopped via abort exception
+                // after pressing play again the next time. and that's okay.
+                Debug.Log("Client thread aborted. That's okay. " + abortException.ToString());
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError("Client exception:" + exception);
+            }
         });
         listenerThread.IsBackground = true;
         listenerThread.Start();
