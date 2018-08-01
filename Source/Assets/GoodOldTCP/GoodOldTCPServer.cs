@@ -178,7 +178,7 @@ public static class GoodOldTCPServer
         // only if started
         if (!Active) return;
 
-        Debug.Log("Server:  stopping...");
+        Debug.Log("Server: stopping...");
 
         // stop listening to connections so that no one can connect while we
         // close the client connections
