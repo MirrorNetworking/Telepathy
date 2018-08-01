@@ -38,7 +38,7 @@ public static class GoodOldTCPClient
         // not if already started
         if (Connected) return;
 
-        Debug.Log("Client: connecting");
+        Debug.Log("Client: connecting to ip=" + ip + " port=" + port);
         client = new TcpClient(ip, port);
 
         // Get a stream object for reading

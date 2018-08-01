@@ -55,13 +55,13 @@ public static class GoodOldTCPServer
     // Runs in background TcpServerThread; Handles incomming TcpClient requests
     // IMPORTANT: Debug.Log is only shown in log file, not in console
 
-    public static void StartServer(int port)
+    public static void StartServer(string ip, int port)
     {
         // not if already started
         if (Active) return;
 
         // start the listener thread
-        Debug.Log("Server: starting...");
+        Debug.Log("Server: starting ip=" + ip + " port=" + port);
         listenerThread = new Thread(() =>
         {
             // absolutely must wrap with try/catch, otherwise thread exceptions
@@ -69,7 +69,7 @@ public static class GoodOldTCPServer
             try
             {
                 // start listener
-                listener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
+                listener = new TcpListener(IPAddress.Parse(ip), port);
                 listener.Start();
                 Debug.Log("Server is listening");
 
