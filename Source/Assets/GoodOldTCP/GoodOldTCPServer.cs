@@ -154,19 +154,19 @@ public static class GoodOldTCPServer
                     // TODO when to dispose the client?
                 }
             }
-            catch (SocketException socketException)
-            {
-                Debug.LogWarning("Server SocketException " + socketException.ToString());
-            }
             catch (ThreadAbortException abortException)
             {
                 // in the editor, this thread is only stopped via abort exception
                 // after pressing play again the next time. and that's okay.
                 Debug.Log("Server thread aborted. That's okay. " + abortException.ToString());
             }
+            catch (SocketException socketException)
+            {
+                Debug.LogError("Server SocketException " + socketException.ToString());
+            }
             catch (Exception exception)
             {
-                Debug.LogWarning("Server Exception: " + exception);
+                Debug.LogError("Server Exception: " + exception);
             }
         });
         listenerThread.IsBackground = true;

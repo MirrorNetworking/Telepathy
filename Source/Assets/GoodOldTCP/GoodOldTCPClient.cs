@@ -101,15 +101,18 @@ public static class GoodOldTCPClient
                 }
                 // TODO call onDisconnect(conn) if we got here?
             }
-            catch (SocketException socketException)
-            {
-                Debug.LogWarning("Client SocketException " + socketException.ToString());
-            }
             catch (ThreadAbortException abortException)
             {
                 // in the editor, this thread is only stopped via abort exception
                 // after pressing play again the next time. and that's okay.
                 Debug.Log("Client thread aborted. That's okay. " + abortException.ToString());
+            }
+            catch (SocketException socketException)
+            {
+                // happens because closing the client gracefully in Disconnect
+                // doesn't seem to work with Unity/Mono. let's not throw an error,
+                // a warning should do.
+                Debug.LogWarning("Client SocketException " + socketException.ToString());
             }
             catch (Exception exception)
             {
