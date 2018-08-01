@@ -50,7 +50,7 @@ public static class GoodOldTCPServer
         return false;
     }
 
-    public static bool Active { get { return listenerThread != null; } }
+    public static bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
     // Runs in background TcpServerThread; Handles incomming TcpClient requests
     // IMPORTANT: Debug.Log is only shown in log file, not in console
@@ -58,7 +58,7 @@ public static class GoodOldTCPServer
     public static void StartServer(int port)
     {
         // not if already started
-        if (listenerThread != null) return;
+        if (Active) return;
 
         // start the listener thread
         Debug.Log("Server: starting...");
@@ -175,6 +175,11 @@ public static class GoodOldTCPServer
 
     public static void StopServer()
     {
+        // only if started
+        if (!Active) return;
+
+        Debug.Log("Server:  stopping...");
+
         // stop listening to connections so that no one can connect while we
         // close the client connections
         listener.Stop();
