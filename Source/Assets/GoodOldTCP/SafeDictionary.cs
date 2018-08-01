@@ -17,6 +17,14 @@ public class SafeDictionary<TKey,TValue>
         }
     }
 
+    public void Remove(TKey key)
+    {
+        lock(dict)
+        {
+            dict.Remove(key);
+        }
+    }
+
     // can't check .ContainsKey before Get because it might change inbetween,
     // so we need a TryGetValue
     public bool TryGetValue(TKey key, out TValue result)

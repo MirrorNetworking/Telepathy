@@ -141,10 +141,9 @@ public static class GoodOldTCPServer
 
                         Debug.Log("Server: finished client thread for connectionId=" + connectionId);
 
-                        // clean up
+                        // close socket and remove from clients list
                         stream.Close();
-
-                        // TODO call onDisconnect(conn) if we got here?
+                        clients.Remove(connectionId);
                     });
                     thread.Start();
 
