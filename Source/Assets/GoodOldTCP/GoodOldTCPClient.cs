@@ -13,20 +13,26 @@ public static class GoodOldTCPClient
     // stream (with BinaryWriter for easier sending)
     static NetworkStream stream;
 
-    // store incoming messages in a thread safe queue, so we can safely process
-    // them from Unity's Update function
-    static SafeQueue<byte[]> messageQueue = new SafeQueue<byte[]>();
+    // incoming message queue of <connectionId, message>
+    // (not a HashSet because one connection can have multiple new messages)
+    static SafeQueue<GoodOldMessage> messageQueue = new SafeQueue<GoodOldMessage>(); // accessed from getmessage and listener thread
 
     // removes and returns the oldest message from the message queue.
     // (might want to call this until it doesn't return anything anymore)
     // only returns one message each time so it's more similar to LLAPI:
     // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.Receive.html
-    public static bool GetNextMessage(out byte[] data)
+    // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
+    public static bool GetNextMessage(out GoodOldEventType eventType, out byte[] data)
     {
-        if (messageQueue.TryDequeue(out data))
+        GoodOldMessage message;
+        if (messageQueue.TryDequeue(out message))
         {
+            eventType = message.eventType;
+            data = message.data;
             return true;
         }
+
+        eventType = GoodOldEventType.Disconnected;
         data = null;
         return false;
     }
@@ -53,6 +59,9 @@ public static class GoodOldTCPClient
             try
             {
                 Debug.Log("Client: started listener thread");
+
+                // add connected event to queue
+                messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Connected, null));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -86,12 +95,15 @@ public static class GoodOldTCPClient
                     //Debug.Log("Received content: " + BitConverter.ToString(content));
 
                     // queue it and show a warning if the queue starts to get big
-                    messageQueue.Enqueue(content);
+                    messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Data, content));
                     if (messageQueue.Count > 10000)
                         Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
 
                 Debug.Log("Client: finished thread");
+
+                // add disconnected event to queue
+                messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Disconnected, null));
 
                 // clean up
                 stream.Close();

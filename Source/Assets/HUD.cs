@@ -41,10 +41,11 @@ public class HUD : MonoBehaviour
             }
 
             // any new message?
+            GoodOldEventType eventType;
             byte[] data;
-            if (GoodOldTCPClient.GetNextMessage(out data))
+            if (GoodOldTCPClient.GetNextMessage(out eventType, out data))
             {
-                Debug.Log("received msg: " + BitConverter.ToString(data));
+                Debug.Log("received event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
             }
         }
 
@@ -60,11 +61,12 @@ public class HUD : MonoBehaviour
             // -> calling it once per frame is okay, but really why not just
             //    process all messages and make it empty..
             byte[] data;
+            GoodOldEventType eventType;
             uint connectionId;
             int receivedCount = 0;
-            while (GoodOldTCPServer.GetNextMessage(out connectionId, out data))
+            while (GoodOldTCPServer.GetNextMessage(out connectionId, out eventType, out data))
             {
-                Debug.Log("received connectionId=" + connectionId + " msg: " + BitConverter.ToString(data));
+                Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
                 ++receivedCount;
             }
             if (receivedCount > 0) Debug.Log("Server received " + receivedCount + " messages this frame."); // easier on CPU to log this way
@@ -95,7 +97,7 @@ public class HUD : MonoBehaviour
         GUI.enabled = !GoodOldTCPServer.Active;
         if (GUILayout.Button("Start Server"))
         {
-            GoodOldTCPServer.StartServer(1337);
+            GoodOldTCPServer.StartServer("127.0.0.1", 1337);
         }
         GUI.enabled = GoodOldTCPServer.Active;
         if (GUILayout.Button("Stop Server"))

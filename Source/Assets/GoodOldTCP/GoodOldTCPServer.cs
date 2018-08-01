@@ -19,33 +19,26 @@ public static class GoodOldTCPServer
 
     // incoming message queue of <connectionId, message>
     // (not a HashSet because one connection can have multiple new messages)
-    struct ConnectionMessage
-    {
-        public uint connectionId;
-        public byte[] data;
-        public ConnectionMessage(uint connectionId, byte[] data)
-        {
-            this.connectionId = connectionId;
-            this.data = data;
-        }
-    }
-    static SafeQueue<ConnectionMessage> messageQueue = new SafeQueue<ConnectionMessage>(); // accessed from getmessage and listener thread
+    static SafeQueue<GoodOldMessage> messageQueue = new SafeQueue<GoodOldMessage>(); // accessed from getmessage and listener thread
 
     // removes and returns the oldest message from the message queue.
     // (might want to call this until it doesn't return anything anymore)
     // only returns one message each time so it's more similar to LLAPI:
     // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.ReceiveFromHost.html
-    public static bool GetNextMessage(out uint connectionId, out byte[] data)
+    // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
+    public static bool GetNextMessage(out uint connectionId, out GoodOldEventType eventType, out byte[] data)
     {
-        ConnectionMessage cm;
-        if (messageQueue.TryDequeue(out cm))
+        GoodOldMessage message;
+        if (messageQueue.TryDequeue(out message))
         {
-            connectionId = cm.connectionId;
-            data = cm.data;
+            connectionId = message.connectionId;
+            eventType = message.eventType;
+            data = message.data;
             return true;
         }
 
         connectionId = 0;
+        eventType = GoodOldEventType.Disconnected;
         data = null;
         return false;
     }
@@ -93,6 +86,9 @@ public static class GoodOldTCPServer
                     // but we still need it in the thread
                     NetworkStream stream = client.GetStream();
 
+                    // add connected event to queue
+                    messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Connected, null));
+
                     // spawn a thread for each client to listen to his messages
                     // NOTE: Unity doesn't show compile errors in the thread. need
                     // to guess it. it only shows:
@@ -134,12 +130,15 @@ public static class GoodOldTCPServer
                             //Debug.Log("Received content: " + BitConverter.ToString(content));
 
                             // queue it and show a warning if the queue starts to get big
-                            messageQueue.Enqueue(new ConnectionMessage(connectionId, content));
+                            messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Data, content));
                             if (messageQueue.Count > 10000)
                                 Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                         }
 
                         Debug.Log("Server: finished client thread for connectionId=" + connectionId);
+
+                        // add disconnected event to queue
+                        messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Disconnected, null));
 
                         // close socket and remove from clients list
                         stream.Close();
