@@ -10,9 +10,18 @@ public static class GoodOldCommon
     public static void SendBytesAndSize(NetworkStream stream, byte[] data)
     {
         //Debug.Log("SendBytesAndSize: " + BitConverter.ToString(data));
+
+        // can we still write to this socket (not disconnected?)
+        if (!stream.CanWrite)
+        {
+            Debug.LogWarning("Send: stream not writeable: " + stream);
+            return;
+        }
+
+        // check size
         if (data.Length > ushort.MaxValue)
         {
-            Debug.LogError("Client.Send: message too big(" + data.Length + ") max=" + ushort.MaxValue);
+            Debug.LogError("Send: message too big(" + data.Length + ") max=" + ushort.MaxValue);
             return;
         }
 
