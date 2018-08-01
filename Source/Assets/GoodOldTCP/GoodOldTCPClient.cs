@@ -17,8 +17,6 @@ public static class GoodOldTCPClient
     // them from Unity's Update function
     static SafeQueue<byte[]> messageQueue = new SafeQueue<byte[]>();
 
-    public static bool Connected { get { return client != null && client.Connected; } }
-
     // removes and returns the oldest message from the message queue.
     // (might want to call this until it doesn't return anything anymore)
     // only returns one message each time so it's more similar to LLAPI:
@@ -33,10 +31,12 @@ public static class GoodOldTCPClient
         return false;
     }
 
+    public static bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
+
     public static void Connect(string ip, int port)
     {
         // not if already started
-        if (listenerThread != null) return;
+        if (Connected) return;
 
         Debug.Log("Client: connecting");
         client = new TcpClient(ip, port);
@@ -122,6 +122,11 @@ public static class GoodOldTCPClient
 
     public static void Disconnect()
     {
+        // only if started
+        if (!Connected) return;
+
+        Debug.Log("Client: disconnecting");
+
         // this is supposed to disconnect gracefully, but the blocking Read
         // calls throw a 'Read failure' exception instead of returning 0.
         // (maybe it's Unity? maybe Mono?)

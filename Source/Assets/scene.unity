@@ -247,7 +247,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 131975dc533484eaeb871ca276d56604, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  packetsPerTick: 10000
+  packetsPerTick: 30000
+  stressBytes: affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01affe01
 --- !u!1 &800315904
 GameObject:
   m_ObjectHideFlags: 0
