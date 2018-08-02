@@ -99,19 +99,6 @@ public static class GoodOldTCPClient
                     if (messageQueue.Count > 10000)
                         Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
-
-                Debug.Log("Client: finished thread");
-
-                // add disconnected event to queue
-                messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Disconnected, null));
-
-                // clean up
-                stream.Close();
-                lock(listenerThread)
-                {
-                    listenerThread = null;
-                }
-                // TODO call onDisconnect(conn) if we got here?
             }
             catch (ThreadAbortException abortException)
             {
@@ -129,6 +116,16 @@ public static class GoodOldTCPClient
             catch (Exception exception)
             {
                 Debug.LogError("Client exception:" + exception);
+            }
+            Debug.Log("Client: finished thread");
+
+            // if we got here then either the client while loop ended, or an exception happened.
+            // disconnect and clean up no matter what
+            messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Disconnected, null));
+            stream.Close();
+            lock(listenerThread)
+            {
+                listenerThread = null;
             }
         });
         listenerThread.IsBackground = true;
