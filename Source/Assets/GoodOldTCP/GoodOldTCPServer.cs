@@ -4,7 +4,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using UnityEngine;
 
 public static class GoodOldTCPServer
 {
@@ -46,7 +45,7 @@ public static class GoodOldTCPServer
     public static bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
     // Runs in background TcpServerThread; Handles incomming TcpClient requests
-    // IMPORTANT: Debug.Log is only shown in log file, not in console
+    // IMPORTANT: Logger.Log is only shown in log file, not in console
 
     public static void StartServer(string ip, int port)
     {
@@ -54,7 +53,7 @@ public static class GoodOldTCPServer
         if (Active) return;
 
         // start the listener thread
-        Debug.Log("Server: starting ip=" + ip + " port=" + port);
+        Logger.Log("Server: starting ip=" + ip + " port=" + port);
         listenerThread = new Thread(() =>
         {
             // absolutely must wrap with try/catch, otherwise thread exceptions
@@ -64,7 +63,7 @@ public static class GoodOldTCPServer
                 // start listener
                 listener = new TcpListener(IPAddress.Parse(ip), port);
                 listener.Start();
-                Debug.Log("Server is listening");
+                Logger.Log("Server is listening");
 
                 // keep accepting new clients
                 while (true) // TODO while(listen)
@@ -75,11 +74,11 @@ public static class GoodOldTCPServer
                     TcpClient client = listener.AcceptTcpClient();
                     if (nextId == uint.MaxValue)
                     {
-                        Debug.LogError("Server can't accept any more clients, out of ids.");
+                        Logger.LogError("Server can't accept any more clients, out of ids.");
                         break;
                     }
                     uint connectionId = nextId++; // TODo is this even thread safe?
-                    Debug.Log("Server: client connected. connectionId=" + connectionId);
+                    Logger.Log("Server: client connected. connectionId=" + connectionId);
 
                     // Get a stream object for reading
                     // note: 'using' sucks here because it will try to dispose after thread was started
@@ -96,7 +95,7 @@ public static class GoodOldTCPServer
                     // if there is any error below.
                     Thread thread = new Thread(() =>
                     {
-                        Debug.Log("Server: started listener thread for connectionId=" + connectionId);
+                        Logger.Log("Server: started listener thread for connectionId=" + connectionId);
 
                         // wrap each client in a try/catch, so that one client error won't bring the whole thing down
                         try
@@ -124,26 +123,26 @@ public static class GoodOldTCPServer
                                 if (!GoodOldCommon.ReadExactly(stream, header, 2))
                                     break;
                                 ushort size = BitConverter.ToUInt16(header, 0);
-                                //Debug.Log("Received size header: " + size);
+                                //Logger.Log("Received size header: " + size);
 
                                 // read exactly 'size' bytes for content (blocking)
                                 byte[] content = new byte[size];
                                 if (!GoodOldCommon.ReadExactly(stream, content, size))
                                     break;
-                                //Debug.Log("Received content: " + BitConverter.ToString(content));
+                                //Logger.Log("Received content: " + BitConverter.ToString(content));
 
                                 // queue it and show a warning if the queue starts to get big
                                 messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Data, content));
                                 if (messageQueue.Count > 10000)
-                                    Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                                    Logger.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                             }
 
-                            Debug.Log("Server: finished client thread for connectionId=" + connectionId);
+                            Logger.Log("Server: finished client thread for connectionId=" + connectionId);
                         }
                         catch (Exception exception)
                         {
                             // just catch it. code below will handle it.
-                            Debug.Log("Server: stopped client thread for connectionId=" + connectionId);
+                            Logger.Log("Server: stopped client thread for connectionId=" + connectionId);
                         }
 
                         // if we got here then either the client while loop ended, or an exception happened.
@@ -164,15 +163,15 @@ public static class GoodOldTCPServer
             {
                 // in the editor, this thread is only stopped via abort exception
                 // after pressing play again the next time. and that's okay.
-                Debug.Log("Server thread aborted. That's okay. " + abortException.ToString());
+                Logger.Log("Server thread aborted. That's okay. " + abortException.ToString());
             }
             catch (SocketException socketException)
             {
-                Debug.LogError("Server SocketException " + socketException.ToString());
+                Logger.LogError("Server SocketException " + socketException.ToString());
             }
             catch (Exception exception)
             {
-                Debug.LogError("Server Exception: " + exception);
+                Logger.LogError("Server Exception: " + exception);
             }
         });
         listenerThread.IsBackground = true;
@@ -184,7 +183,7 @@ public static class GoodOldTCPServer
         // only if started
         if (!Active) return;
 
-        Debug.Log("Server: stopping...");
+        Logger.Log("Server: stopping...");
 
         // stop listening to connections so that no one can connect while we
         // close the client connections
@@ -214,6 +213,6 @@ public static class GoodOldTCPServer
         {
             GoodOldCommon.SendBytesAndSize(client.GetStream(), data);
         }
-        else Debug.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+        else Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
     }
 }

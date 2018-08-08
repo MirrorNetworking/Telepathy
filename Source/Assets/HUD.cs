@@ -13,6 +13,11 @@ public class HUD : MonoBehaviour
     {
         // update even if window isn't focused, otherwise we don't receive.
         Application.runInBackground = true;
+
+        // use Debug.Log functions for TCP so we can see it in the console
+        Logger.LogMethod = Debug.Log;
+        Logger.LogWarningMethod = Debug.LogWarning;
+        Logger.LogErrorMethod = Debug.LogError;
     }
 
     void Update()
@@ -82,7 +87,7 @@ public class HUD : MonoBehaviour
         GUI.enabled = !GoodOldTCPClient.Connected;
         if (GUILayout.Button("Connect Client"))
         {
-            GoodOldTCPClient.Connect("localhost", 1337);
+            GoodOldTCPClient.Connect("127.0.0.1", 1337);
         }
         GUI.enabled = GoodOldTCPClient.Connected;
         if (GUILayout.Button("Disconnect Client"))

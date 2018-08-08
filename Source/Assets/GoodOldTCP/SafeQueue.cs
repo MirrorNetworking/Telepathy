@@ -2,7 +2,6 @@
 // Let's create a simple thread safe queue
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 public class SafeQueue<T>
 {

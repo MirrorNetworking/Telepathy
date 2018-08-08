@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 using System.IO;
-using UnityEngine;
 
 public static class GoodOldTCPClient
 {
@@ -44,7 +43,7 @@ public static class GoodOldTCPClient
         // not if already started
         if (Connected) return;
 
-        Debug.Log("Client: connecting to ip=" + ip + " port=" + port);
+        Logger.Log("Client: connecting to ip=" + ip + " port=" + port);
         client = new TcpClient(ip, port);
 
         // Get a stream object for reading
@@ -58,7 +57,7 @@ public static class GoodOldTCPClient
             // are silent
             try
             {
-                Debug.Log("Client: started listener thread");
+                Logger.Log("Client: started listener thread");
 
                 // add connected event to queue
                 messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Connected, null));
@@ -86,38 +85,38 @@ public static class GoodOldTCPClient
                     if (!GoodOldCommon.ReadExactly(stream, header, 2))
                         break;
                     ushort size = BitConverter.ToUInt16(header, 0);
-                    //Debug.Log("Received size header: " + size);
+                    //Logger.Log("Received size header: " + size);
 
                     // read exactly 'size' bytes for content (blocking)
                     byte[] content = new byte[size];
                     if (!GoodOldCommon.ReadExactly(stream, content, size))
                         break;
-                    //Debug.Log("Received content: " + BitConverter.ToString(content));
+                    //Logger.Log("Received content: " + BitConverter.ToString(content));
 
                     // queue it and show a warning if the queue starts to get big
                     messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Data, content));
                     if (messageQueue.Count > 10000)
-                        Debug.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                        Logger.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
             }
             catch (ThreadAbortException abortException)
             {
                 // in the editor, this thread is only stopped via abort exception
                 // after pressing play again the next time. and that's okay.
-                Debug.Log("Client thread aborted. That's okay. " + abortException.ToString());
+                Logger.Log("Client thread aborted. That's okay. " + abortException.ToString());
             }
             catch (SocketException socketException)
             {
                 // happens because closing the client gracefully in Disconnect
                 // doesn't seem to work with Unity/Mono. let's not throw an error,
                 // a warning should do.
-                Debug.LogWarning("Client SocketException " + socketException.ToString());
+                Logger.LogWarning("Client SocketException " + socketException.ToString());
             }
             catch (Exception exception)
             {
-                Debug.LogError("Client exception:" + exception);
+                Logger.LogError("Client exception:" + exception);
             }
-            Debug.Log("Client: finished thread");
+            Logger.Log("Client: finished thread");
 
             // if we got here then either the client while loop ended, or an exception happened.
             // disconnect and clean up no matter what
@@ -137,7 +136,7 @@ public static class GoodOldTCPClient
         // only if started
         if (!Connected) return;
 
-        Debug.Log("Client: disconnecting");
+        Logger.Log("Client: disconnecting");
 
         // this is supposed to disconnect gracefully, but the blocking Read
         // calls throw a 'Read failure' exception instead of returning 0.
@@ -156,6 +155,6 @@ public static class GoodOldTCPClient
         {
             GoodOldCommon.SendBytesAndSize(stream, data);
         }
-        else Debug.LogWarning("Client.Send: not connected!");
+        else Logger.LogWarning("Client.Send: not connected!");
     }
 }
