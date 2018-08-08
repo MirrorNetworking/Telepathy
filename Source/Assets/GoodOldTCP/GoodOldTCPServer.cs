@@ -60,6 +60,9 @@ public static class GoodOldTCPServer
             // are silent
             try
             {
+                // localhost support so .Parse doesn't throw errors
+                if (ip.ToLower() == "localhost") ip = "127.0.0.1";
+
                 // start listener
                 listener = new TcpListener(IPAddress.Parse(ip), port);
                 listener.Start();
