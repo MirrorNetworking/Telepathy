@@ -114,4 +114,13 @@ public class HUD : MonoBehaviour
 
         GUILayout.EndArea();
     }
+
+    void OnApplicationQuit()
+    {
+        // the client/server threads won't receive the OnQuit info if we are
+        // running them in the Editor. they would only quit when we press Play
+        // again later. this is fine, but let's shut them down here for consistency
+        GoodOldTCPClient.Disconnect();
+        GoodOldTCPServer.StopServer();
+    }
 }
