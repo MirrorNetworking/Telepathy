@@ -152,6 +152,7 @@ public static class GoodOldTCPServer
                         // disconnect and clean up no matter what
                         messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Disconnected, null));
                         stream.Close();
+                        client.Close();
                         clients.Remove(connectionId);
                     });
                     thread.Start();

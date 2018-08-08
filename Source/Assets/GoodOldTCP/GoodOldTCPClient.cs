@@ -148,6 +148,7 @@ public static class GoodOldTCPClient
             // disconnect and clean up no matter what
             messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Disconnected, null));
             stream.Close();
+            client.Close();
             lock(listenerThread)
             {
                 listenerThread = null;
