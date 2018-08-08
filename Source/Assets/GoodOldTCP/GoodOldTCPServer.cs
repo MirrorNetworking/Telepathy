@@ -145,7 +145,7 @@ public static class GoodOldTCPServer
                         catch (Exception exception)
                         {
                             // just catch it. code below will handle it.
-                            Logger.Log("Server: stopped client thread for connectionId=" + connectionId);
+                            Logger.Log("Server: stopped client thread for connectionId=" + connectionId + " reason:" + exception);
                         }
 
                         // if we got here then either the client while loop ended, or an exception happened.
