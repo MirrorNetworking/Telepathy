@@ -38,13 +38,39 @@ public static class GoodOldTCPClient
 
     public static bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
 
-    public static void Connect(string ip, int port)
+    public static bool Connect(string ip, int port, int timeoutSeconds = 6)
     {
         // not if already started
-        if (Connected) return;
+        if (Connected) return false;
 
         Logger.Log("Client: connecting to ip=" + ip + " port=" + port);
-        client = new TcpClient(ip, port);
+
+        // use async connect so we can specify a timeout. if we use
+        // new TcpClient(ip, port) then we can't modify the timeout. deafult is
+        // way too long there.
+        try
+        {
+            client = new TcpClient();
+            IAsyncResult result = client.BeginConnect(ip, port, null, null);
+            bool success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(timeoutSeconds));
+
+            // time elapsed for one reason or another. are we now connect, or not?
+            if (!success || !client.Connected)
+            {
+                Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " after " + timeoutSeconds + "s");
+                client.Close(); // clean up properly before exiting, otherwise Unity freezes for 30s when rebuilding next time
+                return false;
+            }
+            client.EndConnect(result);
+        }
+        catch (SocketException socketException)
+        {
+            // this happens if (for example) the IP address is correct but there
+            // is no server running on that IP/Port
+            Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + socketException);
+            client.Close(); // clean up properly before exiting
+            return false;
+        }
 
         // Get a stream object for reading
         // note: 'using' sucks here because it will try to dispose after thread was started
@@ -129,6 +155,7 @@ public static class GoodOldTCPClient
         });
         listenerThread.IsBackground = true;
         listenerThread.Start();
+        return true;
     }
 
     public static void Disconnect()
