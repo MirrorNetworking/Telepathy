@@ -164,16 +164,19 @@ public static class GoodOldTCPServer
             }
             catch (ThreadAbortException abortException)
             {
-                // in the editor, this thread is only stopped via abort exception
-                // after pressing play again the next time. and that's okay.
+                // UnityEditor causes AbortException if thread is still running
+                // when we press Play again next time. that's okay.
                 Logger.Log("Server thread aborted. That's okay. " + abortException.ToString());
             }
             catch (SocketException socketException)
             {
-                Logger.LogError("Server SocketException " + socketException.ToString());
+                // calling StopServer will interrupt this thread with a
+                // 'SocketException: interrupted'. that's okay.
+                Logger.Log("Server Thread stopped. That's okay. " + socketException.ToString());
             }
             catch (Exception exception)
             {
+                // something else went wrong. probably important.
                 Logger.LogError("Server Exception: " + exception);
             }
         });
