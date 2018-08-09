@@ -108,14 +108,14 @@ public static class GoodOldTCPClient
                 while (true)
                 {
                     // read exactly 2 bytes for header (blocking)
-                    if (!GoodOldCommon.ReadExactly(stream, header, 2))
+                    if (!stream.ReadExactly(header, 2))
                         break;
                     ushort size = BitConverter.ToUInt16(header, 0);
                     //Logger.Log("Received size header: " + size);
 
                     // read exactly 'size' bytes for content (blocking)
                     byte[] content = new byte[size];
-                    if (!GoodOldCommon.ReadExactly(stream, content, size))
+                    if (!stream.ReadExactly(content, size))
                         break;
                     //Logger.Log("Received content: " + BitConverter.ToString(content));
 

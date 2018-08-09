@@ -30,47 +30,4 @@ public static class GoodOldCommon
         writer.Write(data);
         writer.Flush();
     }
-
-    // helper function to read EXACTLY 'n' bytes
-    // -> default .Read reads up to 'n' bytes. this function reads exactly 'n'
-    //    bytes
-    // -> this is blocking obviously
-    // -> immediately returns false in case of disconnects
-    public static bool ReadExactly(NetworkStream stream, byte[] buffer, int amount)
-    {
-        // there might not be enough bytes in the TCP buffer for .Read to read
-        // the whole amount at once, so we need to keep trying until we have all
-        // the bytes (blocking)
-        //
-        // note: this just is a faster version of reading one after another:
-        //     for (int i = 0; i < amount; ++i)
-        //         if (stream.Read(buffer, i, 1) == 0)
-        //             return false;
-        //     return true;
-        int bytesRead = 0;
-        while (bytesRead < amount)
-        {
-            // read up to 'remaining' bytes
-            int remaining = amount - bytesRead;
-
-            // Read returns 0 if the connection was closed, but in Unity/Mono
-            // it also throws an IOException if the client voluntarily
-            // disconnects from a running server, so we need to catch it to
-            // force the expected behaviour
-            int result = 0;
-            try
-            {
-                result = stream.Read(buffer, bytesRead, remaining);
-            }
-            catch (IOException) {}
-
-            // .Read returns 0 if disconnected
-            if (result == 0)
-                return false;
-
-            // otherwise add to bytes read
-            bytesRead += result;
-        }
-        return true;
-    }
 }
