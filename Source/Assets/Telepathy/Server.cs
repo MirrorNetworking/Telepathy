@@ -51,7 +51,6 @@ namespace Telepathy
 
         // Runs in background TcpServerThread; Handles incomming TcpClient requests
         // IMPORTANT: Logger.Log is only shown in log file, not in console
-
         public void Start(string ip, int port)
         {
             // not if already started
