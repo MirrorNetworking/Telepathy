@@ -52,9 +52,19 @@ public static class GoodOldCommon
         {
             // read up to 'remaining' bytes
             int remaining = amount - bytesRead;
-            int result = stream.Read(buffer, bytesRead, remaining);
 
-            // .Read returns null if disconnected
+            // Read returns 0 if the connection was closed, but in Unity/Mono
+            // it also throws an IOException if the client voluntarily
+            // disconnects from a running server, so we need to catch it to
+            // force the expected behaviour
+            int result = 0;
+            try
+            {
+                result = stream.Read(buffer, bytesRead, remaining);
+            }
+            catch (IOException) {}
+
+            // .Read returns 0 if disconnected
             if (result == 0)
                 return false;
 
