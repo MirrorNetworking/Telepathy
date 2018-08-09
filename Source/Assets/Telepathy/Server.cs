@@ -16,28 +16,6 @@ namespace Telepathy
         // clients with <clientId, socket>
         SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
-        // removes and returns the oldest message from the message queue.
-        // (might want to call this until it doesn't return anything anymore)
-        // only returns one message each time so it's more similar to LLAPI:
-        // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.ReceiveFromHost.html
-        // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
-        public bool GetNextMessage(out uint connectionId, out EventType eventType, out byte[] data)
-        {
-            Message message;
-            if (messageQueue.TryDequeue(out message))
-            {
-                connectionId = message.connectionId;
-                eventType = message.eventType;
-                data = message.data;
-                return true;
-            }
-
-            connectionId = 0;
-            eventType = EventType.Disconnected;
-            data = null;
-            return false;
-        }
-
         public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
         // Runs in background TcpServerThread; Handles incomming TcpClient requests

@@ -14,26 +14,6 @@ namespace Telepathy
         // stream (with BinaryWriter for easier sending)
         NetworkStream stream;
 
-        // removes and returns the oldest message from the message queue.
-        // (might want to call this until it doesn't return anything anymore)
-        // only returns one message each time so it's more similar to LLAPI:
-        // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.Receive.html
-        // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
-        public bool GetNextMessage(out EventType eventType, out byte[] data)
-        {
-            Message message;
-            if (messageQueue.TryDequeue(out message))
-            {
-                eventType = message.eventType;
-                data = message.data;
-                return true;
-            }
-
-            eventType = EventType.Disconnected;
-            data = null;
-            return false;
-        }
-
         public bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
 
         public bool Connect(string ip, int port, int timeoutSeconds = 6)

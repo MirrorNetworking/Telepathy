@@ -49,11 +49,10 @@ public class HUD : MonoBehaviour
             }
 
             // any new message?
-            Telepathy.EventType eventType;
-            byte[] data;
-            if (client.GetNextMessage(out eventType, out data))
+            Telepathy.Message message;
+            if (client.GetNextMessage(out message))
             {
-                Debug.Log("received event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
+                Debug.Log("received event=" + message.eventType + " msg: " + (message.data != null ? BitConverter.ToString(message.data) : "null"));
             }
         }
 
@@ -68,13 +67,11 @@ public class HUD : MonoBehaviour
             // any new message?
             // -> calling it once per frame is okay, but really why not just
             //    process all messages and make it empty..
-            byte[] data;
-            Telepathy.EventType eventType;
-            uint connectionId;
             int receivedCount = 0;
-            while (server.GetNextMessage(out connectionId, out eventType, out data))
+            Telepathy.Message message;
+            while (server.GetNextMessage(out message))
             {
-                Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
+                Debug.Log("received connectionId=" + message.connectionId + " event=" + message.eventType + " msg: " + (message.data != null ? BitConverter.ToString(message.data) : "null"));
                 ++receivedCount;
             }
             if (receivedCount > 0) Debug.Log("Server received " + receivedCount + " messages this frame."); // easier on CPU to log this way

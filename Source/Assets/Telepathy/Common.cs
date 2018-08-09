@@ -19,6 +19,17 @@ namespace Telepathy
         // (not a HashSet because one connection can have multiple new messages)
         protected SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
 
+        // removes and returns the oldest message from the message queue.
+        // (might want to call this until it doesn't return anything anymore)
+        // only returns one message each time so it's more similar to LLAPI:
+        // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.ReceiveFromHost.html
+        // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
+        // -> bool return makes while (GetMessage(out Message)) easier!
+        public bool GetNextMessage(out Message message)
+        {
+            return messageQueue.TryDequeue(out message);
+        }
+
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         public static void SendMessage(NetworkStream stream, byte[] content)
