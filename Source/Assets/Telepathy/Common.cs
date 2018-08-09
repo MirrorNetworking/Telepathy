@@ -69,12 +69,23 @@ namespace Telepathy
                 return false;
             }
 
-            // write size header and content
-            byte[] header = UShortToBytes((ushort)content.Length);
-            stream.Write(header, 0, header.Length);
-            stream.Write(content, 0, content.Length);
-            stream.Flush();
-            return true;
+            // stream.Write throws exceptions if client sends with high frequency
+            // and the server stops
+            try
+            {
+                // write size header and content
+                byte[] header = UShortToBytes((ushort)content.Length);
+                stream.Write(header, 0, header.Length);
+                stream.Write(content, 0, content.Length);
+                stream.Flush();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                // log as regular message because servers do shut down sometimes
+                Logger.Log("Send: stream.Write exception: " + exception);
+                return false;
+            }
         }
 
         // read message (via stream) with the <size,content> message structure
