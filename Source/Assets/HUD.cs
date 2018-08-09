@@ -71,7 +71,7 @@ public class HUD : MonoBehaviour
             int receivedCount = 0;
             while (Telepathy.Server.GetNextMessage(out connectionId, out eventType, out data))
             {
-                //Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
+                Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
                 ++receivedCount;
             }
             if (receivedCount > 0) Debug.Log("Server received " + receivedCount + " messages this frame."); // easier on CPU to log this way
