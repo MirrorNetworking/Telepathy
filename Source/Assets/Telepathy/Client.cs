@@ -14,10 +14,6 @@ namespace Telepathy
         // stream (with BinaryWriter for easier sending)
         NetworkStream stream;
 
-        // incoming message queue of <connectionId, message>
-        // (not a HashSet because one connection can have multiple new messages)
-        SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
-
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // only returns one message each time so it's more similar to LLAPI:

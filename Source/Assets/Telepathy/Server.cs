@@ -16,15 +16,6 @@ namespace Telepathy
         // clients with <clientId, socket>
         SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
-        // connectionId counter
-        // (right now we only use it from one listener thread, but we might have
-        //  multiple threads later in case of WebSockets etc.)
-        SafeCounter counter = new SafeCounter();
-
-        // incoming message queue of <connectionId, message>
-        // (not a HashSet because one connection can have multiple new messages)
-        SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
-
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // only returns one message each time so it's more similar to LLAPI:

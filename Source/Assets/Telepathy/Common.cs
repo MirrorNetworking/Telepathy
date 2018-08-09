@@ -9,9 +9,17 @@ namespace Telepathy
 {
     public abstract class Common
     {
+        // common code /////////////////////////////////////////////////////////
+        // connectionId counter
+        // (right now we only use it from one listener thread, but we might have
+        //  multiple threads later in case of WebSockets etc.)
+        protected SafeCounter counter = new SafeCounter();
 
+        // incoming message queue of <connectionId, message>
+        // (not a HashSet because one connection can have multiple new messages)
+        protected SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
 
-        // static helper functions /////////////////////////////////////////////////////////////////////////////////////
+        // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         public static void SendMessage(NetworkStream stream, byte[] content)
         {
