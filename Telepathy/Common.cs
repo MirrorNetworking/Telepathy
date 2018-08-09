@@ -34,7 +34,7 @@ namespace Telepathy
         //    bit shifting: 11ms
         // -> 10x speed improvement makes this optimization actually worth it
         // -> this way we don't need to allocate BinaryWriter/Reader either
-        protected static byte[] UShortToBytes(ushort value)
+        static byte[] UShortToBytes(ushort value)
         {
             return new byte[]
             {
@@ -42,7 +42,7 @@ namespace Telepathy
                 (byte)(value >> 8)
             };
         }
-        public static ushort BytesToUShort(byte[] bytes)
+        static ushort BytesToUShort(byte[] bytes)
         {
             return (ushort)((bytes[1] << 8) + bytes[0]);
         }
