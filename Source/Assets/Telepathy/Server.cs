@@ -74,7 +74,7 @@ namespace Telepathy
                     Logger.Log("Server is listening");
 
                     // keep accepting new clients
-                    while (true) // TODO while(listen)
+                    while (true)
                     {
                         // wait and accept new client
                         // note: 'using' sucks here because it will try to dispose after
