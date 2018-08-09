@@ -51,10 +51,10 @@ namespace Telepathy
             }
 
             // write size header and content
-            BinaryWriter writer = new BinaryWriter(stream); // TODO just use stream?
-            writer.Write((ushort)content.Length);
-            writer.Write(content);
-            writer.Flush();
+            byte[] header = BitConverter.GetBytes((ushort)content.Length);
+            stream.Write(header, 0, header.Length);
+            stream.Write(content, 0, content.Length);
+            stream.Flush();
             return true;
         }
 
