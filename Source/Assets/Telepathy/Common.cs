@@ -117,7 +117,7 @@ namespace Telepathy
             // are silent
             try
             {
-                Logger.Log("TCP: started receive function for connectionId=" + connectionId);
+                Logger.Log("Telepathy: started receive function for connectionId=" + connectionId);
 
 
                 // add connected event to queue
@@ -149,7 +149,7 @@ namespace Telepathy
                     // queue it and show a warning if the queue starts to get big
                     messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
                     if (messageQueue.Count > 10000)
-                        Logger.LogWarning("TCP: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                        Logger.LogWarning("Telepathy: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
             }
             catch (Exception exception)
@@ -157,7 +157,7 @@ namespace Telepathy
                 // just catch it. something went wrong. the thread was interrupted
                 // or the connection closed or we closed our own connection or ...
                 // -> either way we should stop gracefully
-                Logger.Log("TCP: finished receive function for connectionId=" + connectionId + " reason: " + exception);
+                Logger.Log("Telepathy: finished receive function for connectionId=" + connectionId + " reason: " + exception);
             }
 
             // if we got here then either the client while loop ended, or an exception happened.
