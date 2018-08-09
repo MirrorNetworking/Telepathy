@@ -12,9 +12,12 @@ public static class GoodOldTCPServer
     static Thread listenerThread;
 
     // clients with <clientId, socket>
-    // IMPORTANT: lock() while using!
     static SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
-    static uint nextId = 0;
+
+    // connectionId counter
+    // (right now we only use it from one listener thread, but we might have
+    //  multiple threads later in case of WebSockets etc.)
+    static SafeCounter counter = new SafeCounter();
 
     // incoming message queue of <connectionId, message>
     // (not a HashSet because one connection can have multiple new messages)
@@ -75,12 +78,9 @@ public static class GoodOldTCPServer
                     // note: 'using' sucks here because it will try to dispose after
                     // thread was started but we still need it in the thread
                     TcpClient client = listener.AcceptTcpClient();
-                    if (nextId == uint.MaxValue)
-                    {
-                        Logger.LogError("Server can't accept any more clients, out of ids.");
-                        break;
-                    }
-                    uint connectionId = nextId++; // TODo is this even thread safe?
+
+                    // generate the next connection id (thread safely)
+                    uint connectionId = counter.Next();
                     Logger.Log("Server: client connected. connectionId=" + connectionId);
 
                     // Get a stream object for reading
