@@ -4,26 +4,29 @@
 //  different version for every UnityEngine version here)
 using System;
 
-public static class Logger
+namespace Telepathy
 {
-    // log regular
-    public static Action<string> LogMethod = Console.WriteLine;
-    public static void Log(string msg)
+    public static class Logger
     {
-        LogMethod(msg);
-    }
+        // log regular
+        public static Action<string> LogMethod = Console.WriteLine;
+        public static void Log(string msg)
+        {
+            LogMethod(msg);
+        }
 
-    // log warning
-    public static Action<string> LogWarningMethod = Console.WriteLine;
-    public static void LogWarning(string msg)
-    {
-        LogWarningMethod(msg);
-    }
+        // log warning
+        public static Action<string> LogWarningMethod = Console.WriteLine;
+        public static void LogWarning(string msg)
+        {
+            LogWarningMethod(msg);
+        }
 
-    // log error
-    public static Action<string> LogErrorMethod = Console.Error.WriteLine;
-    public static void LogError(string msg)
-    {
-        LogErrorMethod(msg);
+        // log error
+        public static Action<string> LogErrorMethod = Console.Error.WriteLine;
+        public static void LogError(string msg)
+        {
+            LogErrorMethod(msg);
+        }
     }
 }
