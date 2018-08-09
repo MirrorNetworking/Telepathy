@@ -7,30 +7,30 @@ using System.Threading;
 
 namespace Telepathy
 {
-    public static class Server
+    public class Server : Common
     {
         // listener
-        static TcpListener listener;
-        static Thread listenerThread;
+        TcpListener listener;
+        Thread listenerThread;
 
         // clients with <clientId, socket>
-        static SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
+        SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
         //  multiple threads later in case of WebSockets etc.)
-        static SafeCounter counter = new SafeCounter();
+        SafeCounter counter = new SafeCounter();
 
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        static SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
+        SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // only returns one message each time so it's more similar to LLAPI:
         // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.ReceiveFromHost.html
         // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
-        public static bool GetNextMessage(out uint connectionId, out EventType eventType, out byte[] data)
+        public bool GetNextMessage(out uint connectionId, out EventType eventType, out byte[] data)
         {
             Message message;
             if (messageQueue.TryDequeue(out message))
@@ -47,12 +47,12 @@ namespace Telepathy
             return false;
         }
 
-        public static bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
+        public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
         // Runs in background TcpServerThread; Handles incomming TcpClient requests
         // IMPORTANT: Logger.Log is only shown in log file, not in console
 
-        public static void Start(string ip, int port)
+        public void Start(string ip, int port)
         {
             // not if already started
             if (Active) return;
@@ -132,7 +132,7 @@ namespace Telepathy
             listenerThread.Start();
         }
 
-        public static void Stop()
+        public void Stop()
         {
             // only if started
             if (!Active) return;
@@ -159,7 +159,7 @@ namespace Telepathy
         }
 
         // Send message to client using socket connection.
-        public static void Send(uint connectionId, byte[] data)
+        public void Send(uint connectionId, byte[] data)
         {
             // find the connection
             TcpClient client;

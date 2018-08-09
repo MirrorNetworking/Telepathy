@@ -4,6 +4,9 @@ using System.Threading;
 
 public class HUD : MonoBehaviour
 {
+    Telepathy.Client client = new Telepathy.Client();
+    Telepathy.Server server = new Telepathy.Server();
+
     [Header("Stress test")]
     public int packetsPerTick = 1000;
     public byte[] stressBytes = new byte[]{0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01, 0xAF, 0xFE, 0x01};
@@ -22,13 +25,13 @@ public class HUD : MonoBehaviour
 
     void Update()
     {
-        if (Telepathy.Client.Connected)
+        if (client.Connected)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                Telepathy.Client.Send(new byte[]{0xAF, 0xFE});
-                Telepathy.Client.Send(new byte[]{0xBA, 0xBE});
-                //Telepathy.Client.Send(stressBytes);
+                client.Send(new byte[]{0xAF, 0xFE});
+                client.Send(new byte[]{0xBA, 0xBE});
+                //client.Send(stressBytes);
             }
 
             if (Input.GetKeyDown(KeyCode.S))
@@ -42,24 +45,24 @@ public class HUD : MonoBehaviour
             if (stressTestRunning)
             {
                 for (int i = 0; i < packetsPerTick; ++i)
-                    Telepathy.Client.Send(stressBytes);
+                    client.Send(stressBytes);
             }
 
             // any new message?
             Telepathy.EventType eventType;
             byte[] data;
-            if (Telepathy.Client.GetNextMessage(out eventType, out data))
+            if (client.GetNextMessage(out eventType, out data))
             {
                 Debug.Log("received event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
             }
         }
 
-        if (Telepathy.Server.Active)
+        if (server.Active)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                Telepathy.Server.Send(0, new byte[]{0xAF, 0xFE});
-                Telepathy.Server.Send(0, new byte[]{0xBA, 0xBE});
+                server.Send(0, new byte[]{0xAF, 0xFE});
+                server.Send(0, new byte[]{0xBA, 0xBE});
             }
 
             // any new message?
@@ -69,7 +72,7 @@ public class HUD : MonoBehaviour
             Telepathy.EventType eventType;
             uint connectionId;
             int receivedCount = 0;
-            while (Telepathy.Server.GetNextMessage(out connectionId, out eventType, out data))
+            while (server.GetNextMessage(out connectionId, out eventType, out data))
             {
                 Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
                 ++receivedCount;
@@ -84,30 +87,30 @@ public class HUD : MonoBehaviour
 
         // client
         GUILayout.BeginHorizontal();
-        GUI.enabled = !Telepathy.Client.Connected;
+        GUI.enabled = !client.Connected;
         if (GUILayout.Button("Connect Client"))
         {
-            Telepathy.Client.Connect("localhost", 1337);
+            client.Connect("localhost", 1337);
         }
-        GUI.enabled = Telepathy.Client.Connected;
+        GUI.enabled = client.Connected;
         if (GUILayout.Button("Disconnect Client"))
         {
-            Telepathy.Client.Disconnect();
+            client.Disconnect();
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
 
         // server
         GUILayout.BeginHorizontal();
-        GUI.enabled = !Telepathy.Server.Active;
+        GUI.enabled = !server.Active;
         if (GUILayout.Button("Start Server"))
         {
-            Telepathy.Server.Start("localhost", 1337);
+            server.Start("localhost", 1337);
         }
-        GUI.enabled = Telepathy.Server.Active;
+        GUI.enabled = server.Active;
         if (GUILayout.Button("Stop Server"))
         {
-            Telepathy.Server.Stop();
+            server.Stop();
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
@@ -120,7 +123,7 @@ public class HUD : MonoBehaviour
         // the client/server threads won't receive the OnQuit info if we are
         // running them in the Editor. they would only quit when we press Play
         // again later. this is fine, but let's shut them down here for consistency
-        Telepathy.Client.Disconnect();
-        Telepathy.Server.Stop();
+        client.Disconnect();
+        server.Stop();
     }
 }

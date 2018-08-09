@@ -6,24 +6,24 @@ using System.IO;
 
 namespace Telepathy
 {
-    public static class Client
+    public class Client : Common
     {
-        static TcpClient client;
-        static Thread listenerThread;
+        TcpClient client;
+        Thread listenerThread;
 
         // stream (with BinaryWriter for easier sending)
-        static NetworkStream stream;
+        NetworkStream stream;
 
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        static SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
+        SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // only returns one message each time so it's more similar to LLAPI:
         // https://docs.unity3d.com/ScriptReference/Networking.NetworkTransport.Receive.html
         // -> Connected, Data, Disconnected can all be detected with this function. simple and stupid.
-        public static bool GetNextMessage(out EventType eventType, out byte[] data)
+        public bool GetNextMessage(out EventType eventType, out byte[] data)
         {
             Message message;
             if (messageQueue.TryDequeue(out message))
@@ -38,9 +38,9 @@ namespace Telepathy
             return false;
         }
 
-        public static bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
+        public bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
 
-        public static bool Connect(string ip, int port, int timeoutSeconds = 6)
+        public bool Connect(string ip, int port, int timeoutSeconds = 6)
         {
             // not if already started
             if (Connected) return false;
@@ -82,14 +82,14 @@ namespace Telepathy
             listenerThread = new Thread(() =>
             {
                 // run the receive loop
-                Common.ReceiveLoop(messageQueue, 0, client, stream);
+                ReceiveLoop(messageQueue, 0, client, stream);
             });
             listenerThread.IsBackground = true;
             listenerThread.Start();
             return true;
         }
 
-        public static void Disconnect()
+        public void Disconnect()
         {
             // only if started
             if (!Connected) return;
@@ -107,11 +107,11 @@ namespace Telepathy
             messageQueue.Clear();
         }
 
-        public static void Send(byte[] data)
+        public void Send(byte[] data)
         {
             if (Connected)
             {
-                Common.SendMessage(stream, data);
+                SendMessage(stream, data);
             }
             else Logger.LogWarning("Client.Send: not connected!");
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// common code used by server and client
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
@@ -6,8 +7,11 @@ using System.Threading;
 
 namespace Telepathy
 {
-    public static class Common
+    public abstract class Common
     {
+
+
+        // static helper functions /////////////////////////////////////////////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         public static void SendMessage(NetworkStream stream, byte[] content)
         {
