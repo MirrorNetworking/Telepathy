@@ -79,13 +79,17 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        public static void ReceiveLoop(SafeQueue<Message> messageQueue, uint connectionId, TcpClient client, NetworkStream stream)
+        public static void ReceiveLoop(SafeQueue<Message> messageQueue, uint connectionId, TcpClient client)
         {
+            // get NetworkStream from client
+            NetworkStream stream = client.GetStream();
+
             // absolutely must wrap with try/catch, otherwise thread exceptions
             // are silent
             try
             {
                 Logger.Log("TCP: started receive function for connectionId=" + connectionId);
+
 
                 // add connected event to queue
                 messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));

@@ -11,9 +11,6 @@ namespace Telepathy
         TcpClient client;
         Thread listenerThread;
 
-        // stream (with BinaryWriter for easier sending)
-        NetworkStream stream;
-
         public bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
 
         public bool Connect(string ip, int port, int timeoutSeconds = 6)
@@ -50,15 +47,10 @@ namespace Telepathy
                 return false;
             }
 
-            // Get a stream object for reading
-            // note: 'using' sucks here because it will try to dispose after thread was started
-            // but we still need it in the thread
-            stream = client.GetStream();
-
             listenerThread = new Thread(() =>
             {
                 // run the receive loop
-                ReceiveLoop(messageQueue, 0, client, stream);
+                ReceiveLoop(messageQueue, 0, client);
             });
             listenerThread.IsBackground = true;
             listenerThread.Start();
@@ -75,7 +67,7 @@ namespace Telepathy
             // this is supposed to disconnect gracefully, but the blocking Read
             // calls throw a 'Read failure' exception instead of returning 0.
             // (maybe it's Unity? maybe Mono?)
-            stream.Close();
+            client.GetStream().Close();
             client.Close();
 
             // clear queue just to be sure that nothing old is processed when
@@ -87,7 +79,7 @@ namespace Telepathy
         {
             if (Connected)
             {
-                SendMessage(stream, data);
+                SendMessage(client.GetStream(), data);
             }
             else Logger.LogWarning("Client.Send: not connected!");
         }

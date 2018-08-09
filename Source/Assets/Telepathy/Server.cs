@@ -53,11 +53,6 @@ namespace Telepathy
                         uint connectionId = counter.Next();
                         Logger.Log("Server: client connected. connectionId=" + connectionId);
 
-                        // Get a stream object for reading
-                        // note: 'using' sucks here because it will try to dispose after thread was started
-                        // but we still need it in the thread
-                        NetworkStream stream = client.GetStream();
-
                         // spawn a thread for each client to listen to his messages
                         // NOTE: Unity doesn't show compile errors in the thread. need
                         // to guess it. it only shows:
@@ -66,7 +61,7 @@ namespace Telepathy
                         Thread thread = new Thread(() =>
                         {
                             // run the receive loop
-                            Common.ReceiveLoop(messageQueue, connectionId, client, stream);
+                            Common.ReceiveLoop(messageQueue, connectionId, client);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);
