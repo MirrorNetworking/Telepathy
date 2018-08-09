@@ -75,13 +75,14 @@ namespace Telepathy
             messageQueue.Clear();
         }
 
-        public void Send(byte[] data)
+        public bool Send(byte[] data)
         {
             if (Connected)
             {
-                SendMessage(client.GetStream(), data);
+                return SendMessage(client.GetStream(), data);
             }
-            else Logger.LogWarning("Client.Send: not connected!");
+            Logger.LogWarning("Client.Send: not connected!");
+            return false;
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Telepathy
 
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
-        protected void SendMessage(NetworkStream stream, byte[] content)
+        protected bool SendMessage(NetworkStream stream, byte[] content)
         {
             //Logger.Log("SendMessage: " + BitConverter.ToString(data));
 
@@ -40,14 +40,14 @@ namespace Telepathy
             if (!stream.CanWrite)
             {
                 Logger.LogWarning("Send: stream not writeable: " + stream);
-                return;
+                return false;
             }
 
             // check size
             if (content.Length > ushort.MaxValue)
             {
                 Logger.LogError("Send: message too big(" + content.Length + ") max=" + ushort.MaxValue);
-                return;
+                return false;
             }
 
             // write size header and content
@@ -55,6 +55,7 @@ namespace Telepathy
             writer.Write((ushort)content.Length);
             writer.Write(content);
             writer.Flush();
+            return true;
         }
 
         // read message (via stream) with the <size,content> message structure

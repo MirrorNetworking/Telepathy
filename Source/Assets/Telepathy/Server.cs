@@ -122,15 +122,16 @@ namespace Telepathy
         }
 
         // Send message to client using socket connection.
-        public void Send(uint connectionId, byte[] data)
+        public bool Send(uint connectionId, byte[] data)
         {
             // find the connection
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
-                SendMessage(client.GetStream(), data);
+                return SendMessage(client.GetStream(), data);
             }
-            else Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+            Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+            return false;
         }
     }
 }
