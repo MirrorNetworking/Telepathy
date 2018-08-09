@@ -50,8 +50,6 @@ namespace Telepathy
         // send message (via stream) with the <size,content> message structure
         protected static bool SendMessage(NetworkStream stream, byte[] content)
         {
-            //Logger.Log("SendMessage: " + BitConverter.ToString(data));
-
             // can we still write to this socket (not disconnected?)
             if (!stream.CanWrite)
             {
