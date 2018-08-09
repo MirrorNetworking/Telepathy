@@ -1,6 +1,5 @@
 ﻿// C#'s ConcurrentHashSet is not available in Unity :(
 // Let's create a simple thread safe hash set
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
