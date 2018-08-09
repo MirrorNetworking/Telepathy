@@ -32,7 +32,7 @@ namespace Telepathy
 
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
-        public static void SendMessage(NetworkStream stream, byte[] content)
+        protected void SendMessage(NetworkStream stream, byte[] content)
         {
             //Logger.Log("SendMessage: " + BitConverter.ToString(data));
 
@@ -58,7 +58,7 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        public static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        protected static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
         {
             content = null;
 
@@ -79,7 +79,7 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        public static void ReceiveLoop(SafeQueue<Message> messageQueue, uint connectionId, TcpClient client)
+        protected static void ReceiveLoop(SafeQueue<Message> messageQueue, uint connectionId, TcpClient client)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
