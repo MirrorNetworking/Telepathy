@@ -32,7 +32,7 @@ namespace Telepathy
 
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
-        protected bool SendMessage(NetworkStream stream, byte[] content)
+        protected static bool SendMessage(NetworkStream stream, byte[] content)
         {
             //Logger.Log("SendMessage: " + BitConverter.ToString(data));
 
