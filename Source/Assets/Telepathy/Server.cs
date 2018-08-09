@@ -52,7 +52,7 @@ namespace Telepathy
         // Runs in background TcpServerThread; Handles incomming TcpClient requests
         // IMPORTANT: Logger.Log is only shown in log file, not in console
 
-        public static void StartServer(string ip, int port)
+        public static void Start(string ip, int port)
         {
             // not if already started
             if (Active) return;
@@ -132,7 +132,7 @@ namespace Telepathy
             listenerThread.Start();
         }
 
-        public static void StopServer()
+        public static void Stop()
         {
             // only if started
             if (!Active) return;

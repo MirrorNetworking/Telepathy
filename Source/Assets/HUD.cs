@@ -102,12 +102,12 @@ public class HUD : MonoBehaviour
         GUI.enabled = !Telepathy.Server.Active;
         if (GUILayout.Button("Start Server"))
         {
-            Telepathy.Server.StartServer("localhost", 1337);
+            Telepathy.Server.Start("localhost", 1337);
         }
         GUI.enabled = Telepathy.Server.Active;
         if (GUILayout.Button("Stop Server"))
         {
-            Telepathy.Server.StopServer();
+            Telepathy.Server.Stop();
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
@@ -121,6 +121,6 @@ public class HUD : MonoBehaviour
         // running them in the Editor. they would only quit when we press Play
         // again later. this is fine, but let's shut them down here for consistency
         Telepathy.Client.Disconnect();
-        Telepathy.Server.StopServer();
+        Telepathy.Server.Stop();
     }
 }
