@@ -22,13 +22,13 @@ public class HUD : MonoBehaviour
 
     void Update()
     {
-        if (GoodOldTCPClient.Connected)
+        if (Telepathy.Client.Connected)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GoodOldTCPClient.Send(new byte[]{0xAF, 0xFE});
-                GoodOldTCPClient.Send(new byte[]{0xBA, 0xBE});
-                //GoodOldTCPClient.Send(stressBytes);
+                Telepathy.Client.Send(new byte[]{0xAF, 0xFE});
+                Telepathy.Client.Send(new byte[]{0xBA, 0xBE});
+                //Telepathy.Client.Send(stressBytes);
             }
 
             if (Input.GetKeyDown(KeyCode.S))
@@ -42,36 +42,36 @@ public class HUD : MonoBehaviour
             if (stressTestRunning)
             {
                 for (int i = 0; i < packetsPerTick; ++i)
-                    GoodOldTCPClient.Send(stressBytes);
+                    Telepathy.Client.Send(stressBytes);
             }
 
             // any new message?
-            GoodOldEventType eventType;
+            Telepathy.EventType eventType;
             byte[] data;
-            if (GoodOldTCPClient.GetNextMessage(out eventType, out data))
+            if (Telepathy.Client.GetNextMessage(out eventType, out data))
             {
                 Debug.Log("received event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
             }
         }
 
-        if (GoodOldTCPServer.Active)
+        if (Telepathy.Server.Active)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GoodOldTCPServer.Send(0, new byte[]{0xAF, 0xFE});
-                GoodOldTCPServer.Send(0, new byte[]{0xBA, 0xBE});
+                Telepathy.Server.Send(0, new byte[]{0xAF, 0xFE});
+                Telepathy.Server.Send(0, new byte[]{0xBA, 0xBE});
             }
 
             // any new message?
             // -> calling it once per frame is okay, but really why not just
             //    process all messages and make it empty..
             byte[] data;
-            GoodOldEventType eventType;
+            Telepathy.EventType eventType;
             uint connectionId;
             int receivedCount = 0;
-            while (GoodOldTCPServer.GetNextMessage(out connectionId, out eventType, out data))
+            while (Telepathy.Server.GetNextMessage(out connectionId, out eventType, out data))
             {
-                Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
+                //Debug.Log("received connectionId=" + connectionId + " event=" + eventType + " msg: " + (data != null ? BitConverter.ToString(data) : "null"));
                 ++receivedCount;
             }
             if (receivedCount > 0) Debug.Log("Server received " + receivedCount + " messages this frame."); // easier on CPU to log this way
@@ -84,30 +84,30 @@ public class HUD : MonoBehaviour
 
         // client
         GUILayout.BeginHorizontal();
-        GUI.enabled = !GoodOldTCPClient.Connected;
+        GUI.enabled = !Telepathy.Client.Connected;
         if (GUILayout.Button("Connect Client"))
         {
-            GoodOldTCPClient.Connect("localhost", 1337);
+            Telepathy.Client.Connect("localhost", 1337);
         }
-        GUI.enabled = GoodOldTCPClient.Connected;
+        GUI.enabled = Telepathy.Client.Connected;
         if (GUILayout.Button("Disconnect Client"))
         {
-            GoodOldTCPClient.Disconnect();
+            Telepathy.Client.Disconnect();
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
 
         // server
         GUILayout.BeginHorizontal();
-        GUI.enabled = !GoodOldTCPServer.Active;
+        GUI.enabled = !Telepathy.Server.Active;
         if (GUILayout.Button("Start Server"))
         {
-            GoodOldTCPServer.StartServer("localhost", 1337);
+            Telepathy.Server.StartServer("localhost", 1337);
         }
-        GUI.enabled = GoodOldTCPServer.Active;
+        GUI.enabled = Telepathy.Server.Active;
         if (GUILayout.Button("Stop Server"))
         {
-            GoodOldTCPServer.StopServer();
+            Telepathy.Server.StopServer();
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
@@ -120,7 +120,7 @@ public class HUD : MonoBehaviour
         // the client/server threads won't receive the OnQuit info if we are
         // running them in the Editor. they would only quit when we press Play
         // again later. this is fine, but let's shut them down here for consistency
-        GoodOldTCPClient.Disconnect();
-        GoodOldTCPServer.StopServer();
+        Telepathy.Client.Disconnect();
+        Telepathy.Server.StopServer();
     }
 }
