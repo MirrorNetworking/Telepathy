@@ -119,20 +119,12 @@ public static class GoodOldTCPServer
                             //    + no resizing
                             //    + no extra allocations, just one for the content
                             //    + no crazy extraction logic
-                            byte[] header = new byte[2]; // only create once to avoid allocations
                             while (true)
                             {
-                                // read exactly 2 bytes for header (blocking)
-                                if (!stream.ReadExactly(header, 2))
+                                // read the next message (blocking) or stop if stream closed
+                                byte[] content;
+                                if (!GoodOldCommon.ReadMessageBlocking(stream, out content))
                                     break;
-                                ushort size = BitConverter.ToUInt16(header, 0);
-                                //Logger.Log("Received size header: " + size);
-
-                                // read exactly 'size' bytes for content (blocking)
-                                byte[] content = new byte[size];
-                                if (!stream.ReadExactly(content, size))
-                                    break;
-                                //Logger.Log("Received content: " + BitConverter.ToString(content));
 
                                 // queue it and show a warning if the queue starts to get big
                                 messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Data, content));
@@ -218,7 +210,7 @@ public static class GoodOldTCPServer
         TcpClient client;
         if (clients.TryGetValue(connectionId, out client))
         {
-            GoodOldCommon.SendBytesAndSize(client.GetStream(), data);
+            GoodOldCommon.SendMessage(client.GetStream(), data);
         }
         else Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
     }
