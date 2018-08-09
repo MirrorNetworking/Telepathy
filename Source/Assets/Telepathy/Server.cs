@@ -128,7 +128,7 @@ namespace Telepathy
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
-                Common.SendMessage(client.GetStream(), data);
+                SendMessage(client.GetStream(), data);
             }
             else Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
         }
