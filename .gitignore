@@ -28,6 +28,7 @@ Source/Source.sln
 *.user
 *.unityproj
 *.booproj
+bin/
 .vs/
 .idea/
 
