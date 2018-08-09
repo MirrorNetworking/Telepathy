@@ -79,72 +79,8 @@ public static class GoodOldTCPClient
 
         listenerThread = new Thread(() =>
         {
-            // absolutely must wrap with try/catch, otherwise thread exceptions
-            // are silent
-            try
-            {
-                Logger.Log("Client: started listener thread");
-
-                // add connected event to queue
-                messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Connected, null));
-
-                // let's talk about reading data.
-                // -> normally we would read as much as possible and then
-                //    extract as many <size,content>,<size,content> messages
-                //    as we received this time. this is really complicated
-                //    and expensive to do though
-                // -> instead we use a trick:
-                //      Read(2) -> size
-                //        Read(size) -> content
-                //      repeat
-                //    Read is blocking, but it doesn't matter since the
-                //    best thing to do until the full message arrives,
-                //    is to wait.
-                // => this is the most elegant AND fast solution.
-                //    + no resizing
-                //    + no extra allocations, just one for the content
-                //    + no crazy extraction logic
-                while (true)
-                {
-                    // read the next message (blocking) or stop if stream closed
-                    byte[] content;
-                    if (!GoodOldCommon.ReadMessageBlocking(stream, out content))
-                        break;
-
-                    // queue it and show a warning if the queue starts to get big
-                    messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Data, content));
-                    if (messageQueue.Count > 10000)
-                        Logger.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                }
-            }
-            catch (ThreadAbortException abortException)
-            {
-                // in the editor, this thread is only stopped via abort exception
-                // after pressing play again the next time. and that's okay.
-                Logger.Log("Client thread aborted. That's okay. " + abortException.ToString());
-            }
-            catch (SocketException socketException)
-            {
-                // happens because closing the client gracefully in Disconnect
-                // doesn't seem to work with Unity/Mono. let's not throw an error,
-                // a warning should do.
-                Logger.LogWarning("Client SocketException " + socketException.ToString());
-            }
-            catch (Exception exception)
-            {
-                Logger.LogError("Client exception:" + exception);
-            }
-            Logger.Log("Client: finished thread");
-
-            // if we got here then either the client while loop ended, or an exception happened.
-            // disconnect and clean up no matter what
-            messageQueue.Enqueue(new GoodOldMessage(0, GoodOldEventType.Disconnected, null));
-            stream.Close();
-            client.Close();
-            lock(listenerThread)
-            {
-                listenerThread = null;
-            }
+            // run the receive loop
+            GoodOldCommon.ReceiveLoop(messageQueue, 0, client, stream);
         });
         listenerThread.IsBackground = true;
         listenerThread.Start();

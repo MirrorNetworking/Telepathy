@@ -88,9 +88,6 @@ public static class GoodOldTCPServer
                     // but we still need it in the thread
                     NetworkStream stream = client.GetStream();
 
-                    // add connected event to queue
-                    messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Connected, null));
-
                     // spawn a thread for each client to listen to his messages
                     // NOTE: Unity doesn't show compile errors in the thread. need
                     // to guess it. it only shows:
@@ -98,61 +95,17 @@ public static class GoodOldTCPServer
                     // if there is any error below.
                     Thread thread = new Thread(() =>
                     {
-                        Logger.Log("Server: started listener thread for connectionId=" + connectionId);
+                        // run the receive loop
+                        GoodOldCommon.ReceiveLoop(messageQueue, connectionId, client, stream);
 
-                        // wrap each client in a try/catch, so that one client error won't bring the whole thing down
-                        try
-                        {
-                            // let's talk about reading data.
-                            // -> normally we would read as much as possible and then
-                            //    extract as many <size,content>,<size,content> messages
-                            //    as we received this time. this is really complicated
-                            //    and expensive to do though
-                            // -> instead we use a trick:
-                            //      Read(2) -> size
-                            //        Read(size) -> content
-                            //      repeat
-                            //    Read is blocking, but it doesn't matter since the
-                            //    best thing to do until the full message arrives,
-                            //    is to wait.
-                            // => this is the most elegant AND fast solution.
-                            //    + no resizing
-                            //    + no extra allocations, just one for the content
-                            //    + no crazy extraction logic
-                            while (true)
-                            {
-                                // read the next message (blocking) or stop if stream closed
-                                byte[] content;
-                                if (!GoodOldCommon.ReadMessageBlocking(stream, out content))
-                                    break;
-
-                                // queue it and show a warning if the queue starts to get big
-                                messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Data, content));
-                                if (messageQueue.Count > 10000)
-                                    Logger.LogWarning("Server: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                            }
-
-                            Logger.Log("Server: finished client thread for connectionId=" + connectionId);
-                        }
-                        catch (Exception exception)
-                        {
-                            // just catch it. code below will handle it.
-                            Logger.Log("Server: stopped client thread for connectionId=" + connectionId + " reason:" + exception);
-                        }
-
-                        // if we got here then either the client while loop ended, or an exception happened.
-                        // disconnect and clean up no matter what
-                        messageQueue.Enqueue(new GoodOldMessage(connectionId, GoodOldEventType.Disconnected, null));
-                        stream.Close();
-                        client.Close();
+                        // remove client from clients dict afterwards
                         clients.Remove(connectionId);
                     });
+                    thread.IsBackground = true;
                     thread.Start();
 
                     // add to dict now
                     clients.Add(connectionId, client);
-
-                    // TODO when to dispose the client?
                 }
             }
             catch (ThreadAbortException abortException)
