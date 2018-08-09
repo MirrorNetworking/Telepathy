@@ -68,13 +68,11 @@ namespace Telepathy
             if (!stream.ReadExactly(header, 2))
                 return false;
             ushort size = BitConverter.ToUInt16(header, 0);
-            //Logger.Log("Received size header: " + size);
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];
             if (!stream.ReadExactly(content, size))
                 return false;
-            //Logger.Log("Received content: " + BitConverter.ToString(content));
 
             return true;
         }
