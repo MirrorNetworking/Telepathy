@@ -17,8 +17,8 @@ namespace Telepathy
 
         public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
-        // Runs in background TcpServerThread; Handles incomming TcpClient requests
-        // IMPORTANT: Logger.Log is only shown in log file, not in console
+        // start listening for new connections in a background thread and spawn
+        // a new thread for each one.
         public void Start(string ip, int port)
         {
             // not if already started
@@ -28,8 +28,8 @@ namespace Telepathy
             Logger.Log("Server: starting ip=" + ip + " port=" + port);
             listenerThread = new Thread(() =>
             {
-                // absolutely must wrap with try/catch, otherwise thread exceptions
-                // are silent
+                // absolutely must wrap with try/catch, otherwise thread
+                // exceptions are silent
                 try
                 {
                     // localhost support so .Parse doesn't throw errors
@@ -44,18 +44,16 @@ namespace Telepathy
                     while (true)
                     {
                         // wait and accept new client
-                        // note: 'using' sucks here because it will try to dispose after
-                        // thread was started but we still need it in the thread
+                        // note: 'using' sucks here because it will try to
+                        // dispose after thread was started but we still need it
+                        // in the thread
                         TcpClient client = listener.AcceptTcpClient();
 
                         // generate the next connection id (thread safely)
                         uint connectionId = counter.Next();
 
-                        // spawn a thread for each client to listen to his messages
-                        // NOTE: Unity doesn't show compile errors in the thread. need
-                        // to guess it. it only shows:
-                        //   Delegate `System.Threading.ParameterizedThreadStart' does not take `0' arguments
-                        // if there is any error below.
+                        // spawn a thread for each client to listen to his
+                        // messages
                         Thread thread = new Thread(() =>
                         {
                             // run the receive loop
@@ -73,8 +71,8 @@ namespace Telepathy
                 }
                 catch (ThreadAbortException abortException)
                 {
-                    // UnityEditor causes AbortException if thread is still running
-                    // when we press Play again next time. that's okay.
+                    // UnityEditor causes AbortException if thread is still
+                    // running when we press Play again next time. that's okay.
                     Logger.Log("Server thread aborted. That's okay. " + abortException.ToString());
                 }
                 catch (SocketException socketException)
@@ -85,7 +83,7 @@ namespace Telepathy
                 }
                 catch (Exception exception)
                 {
-                    // something else went wrong. probably important.
+                    // something went wrong. probably important.
                     Logger.LogError("Server Exception: " + exception);
                 }
             });
@@ -108,9 +106,9 @@ namespace Telepathy
             List<TcpClient> connections = clients.GetValues();
             foreach (TcpClient client in connections)
             {
-                // this is supposed to disconnect gracefully, but the blocking Read
-                // calls throw a 'Read failure' exception instead of returning 0.
-                // (maybe it's Unity? maybe Mono?)
+                // this is supposed to disconnect gracefully, but the blocking
+                // Read calls throw a 'Read failure' exception in Unity
+                // sometimes (instead of returning 0)
                 client.GetStream().Close();
                 client.Close();
             }
@@ -119,7 +117,7 @@ namespace Telepathy
             clients.Clear();
         }
 
-        // Send message to client using socket connection.
+        // send message to client using socket connection.
         public bool Send(uint connectionId, byte[] data)
         {
             // find the connection
