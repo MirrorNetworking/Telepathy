@@ -6,59 +6,47 @@ namespace Telepathy
 {
     public class Client : Common
     {
-        TcpClient client;
-        Thread listenerThread;
+        TcpClient client = new TcpClient();
+        Thread thread;
 
-        public bool Connected { get { return listenerThread != null && listenerThread.IsAlive; } }
+        public bool Connecting { get { return thread != null && thread.IsAlive; } }
+        public bool Connected { get { return thread != null && thread.IsAlive && client.Connected; } }
 
-        public bool Connect(string ip, int port, int timeoutSeconds = 6)
+        public void Connect(string ip, int port)
         {
             // not if already started
-            if (Connected) return false;
+            if (Connecting || Connected) return;
 
-            Logger.Log("Client: connecting to ip=" + ip + " port=" + port);
-
-            // use async connect so we can specify a timeout. if we use
-            // new TcpClient(ip, port) then we can't modify the timeout. deafult is
-            // way too long there.
-            try
+            // client.Connect(ip, port) is blocking. let's call it in the thread and return immediately.
+            // -> this way the application doesn't hang for 30s if connect takes too long, which is especially good
+            //    in games
+            // -> this way we don't async client.BeginConnect, which seems to fail sometimes if we connect too many
+            //    clients too fast
+            thread = new Thread(() =>
             {
-                client = new TcpClient();
-                IAsyncResult result = client.BeginConnect(ip, port, null, null);
-                bool success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(timeoutSeconds));
-
-                // time elapsed for one reason or another. are we now connect, or not?
-                if (!success || !client.Connected)
+                try
                 {
-                    Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " after " + timeoutSeconds + "s");
-                    client.Close(); // clean up properly before exiting, otherwise Unity freezes for 30s when rebuilding next time
-                    return false;
-                }
-                client.EndConnect(result);
-            }
-            catch (SocketException socketException)
-            {
-                // this happens if (for example) the IP address is correct but there
-                // is no server running on that IP/Port
-                Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + socketException);
-                client.Close(); // clean up properly before exiting
-                return false;
-            }
+                    client.Connect(ip, port);
 
-            listenerThread = new Thread(() =>
-            {
-                // run the receive loop
-                ReceiveLoop(messageQueue, 0, client);
+                    // run the receive loop
+                    ReceiveLoop(messageQueue, 0, client);
+                }
+                catch (SocketException socketException)
+                {
+                    // this happens if (for example) the IP address is correct but there
+                    // is no server running on that IP/Port
+                    Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + socketException);
+                    client.Close(); // clean up properly before exiting
+                }
             });
-            listenerThread.IsBackground = true;
-            listenerThread.Start();
-            return true;
+            thread.IsBackground = true;
+            thread.Start();
         }
 
         public void Disconnect()
         {
             // only if started
-            if (!Connected) return;
+            if (!Connecting && !Connected) return;
 
             Logger.Log("Client: disconnecting");
 
