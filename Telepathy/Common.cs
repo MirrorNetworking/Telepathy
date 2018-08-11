@@ -112,9 +112,6 @@ namespace Telepathy
             // are silent
             try
             {
-                Logger.Log("Telepathy: started receive function for connectionId=" + connectionId);
-
-
                 // add connected event to queue
                 messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
 
