@@ -1,4 +1,4 @@
-﻿// A very simple locked 'uint' counter
+﻿// a very simple locked 'uint' counter
 // (we can't do lock(int) so we need an object and since we also need a max
 //  check, we might as well put it into a class here)
 using System;
