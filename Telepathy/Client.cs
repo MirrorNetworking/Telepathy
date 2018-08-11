@@ -24,11 +24,12 @@ namespace Telepathy
             // not if already started
             if (Connecting || Connected) return;
 
-            // client.Connect(ip, port) is blocking. let's call it in the thread and return immediately.
-            // -> this way the application doesn't hang for 30s if connect takes too long, which is especially good
-            //    in games
-            // -> this way we don't async client.BeginConnect, which seems to fail sometimes if we connect too many
-            //    clients too fast
+            // client.Connect(ip, port) is blocking. let's call it in the thread
+            // and return immediately.
+            // -> this way the application doesn't hang for 30s if connect takes
+            //    too long, which is especially good in games
+            // -> this way we don't async client.BeginConnect, which seems to
+            //    fail sometimes if we connect too many clients too fast
             thread = new Thread(() =>
             {
                 // absolutely must wrap with try/catch, otherwise thread
@@ -43,10 +44,12 @@ namespace Telepathy
                 }
                 catch (SocketException exception)
                 {
-                    // this happens if (for example) the IP address is correct but there
-                    // is no server running on that IP/Port
+                    // this happens if (for example) the ip address is correct
+                    // but there is no server running on that ip/port
                     Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
-                    client.Close(); // clean up properly before exiting
+
+                    // clean up properly before exiting
+                    client.Close();
                 }
                 catch (Exception exception)
                 {
