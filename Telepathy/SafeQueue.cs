@@ -1,5 +1,4 @@
-﻿// C#'s ConcurrentQueue is not available in Unity :(
-// Let's create a simple thread safe queue
+﻿// replaces ConcurrentQueue which is not available in .NET 3.5 yet.
 using System.Collections.Generic;
 
 namespace Telepathy
