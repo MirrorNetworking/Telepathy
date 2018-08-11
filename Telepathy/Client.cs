@@ -41,11 +41,11 @@ namespace Telepathy
                     // run the receive loop
                     ReceiveLoop(messageQueue, 0, client);
                 }
-                catch (SocketException socketException)
+                catch (SocketException exception)
                 {
                     // this happens if (for example) the IP address is correct but there
                     // is no server running on that IP/Port
-                    Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + socketException);
+                    Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
                     client.Close(); // clean up properly before exiting
                 }
                 catch (Exception exception)
