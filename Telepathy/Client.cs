@@ -9,8 +9,15 @@ namespace Telepathy
         TcpClient client = new TcpClient();
         Thread thread;
 
-        public bool Connecting { get { return thread != null && thread.IsAlive && !client.Connected; } }
-        public bool Connected { get { return thread != null && thread.IsAlive && client.Connected; } }
+        public bool Connecting
+        {
+            get { return thread != null && thread.IsAlive && !client.Connected; }
+        }
+
+        public bool Connected
+        {
+            get { return thread != null && thread.IsAlive && client.Connected; }
+        }
 
         public void Connect(string ip, int port)
         {
