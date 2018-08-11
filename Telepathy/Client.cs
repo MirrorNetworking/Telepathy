@@ -31,6 +31,8 @@ namespace Telepathy
             //    clients too fast
             thread = new Thread(() =>
             {
+                // absolutely must wrap with try/catch, otherwise thread
+                // exceptions are silent
                 try
                 {
                     // connect (blocking)
@@ -45,6 +47,11 @@ namespace Telepathy
                     // is no server running on that IP/Port
                     Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + socketException);
                     client.Close(); // clean up properly before exiting
+                }
+                catch (Exception exception)
+                {
+                    // something went wrong. probably important.
+                    Logger.LogError("Client Exception: " + exception);
                 }
             });
             thread.IsBackground = true;
