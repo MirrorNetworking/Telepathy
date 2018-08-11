@@ -73,17 +73,17 @@ namespace Telepathy
                         clients.Add(connectionId, client);
                     }
                 }
-                catch (ThreadAbortException abortException)
+                catch (ThreadAbortException exception)
                 {
                     // UnityEditor causes AbortException if thread is still
                     // running when we press Play again next time. that's okay.
-                    Logger.Log("Server thread aborted. That's okay. " + abortException);
+                    Logger.Log("Server thread aborted. That's okay. " + exception);
                 }
-                catch (SocketException socketException)
+                catch (SocketException exception)
                 {
                     // calling StopServer will interrupt this thread with a
                     // 'SocketException: interrupted'. that's okay.
-                    Logger.Log("Server Thread stopped. That's okay. " + socketException);
+                    Logger.Log("Server Thread stopped. That's okay. " + exception);
                 }
                 catch (Exception exception)
                 {
