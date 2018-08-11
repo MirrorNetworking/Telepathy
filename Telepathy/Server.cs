@@ -12,7 +12,7 @@ namespace Telepathy
         TcpListener listener;
         Thread listenerThread;
 
-        // clients with <clientId, socket>
+        // clients with <connectionId, TcpClient>
         SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
         public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
