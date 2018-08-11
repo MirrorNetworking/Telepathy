@@ -15,7 +15,11 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
-        public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
+        // check if the server is running
+        public bool Active
+        {
+            get { return listenerThread != null && listenerThread.IsAlive; }
+        }
 
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
