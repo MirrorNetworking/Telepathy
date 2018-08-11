@@ -136,22 +136,22 @@ namespace Telepathy
                     if (!ReadMessageBlocking(stream, out content))
                         break;
 
-                    // queue it and show a warning if the queue starts to get big
+                    // queue it and show a warning if the queue gets too big
                     messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
                     if (messageQueue.Count > 10000)
-                        Logger.LogWarning("Telepathy: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                        Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
             }
             catch (Exception exception)
             {
-                // just catch it. something went wrong. the thread was interrupted
-                // or the connection closed or we closed our own connection or ...
+                // something went wrong. the thread was interrupted or the
+                // connection closed or we closed our own connection or ...
                 // -> either way we should stop gracefully
-                Logger.Log("Telepathy: finished receive function for connectionId=" + connectionId + " reason: " + exception);
+                Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
             }
 
-            // if we got here then either the client while loop ended, or an exception happened.
-            // disconnect
+            // if we got here then either the client while loop ended, or an
+            // exception happened. disconnect
             messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
 
             // clean up no matter what
