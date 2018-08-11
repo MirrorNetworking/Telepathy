@@ -14,7 +14,7 @@ namespace Telepathy
 
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        protected SafeQueue<Message> messageQueue = new SafeQueue<Message>(); // accessed from getmessage and listener thread
+        protected SafeQueue<Message> messageQueue = new SafeQueue<Message>();
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
