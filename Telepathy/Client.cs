@@ -24,6 +24,12 @@ namespace Telepathy
             // not if already started
             if (Connecting || Connected) return;
 
+            // clear old messages in queue, just to be sure that the caller
+            // doesn't receive data from last time and gets out of sync.
+            // -> calling this in Disconnect isn't smart because the caller may
+            //    still want to process all the latest messages afterwards
+            messageQueue.Clear();
+
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
             // -> this way the application doesn't hang for 30s if connect takes
@@ -73,10 +79,6 @@ namespace Telepathy
             // (maybe it's Unity? maybe Mono?)
             client.GetStream().Close();
             client.Close();
-
-            // clear queue just to be sure that nothing old is processed when
-            // starting again
-            messageQueue.Clear();
         }
 
         public bool Send(byte[] data)

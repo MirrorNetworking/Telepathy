@@ -28,6 +28,12 @@ namespace Telepathy
             // not if already started
             if (Active) return;
 
+            // clear old messages in queue, just to be sure that the caller
+            // doesn't receive data from last time and gets out of sync.
+            // -> calling this in Stop isn't smart because the caller may
+            //    still want to process all the latest messages afterwards
+            messageQueue.Clear();
+
             // start the listener thread
             Logger.Log("Server: starting ip=" + ip + " port=" + port);
             listenerThread = new Thread(() =>
