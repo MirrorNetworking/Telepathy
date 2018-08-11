@@ -26,6 +26,7 @@ namespace Telepathy
             {
                 try
                 {
+                    // connect (blocking)
                     client.Connect(ip, port);
 
                     // run the receive loop
