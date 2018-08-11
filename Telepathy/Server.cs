@@ -50,7 +50,6 @@ namespace Telepathy
 
                         // generate the next connection id (thread safely)
                         uint connectionId = counter.Next();
-                        Logger.Log("Server: client connected. connectionId=" + connectionId);
 
                         // spawn a thread for each client to listen to his messages
                         // NOTE: Unity doesn't show compile errors in the thread. need
