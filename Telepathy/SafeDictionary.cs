@@ -1,5 +1,4 @@
-﻿// C#'s ConcurrentHashSet is not available in Unity :(
-// Let's create a simple thread safe hash set
+﻿// replaces ConcurrentDictionary which is not available in .NET 3.5 yet.
 using System.Collections.Generic;
 using System.Linq;
 
