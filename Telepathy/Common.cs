@@ -25,6 +25,7 @@ namespace Telepathy
         // 2MB are not that much, but it is a bad sign if the caller process
         // can't call GetNextMessage faster than the incoming messages.
         public int messageQueueSizeWarning = 100000;
+        DateTime messageQueueLastWarning = DateTime.Now;
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
@@ -146,10 +147,24 @@ namespace Telepathy
                     if (!ReadMessageBlocking(stream, out content))
                         break;
 
-                    // queue it and show a warning if the queue gets too big
+                    // queue it
                     messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+
+                    // and show a warning if the queue gets too big
+                    // -> we don't want to show a warning every single time,
+                    //    because then a lot of processing power gets wasted on
+                    //    logging, which will make the queue pile up even more.
+                    // -> instead we show it every 10s, so that the system can
+                    //    use most it's processing power to hopefully process it.
                     if (messageQueue.Count > messageQueueSizeWarning)
-                        Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                    {
+                        TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
+                        if (elapsed.TotalSeconds > 10)
+                        {
+                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            messageQueueLastWarning = DateTime.Now;
+                        }
+                    }
                 }
             }
             catch (Exception exception)
