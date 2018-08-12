@@ -46,7 +46,7 @@ namespace Telepathy
                     client.Connect(ip, port);
 
                     // run the receive loop
-                    ReceiveLoop(messageQueue, 0, client);
+                    ReceiveLoop(0, client);
                 }
                 catch (SocketException exception)
                 {

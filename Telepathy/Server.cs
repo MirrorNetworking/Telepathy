@@ -67,7 +67,7 @@ namespace Telepathy
                         Thread thread = new Thread(() =>
                         {
                             // run the receive loop
-                            ReceiveLoop(messageQueue, connectionId, client);
+                            ReceiveLoop(connectionId, client);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);

@@ -17,6 +17,15 @@ namespace Telepathy
         // (not a HashSet because one connection can have multiple new messages)
         protected SafeQueue<Message> messageQueue = new SafeQueue<Message>();
 
+        // warning if message queue gets too big
+        // if the average message is about 20 bytes then:
+        // -   1k messages are   20KB
+        // -  10k messages are  200KB
+        // - 100k messages are 1.95MB
+        // 2MB are not that much, but it is a bad sign if the caller process
+        // can't call GetNextMessage faster than the incoming messages.
+        public int messageQueueSizeWarning = 100000;
+
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // -> Connected, Data, Disconnected events are all added here
@@ -102,7 +111,7 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        protected static void ReceiveLoop(SafeQueue<Message> messageQueue, uint connectionId, TcpClient client)
+        protected void ReceiveLoop(uint connectionId, TcpClient client)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -139,7 +148,7 @@ namespace Telepathy
 
                     // queue it and show a warning if the queue gets too big
                     messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
-                    if (messageQueue.Count > 10000)
+                    if (messageQueue.Count > messageQueueSizeWarning)
                         Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                 }
             }
