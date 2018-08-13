@@ -1,0 +1,10 @@
+version: '{build}'
+
+build:
+  verbosity: minimal
+  
+image: Visual Studio 2017
+
+deploy:
+  provider: Environment
+  name: nuget-telepathy
