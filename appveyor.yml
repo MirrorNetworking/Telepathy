@@ -5,6 +5,10 @@ build:
   
 image: Visual Studio 2017
 
+artifacts:
+  - path: Telepathy\bin\Debug\Telepathy.dll
+    name: Telepathy.dll
+
 deploy:
   provider: Environment
   name: nuget-telepathy
