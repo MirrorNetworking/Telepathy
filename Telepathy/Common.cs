@@ -36,26 +36,6 @@ namespace Telepathy
             return messageQueue.TryDequeue(out message);
         }
 
-        // static helper functions /////////////////////////////////////////////
-        // fast ushort to byte[] conversion and vice versa
-        // -> test with 100k conversions:
-        //    BitConverter.GetBytes(ushort): 144ms
-        //    bit shifting: 11ms
-        // -> 10x speed improvement makes this optimization actually worth it
-        // -> this way we don't need to allocate BinaryWriter/Reader either
-        static byte[] UShortToBytes(ushort value)
-        {
-            return new byte[]
-            {
-                (byte)value,
-                (byte)(value >> 8)
-            };
-        }
-        static ushort BytesToUShort(byte[] bytes)
-        {
-            return (ushort)((bytes[1] << 8) + bytes[0]);
-        }
-
         // send message (via stream) with the <size,content> message structure
         protected static bool SendMessage(NetworkStream stream, byte[] content)
         {
@@ -78,8 +58,7 @@ namespace Telepathy
             try
             {
                 // write size header and content
-                byte[] header = UShortToBytes((ushort)content.Length);
-                stream.Write(header, 0, header.Length);
+                stream.WriteUShort((ushort)content.Length);
                 stream.Write(content, 0, content.Length);
                 stream.Flush();
                 return true;
@@ -97,11 +76,7 @@ namespace Telepathy
         {
             content = null;
 
-            // read exactly 2 bytes for header (blocking)
-            byte[] header = new byte[2];
-            if (!stream.ReadExactly(header, 2))
-                return false;
-            ushort size = BytesToUShort(header);
+            ushort size = stream.ReadUShort();
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];

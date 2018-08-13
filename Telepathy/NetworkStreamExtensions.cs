@@ -52,4 +52,25 @@ public static class NetworkStreamExtensions
         }
         return true;
     }
+
+    public static ushort ReadUShort(this NetworkStream stream)
+    {
+        int b0 = stream.ReadByte();
+        int b1 = stream.ReadByte();
+
+        if (b0 == -1 || b1 == -1)
+        {
+            throw new EndOfStreamException("Could not read ushort from stream");
+        }
+        return (ushort)(b0 | (b1 << 8));
+    }
+
+    public static void WriteUShort(this NetworkStream stream, ushort data)
+    {
+        byte b0 = (byte)data;
+        stream.WriteByte(b0);
+        byte b1 = (byte)(data >> 8);
+        stream.WriteByte(b1);
+    }
+
 }
