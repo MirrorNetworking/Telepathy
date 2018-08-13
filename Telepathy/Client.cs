@@ -19,6 +19,35 @@ namespace Telepathy
             get { return thread != null && thread.IsAlive && client.Connected; }
         }
 
+        // the thread function
+        void ThreadFunction(string ip, int port)
+        {
+            // absolutely must wrap with try/catch, otherwise thread
+            // exceptions are silent
+            try
+            {
+                // connect (blocking)
+                client.Connect(ip, port);
+
+                // run the receive loop
+                ReceiveLoop(0, client);
+            }
+            catch (SocketException exception)
+            {
+                // this happens if (for example) the ip address is correct
+                // but there is no server running on that ip/port
+                Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
+
+                // clean up properly before exiting
+                client.Close();
+            }
+            catch (Exception exception)
+            {
+                // something went wrong. probably important.
+                Logger.LogError("Client Exception: " + exception);
+            }
+        }
+
         public void Connect(string ip, int port)
         {
             // not if already started
@@ -36,33 +65,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() =>
-            {
-                // absolutely must wrap with try/catch, otherwise thread
-                // exceptions are silent
-                try
-                {
-                    // connect (blocking)
-                    client.Connect(ip, port);
-
-                    // run the receive loop
-                    ReceiveLoop(0, client);
-                }
-                catch (SocketException exception)
-                {
-                    // this happens if (for example) the ip address is correct
-                    // but there is no server running on that ip/port
-                    Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
-
-                    // clean up properly before exiting
-                    client.Close();
-                }
-                catch (Exception exception)
-                {
-                    // something went wrong. probably important.
-                    Logger.LogError("Client Exception: " + exception);
-                }
-            });
+            thread = new Thread(() => { ThreadFunction(ip, port); });
             thread.IsBackground = true;
             thread.Start();
         }
