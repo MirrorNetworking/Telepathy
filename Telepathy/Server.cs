@@ -23,7 +23,7 @@ namespace Telepathy
 
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
-        public void Start(string ip, int port)
+        public void Start(int port)
         {
             // not if already started
             if (Active) return;
@@ -35,18 +35,15 @@ namespace Telepathy
             messageQueue.Clear();
 
             // start the listener thread
-            Logger.Log("Server: starting ip=" + ip + " port=" + port);
+            Logger.Log("Server: starting on port=" + port);
             listenerThread = new Thread(() =>
             {
                 // absolutely must wrap with try/catch, otherwise thread
                 // exceptions are silent
                 try
                 {
-                    // localhost support so .Parse doesn't throw errors
-                    if (ip.ToLower() == "localhost") ip = "127.0.0.1";
-
                     // start listener
-                    listener = new TcpListener(IPAddress.Parse(ip), port);
+                    listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
                     listener.Start();
                     Logger.Log("Server is listening");
 
