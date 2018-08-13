@@ -10,5 +10,7 @@ artifacts:
     name: Telepathy.dll
 
 deploy:
-  provider: Environment
-  name: nuget-telepathy
+  - provider: Environment
+    name: nuget-telepathy
+    on:
+      branch: master
