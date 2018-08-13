@@ -102,7 +102,7 @@ public class SimpleExample : MonoBehaviour
         // update even if window isn't focused, otherwise we don't receive.
         Application.runInBackground = true;
 
-        // use Debug.Log functions for TCP so we can see it in the console
+        // use Debug.Log functions for Telepathy so we can see it in the console
         Telepathy.Logger.LogMethod = Debug.Log;
         Telepathy.Logger.LogWarningMethod = Debug.LogWarning;
         Telepathy.Logger.LogErrorMethod = Debug.LogError;
