@@ -52,4 +52,33 @@ public static class NetworkStreamExtensions
         }
         return true;
     }
+
+    // static helper functions /////////////////////////////////////////////
+    // fast ushort to byte[] conversion and vice versa
+    // -> test with 100k conversions:
+    //    BitConverter.GetBytes(ushort): 144ms
+    //    bit shifting: 11ms
+    // -> 10x speed improvement makes this optimization actually worth it
+    // -> this way we don't need to allocate BinaryWriter/Reader either
+    public static int ReadUshort(this NetworkStream stream)
+    {
+        byte[] bytes = new byte[2];
+
+        if (!stream.ReadExactly(bytes, 2))
+            return -1;
+
+        return (ushort)((bytes[1] << 8) + bytes[0]);
+    }
+
+    public static void Write(this NetworkStream stream, ushort value)
+    {
+        byte [] bytes =  new byte[]
+        {
+                (byte)value,
+                (byte)(value >> 8)
+        };
+
+        stream.Write(bytes, 0, bytes.Length);
+    }
+
 }
