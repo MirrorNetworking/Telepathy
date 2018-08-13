@@ -63,6 +63,9 @@ namespace Telepathy
                         // messages
                         Thread thread = new Thread(() =>
                         {
+                            // add to dict immediately
+                            clients.Add(connectionId, client);
+
                             // run the receive loop
                             ReceiveLoop(connectionId, client);
 
@@ -71,9 +74,6 @@ namespace Telepathy
                         });
                         thread.IsBackground = true;
                         thread.Start();
-
-                        // add to dict now
-                        clients.Add(connectionId, client);
                     }
                 }
                 catch (ThreadAbortException exception)
