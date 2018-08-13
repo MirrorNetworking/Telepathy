@@ -11,9 +11,9 @@
     <AssemblyName>Telepathy</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <Description>Simple, message based, MMO Scale TCP networking in C#. And no magic.</Description>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -36,6 +36,7 @@
     <Version>1.0.0</Version>
     <Authors>vis2k</Authors>
     <Company>vis2k</Company>
+    <PackOnBuild>true</PackOnBuild>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

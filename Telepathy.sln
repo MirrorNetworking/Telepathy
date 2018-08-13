@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telepathy", "Telepathy\Telepathy.csproj", "{1D55A635-BC4E-4DDE-8D9A-044956F75A24}"
 EndProject
 Global

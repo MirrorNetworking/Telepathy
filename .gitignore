@@ -30,6 +30,7 @@ Source/Source.sln
 bin/
 .vs/
 .idea/
+*.nupkg
 
 # ============ #
 # OS generated #

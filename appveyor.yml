@@ -1,0 +1,17 @@
+version: '{build}'
+
+build:
+  publish_nuget: true
+  publish_nuget_symbols: true
+
+image: Visual Studio 2017
+
+artifacts:
+  - path: '**\*.nupkg'
+
+deploy:
+  - provider: Environment
+    name: nuget-telepathy
+    artifact: '**\*.nupkg'
+    on:
+      branch: master
