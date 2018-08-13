@@ -199,7 +199,7 @@ Then build it, start the server in the build and the client in the Editor and pr
 
 # Benchmarks
 **Real World**<br/>
-Telepathy is constantly tested in production with [@uMMORPG](https://www.assetstore.unity3d.com/#!/content/51212).
+Telepathy is constantly tested in production with [uMMORPG](https://www.assetstore.unity3d.com/#!/content/51212).
 We [recently tested](https://docs.google.com/document/d/e/2PACX-1vQqf_iqOLlBRTUqqyor_OUx_rHlYx-SYvZWMvHGuLIuRuxJ-qX3s8JzrrBB5vxDdGfl-HhYZW3g5lLW/pub#h.h4wha2mpetsc) 100+ players all broadcasting to each other in the worst case scenario, without issues.
 
 We had to stop the test because we didn't have more players to spawn clients.<br/>
