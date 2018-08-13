@@ -59,6 +59,9 @@ namespace Telepathy
                         // generate the next connection id (thread safely)
                         uint connectionId = counter.Next();
 
+                        // add to dict now
+                        clients.Add(connectionId, client);
+
                         // spawn a thread for each client to listen to his
                         // messages
                         Thread thread = new Thread(() =>
@@ -71,9 +74,6 @@ namespace Telepathy
                         });
                         thread.IsBackground = true;
                         thread.Start();
-
-                        // add to dict now
-                        clients.Add(connectionId, client);
                     }
                 }
                 catch (ThreadAbortException exception)
