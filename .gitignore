@@ -32,6 +32,8 @@ bin/
 .idea/
 *.nupkg
 
+/packages
+
 # ============ #
 # OS generated #
 # ============ #
