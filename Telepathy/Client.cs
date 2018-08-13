@@ -26,6 +26,7 @@ namespace Telepathy
             // exceptions are silent
             try
             {
+                client.NoDelay = true;
                 // connect (blocking)
                 client.Connect(ip, port);
 
