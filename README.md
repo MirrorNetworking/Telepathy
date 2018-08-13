@@ -80,7 +80,7 @@ while (client.GetNextMessage(out msg))
 }
 
 // send a message to server
-client.Send(0, new byte[]{0xFF});
+client.Send(new byte[]{0xFF});
 
 // disconnect from the server when we are done
 client.Disconnect();
