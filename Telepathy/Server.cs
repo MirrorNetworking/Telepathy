@@ -135,7 +135,17 @@ namespace Telepathy
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
-                return SendMessage(client.GetStream(), data);
+                // GetStream() might throw exception if client is disconnected
+                try
+                {
+                    NetworkStream stream = client.GetStream();
+                    return SendMessage(stream, data);
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogWarning("Server.Send exception: " + exception);
+                    return false;
+                }
             }
             Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
             return false;
