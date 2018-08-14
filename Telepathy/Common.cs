@@ -181,7 +181,6 @@ namespace Telepathy
 
             // clean up no matter what
             stream.Close();
-            client.Close();
         }
     }
 }

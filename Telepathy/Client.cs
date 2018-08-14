@@ -40,13 +40,19 @@ namespace Telepathy
                 // but there is no server running on that ip/port
                 Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
-                // clean up properly before exiting
-                client.Close();
+
             }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
                 Logger.LogError("Client Exception: " + exception);
+            }
+            finally
+            {
+                // client should aways be closed whether there is an exception or not
+                // otherwise,  if we encounter an unexpected exception,  we would 
+                // leak tcp clients
+                client.Close();
             }
         }
 

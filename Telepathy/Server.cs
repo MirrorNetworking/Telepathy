@@ -59,6 +59,8 @@ namespace Telepathy
 
                         // remove client from clients dict afterwards
                         clients.Remove(connectionId);
+
+                        client.Close();
                     });
                     thread.IsBackground = true;
                     thread.Start();
