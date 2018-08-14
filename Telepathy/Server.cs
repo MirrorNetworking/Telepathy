@@ -29,6 +29,7 @@ namespace Telepathy
             try
             {
                 // start listener
+                // (NoDelay disables nagle algorithm. lowers CPU% and latency)
                 listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
                 listener.Server.NoDelay = true;
                 listener.Start();

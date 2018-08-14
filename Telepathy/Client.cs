@@ -26,8 +26,9 @@ namespace Telepathy
             // exceptions are silent
             try
             {
-                client.NoDelay = true;
                 // connect (blocking)
+                // (NoDelay disables nagle algorithm. lowers CPU% and latency)
+                client.NoDelay = true;
                 client.Connect(ip, port);
 
                 // run the receive loop
