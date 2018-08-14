@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
-namespace TelepathyTests
+
+namespace Telepathy.Tests
 {
     [TestFixture]
     public class Test

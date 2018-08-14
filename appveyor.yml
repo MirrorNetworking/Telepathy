@@ -6,8 +6,18 @@ before_build:
 build:
   publish_nuget: true
   publish_nuget_symbols: true
+  project: Telepathy.sln
 
 image: Visual Studio 2017
+
+test_script:
+  - packages\OpenCover.4.6.519\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:"Telepathy.Tests\bin\Debug\Telepathy.Tests.dll" -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "
+
+after_test:
+  - ps: |
+      $env:PATH = 'C:\msys64\usr\bin;' + $env:PATH
+      Invoke-WebRequest -Uri 'https://codecov.io/bash' -OutFile codecov.sh
+      bash codecov.sh -f "coverage.xml" 
 
 deploy:
   - provider: Environment
