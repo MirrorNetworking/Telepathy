@@ -80,10 +80,12 @@ namespace Telepathy.Tests
             string str = utf8.GetString(dataMsg.data);
             Assert.That(str, Is.EqualTo("Hello world"));
 
-            // finally when the client disconnect,  we should get a disconnected message
-            client.Disconnect();
+            // finally if the server stops,  the clients should get a disconnect error
+            server.Stop();
             Message disconnectMsg = NextMessage(client);
             Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
+
+            client.Disconnect();
 
         }
 
