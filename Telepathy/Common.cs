@@ -43,17 +43,23 @@ namespace Telepathy
         //    bit shifting: 11ms
         // -> 10x speed improvement makes this optimization actually worth it
         // -> this way we don't need to allocate BinaryWriter/Reader either
-        static byte[] UShortToBytes(ushort value)
-        {
-            return new byte[]
-            {
-                (byte)value,
-                (byte)(value >> 8)
-            };
-        }
         static ushort BytesToUShort(byte[] bytes)
         {
             return (ushort)((bytes[1] << 8) + bytes[0]);
+        }
+
+        // add a header to the payload with the payload size
+        static byte[] SizeAndPayload(byte[] payload)
+        {
+            // one buffer for header + payload
+            byte[] messageData = new byte[payload.Length + 2];
+            int length = payload.Length;
+
+            messageData[0] = (byte)length;
+            messageData[1] = (byte)(length >> 8);
+
+            payload.CopyTo(messageData, 2);
+            return messageData;
         }
 
         // send message (via stream) with the <size,content> message structure
@@ -78,9 +84,8 @@ namespace Telepathy
             try
             {
                 // write size header and content
-                byte[] header = UShortToBytes((ushort)content.Length);
-                stream.Write(header, 0, header.Length);
-                stream.Write(content, 0, content.Length);
+                byte[] data = SizeAndPayload(content);
+                stream.Write(data, 0, data.Length);
                 stream.Flush();
                 return true;
             }
