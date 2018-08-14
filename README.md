@@ -1,5 +1,10 @@
 ![Telepathy Logo](https://i.imgur.com/eUk2rmT.png)
 
+[![Build status](https://img.shields.io/appveyor/ci/vis2k73562/telepathy.svg)](https://ci.appveyor.com/project/vis2k73562/telepathy/)
+[![AppVeyor tests branch](https://img.shields.io/appveyor/tests/vis2k73562/telepathy.svg)](https://ci.appveyor.com/project/vis2k73562/hlapi-community-edition/branch/improvements/tests)
+[![Discord](https://img.shields.io/discord/343440455738064897.svg)](https://discordapp.com/invite/N9QVxbM)
+[![Codecov](https://codecov.io/gh/vis2k/telepathy/graph/badge.svg)](https://codecov.io/gh/vis2k/telepathy)
+
 Simple, message based, MMO Scale TCP networking in C#. And no magic.
 
 Telepathy was designed with the [KISS Principle](https://en.wikipedia.org/wiki/KISS_principle) in mind.<br/>
