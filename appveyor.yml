@@ -9,12 +9,7 @@ build:
 
 image: Visual Studio 2017
 
-artifacts:
-  - path: '**\*.nupkg'
-
 deploy:
   - provider: Environment
     name: nuget-telepathy
-    artifact: '**\*.nupkg'
-    on:
-      branch: master
+    artifact: /.*\.nupkg/
