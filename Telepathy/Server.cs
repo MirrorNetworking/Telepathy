@@ -30,6 +30,7 @@ namespace Telepathy
             {
                 // start listener
                 listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
+                listener.Server.NoDelay = true;
                 listener.Start();
                 Logger.Log("Server is listening");
 
