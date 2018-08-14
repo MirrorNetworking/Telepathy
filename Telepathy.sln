@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telepathy", "Telepathy\Telepathy.csproj", "{1D55A635-BC4E-4DDE-8D9A-044956F75A24}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telepathy-Tests", "Telepathy.Tests\Telepathy.Tests.csproj", "{6C338324-3555-4F6B-B72B-E8523319B05F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telepathy.Tests", "Telepathy.Tests\Telepathy.Tests.csproj", "{6C338324-3555-4F6B-B72B-E8523319B05F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
