@@ -34,19 +34,22 @@ namespace Telepathy.LoadTest
             {
                 foreach (Client client in clients)
                 {
-                    // send 2 messages each time
-                    client.Send(messageBytes);
-                    client.Send(messageBytes);
-
-                    messagesSent += 2;
-                    // get new messages from queue
-                    Message msg;
-                    while (client.GetNextMessage(out msg))
+                    if (client.Connected)
                     {
-                        if (msg.eventType == EventType.Data)
+                        // send 2 messages each time
+                        client.Send(messageBytes);
+                        client.Send(messageBytes);
+
+                        messagesSent += 2;
+                        // get new messages from queue
+                        Message msg;
+                        while (client.GetNextMessage(out msg))
                         {
-                            messagesReceived++;
-                            dataReceived += msg.data.Length;
+                            if (msg.eventType == EventType.Data)
+                            {
+                                messagesReceived++;
+                                dataReceived += msg.data.Length;
+                            }
                         }
                     }
                 }
