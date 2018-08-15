@@ -73,8 +73,8 @@ namespace Telepathy
                 return false;
             }
 
-            // stream.Write throws exceptions if client sends with high frequency
-            // and the server stops
+            // stream.Write throws exceptions if client sends with high
+            // frequency and the server stops
             try
             {
                 // write size header and content
