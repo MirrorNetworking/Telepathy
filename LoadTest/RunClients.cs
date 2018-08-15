@@ -72,7 +72,8 @@ namespace Telepathy.LoadTest
                                              bandwithIn,
                                              messagesSent,
                                              bandwithOut));
-                    stopwatch.Restart();
+                    stopwatch.Stop();
+                    stopwatch = Stopwatch.StartNew();
                     messagesSent = 0;
                     dataReceived = 0;
                     messagesReceived = 0;

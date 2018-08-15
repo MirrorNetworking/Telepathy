@@ -41,7 +41,8 @@ namespace Telepathy.LoadTest
                 if (stopwatch.ElapsedMilliseconds > 1000 * 10)
                 {
                     Logger.Log(string.Format("Server in={0} ({1} KB/s)  out={0} ({1} KB/s)", messagesReceived, (dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024))));
-                    stopwatch.Restart();
+                    stopwatch.Stop();
+                    stopwatch = Stopwatch.StartNew();
                     messagesReceived = 0;
                     dataReceived = 0;
                 }
