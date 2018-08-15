@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 
+using System.Timers;
+
+
 namespace Telepathy.LoadTest
 {
     public class RunClients
@@ -30,8 +33,11 @@ namespace Telepathy.LoadTest
             long messagesReceived = 0;
             long dataReceived = 0;
 
-            while (true)
+            var timer = new System.Timers.Timer(1000.0 / clientFrequency);
+
+            timer.Elapsed += (object sender, ElapsedEventArgs e) =>
             {
+
                 foreach (Client client in clients)
                 {
                     if (client.Connected)
@@ -54,8 +60,6 @@ namespace Telepathy.LoadTest
                     }
                 }
 
-                // client tick rate
-                Thread.Sleep(1000 / clientFrequency);
 
                 // report every 10 seconds
                 if (stopwatch.ElapsedMilliseconds > 1000 * 10)
@@ -74,6 +78,19 @@ namespace Telepathy.LoadTest
                     messagesReceived = 0;
                 }
 
+            };
+
+            timer.AutoReset = true;
+            timer.Enabled = true;
+
+            Console.ReadLine();
+            timer.Stop();
+            timer.Dispose();
+
+
+            foreach (Client client in clients)
+            {
+                client.Disconnect();
             }
         }
     }
