@@ -15,6 +15,12 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<uint, TcpClient> clients = new SafeDictionary<uint, TcpClient>();
 
+        // connectionId counter
+        // (right now we only use it from one listener thread, but we might have
+        //  multiple threads later in case of WebSockets etc.)
+        // -> static so that another server instance doesn't start at 0 again.
+        static SafeCounter counter = new SafeCounter();
+
         // check if the server is running
         public bool Active
         {
