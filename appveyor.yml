@@ -23,6 +23,5 @@ after_test:
 deploy:
   - provider: Environment
     name: nuget-telepathy
-    artifact: /.*\.nupkg/
     on:
       branch: master
