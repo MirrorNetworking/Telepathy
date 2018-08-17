@@ -7,6 +7,7 @@ build:
   publish_nuget: true
   publish_nuget_symbols: true
   project: Telepathy.sln
+  verbosity: minimal
 
 image: Visual Studio 2017
 
