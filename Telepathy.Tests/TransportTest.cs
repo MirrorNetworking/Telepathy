@@ -27,6 +27,41 @@ namespace Telepathy.Tests
             server.Stop();
         }
 
+        [Test]
+        public void DisconnectImmediateTest()
+        {
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // I should be able to disconnect right away
+            // if connection was pending,  it should just cancel
+            client.Disconnect();
+
+            Assert.That(client.Connected, Is.False);
+        }
+
+        [Test]
+        public void ReconnectTest()
+        {
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // wait for successful connection
+            Message connectMsg = NextMessage(client);
+            Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
+            // disconnect and lets try again
+            client.Disconnect();
+
+
+            // connecting should flush message queue  right?
+            client.Connect("127.0.0.1", port);
+            // wait for successful connection
+            connectMsg = NextMessage(client);
+            Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            client.Disconnect();
+        }
+
 
         [Test]
         public void ServerTest()
