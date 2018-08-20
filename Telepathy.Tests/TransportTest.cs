@@ -134,7 +134,7 @@ namespace Telepathy.Tests
         }
 
         [Test]
-        public void ConnectDataIpAddressTest()
+        public void GetConnectionInfoTest()
         {
             // connect a client
             Client client = new Client();
@@ -144,11 +144,13 @@ namespace Telepathy.Tests
             Message serverConnectMsg = NextMessage(server);
             Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
 
-            // try parsing to IPAddress
-            IPAddress address = new IPAddress(serverConnectMsg.data);
-            Assert.That(address.ToString(), Is.EqualTo("127.0.0.1"));
-
-            Logger.Log("IP: " + address);
+            // get server's connection info for that client
+            IPAddress address;
+            if (server.GetConnectionInfo(serverConnectMsg.connectionId, out address))
+            {
+                Assert.That(address.ToString() == "127.0.0.1");
+            }
+            else Assert.Fail();
 
             client.Disconnect();
         }

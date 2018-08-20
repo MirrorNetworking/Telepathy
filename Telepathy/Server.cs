@@ -200,6 +200,7 @@ namespace Telepathy
             if (clients.TryGetValue(connectionId, out client))
             {
                 address = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                return true;
             }
             address = null;
             return false;
