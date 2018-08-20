@@ -73,7 +73,7 @@ namespace Telepathy
                             clients.Add(connectionId, client);
 
                             // run the receive loop
-                            ReceiveLoop(connectionId, client);
+                            ReceiveLoop(connectionId, client, messageQueue);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);

@@ -18,8 +18,7 @@ namespace Telepathy
         // - 100k messages are 1.95MB
         // 2MB are not that much, but it is a bad sign if the caller process
         // can't call GetNextMessage faster than the incoming messages.
-        public int messageQueueSizeWarning = 100000;
-        DateTime messageQueueLastWarning = DateTime.Now;
+        public static int messageQueueSizeWarning = 100000;
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
@@ -114,10 +113,14 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        protected void ReceiveLoop(int connectionId, TcpClient client)
+        // (static to reduce state for maximum reliability)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
+
+            // keep track of last message queue warning
+            DateTime messageQueueLastWarning = DateTime.Now;
 
             // absolutely must wrap with try/catch, otherwise thread exceptions
             // are silent
