@@ -52,15 +52,20 @@ namespace Telepathy
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
                 messageQueue.Enqueue(new Message(0, EventType.Disconnected, null));
-
-                // clean up properly before exiting
-                client.Close();
             }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
                 Logger.LogError("Client Exception: " + exception);
             }
+
+            // if we got here then we are done. ReceiveLoop cleans up already,
+            // but we may never get there if connect fails. so let's clean up
+            // here too.
+            client.Close();
+            // clear client so no one uses an old client. need lock because it's
+            // also used from main thread
+            lock (client) client = null;
         }
 
         public void Connect(string ip, int port)
