@@ -9,16 +9,23 @@ namespace Telepathy
         TcpClient client;
         Thread thread;
 
-        public bool Connecting
-        {
-            get { return thread != null && thread.IsAlive &&
-                         client != null && !client.Connected; }
-        }
-
         public bool Connected
         {
-            get { return thread != null && thread.IsAlive &&
-                         client != null && client.Connected; }
+            get
+            {
+                // TcpClient.Connected doesn't check if socket != null, which
+                // results in NullReferenceExceptions if connection was closed.
+                // -> let's check it manually instead
+                return client != null &&
+                       client.Client != null &&
+                       client.Client.Connected;
+            }
+        }
+
+        public bool Connecting
+        {
+            // client was created by Connect() call but not fully connected yet?
+            get { return client != null && !Connected; }
         }
 
         // the thread function
