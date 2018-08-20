@@ -1,5 +1,6 @@
 ﻿// common code used by server and client
 using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace Telepathy
@@ -18,13 +19,14 @@ namespace Telepathy
         // - 100k messages are 1.95MB
         // 2MB are not that much, but it is a bad sign if the caller process
         // can't call GetNextMessage faster than the incoming messages.
-        public int messageQueueSizeWarning = 100000;
-        DateTime messageQueueLastWarning = DateTime.Now;
+        public static int messageQueueSizeWarning = 100000;
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // -> Connected, Data, Disconnected events are all added here
         // -> bool return makes while (GetMessage(out Message)) easier!
+        // -> no 'is client connected' check because we still want to read the
+        //    Disconnected message after a disconnect
         public bool GetNextMessage(out Message message)
         {
             return messageQueue.TryDequeue(out message);
@@ -114,17 +116,25 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        protected void ReceiveLoop(uint connectionId, TcpClient client)
+        // (static to reduce state for maximum reliability)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
+
+            // keep track of last message queue warning
+            DateTime messageQueueLastWarning = DateTime.Now;
 
             // absolutely must wrap with try/catch, otherwise thread exceptions
             // are silent
             try
             {
-                // add connected event to queue
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                // get ip address from client
+                IPAddress address = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+
+                // add connected event to queue with ip address as data in case
+                // it's needed
+                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, address.GetAddressBytes()));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
