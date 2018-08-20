@@ -145,10 +145,9 @@ namespace Telepathy
             List<TcpClient> connections = clients.GetValues();
             foreach (TcpClient client in connections)
             {
-                // this is supposed to disconnect gracefully, but the blocking
-                // Read calls throw a 'Read failure' exception in Unity
-                // sometimes (instead of returning 0)
-                client.GetStream().Close();
+                // close the stream if not closed yet. it may have been closed
+                // by a disconnect already, so use try/catch
+                try { client.GetStream().Close(); } catch {}
                 client.Close();
             }
 
