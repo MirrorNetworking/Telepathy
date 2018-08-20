@@ -42,7 +42,7 @@ while (server.GetNextMessage(out msg))
     switch (msg.eventType)
     {
         case Telepathy.EventType.Connect:
-            Console.WriteLine(msg.connectionId + " Connected");
+            Console.WriteLine(msg.connectionId + " Connected. IP: + new IPAddress(msg.data));
             break;
         case Telepathy.EventType.Data:
             Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));

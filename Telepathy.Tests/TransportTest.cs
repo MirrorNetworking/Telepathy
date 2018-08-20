@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Net;
 using System.Text;
 using System.Threading;
 
@@ -80,6 +81,26 @@ namespace Telepathy.Tests
             server.Stop();
             Message disconnectMsg = NextMessage(client);
             Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
+
+            client.Disconnect();
+        }
+
+        [Test]
+        public void ConnectDataIpAddressTest()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // get server's connect message
+            Message serverConnectMsg = NextMessage(server);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // try parsing to IPAddress
+            IPAddress address = new IPAddress(serverConnectMsg.data);
+            Assert.That(address.ToString(), Is.EqualTo("127.0.0.1"));
+
+            Logger.Log("IP: " + address);
 
             client.Disconnect();
         }
