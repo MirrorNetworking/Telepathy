@@ -52,7 +52,6 @@
     <Compile Include="Message.cs" />
     <Compile Include="NetworkStreamExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SafeCounter.cs" />
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SafeQueue.cs" />
     <Compile Include="Server.cs" />
