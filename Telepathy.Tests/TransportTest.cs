@@ -27,11 +27,9 @@ namespace Telepathy.Tests
             server.Stop();
         }
 
-
         [Test]
         public void ServerTest()
         {
-
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client();
 
@@ -53,13 +51,11 @@ namespace Telepathy.Tests
             client.Disconnect();
             Message disconnectMsg = NextMessage(server);
             Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
-
         }
 
         [Test]
         public void ClientTest()
         {
-
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client();
 
@@ -86,7 +82,6 @@ namespace Telepathy.Tests
             Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
 
             client.Disconnect();
-
         }
 
 
