@@ -28,7 +28,8 @@ namespace Telepathy
         }
 
         // the thread function
-        void ThreadFunction(string ip, int port)
+        // (static to reduce state for maximum reliability)
+        static void ThreadFunction(TcpClient client, string ip, int port, SafeQueue<Message> messageQueue)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -62,9 +63,6 @@ namespace Telepathy
             // but we may never get there if connect fails. so let's clean up
             // here too.
             client.Close();
-            // clear client so no one uses an old client. need lock because it's
-            // also used from main thread
-            lock (client) client = null;
         }
 
         public void Connect(string ip, int port)
@@ -88,7 +86,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            Thread thread = new Thread(() => { ThreadFunction(ip, port); });
+            Thread thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue); });
             thread.IsBackground = true;
             thread.Start();
         }
@@ -98,8 +96,19 @@ namespace Telepathy
             // only if started
             if (Connecting || Connected)
             {
-                // close client. the thread will take care of everything else.
+                // close client, ThreadFunc will end and clean up
                 client.Close();
+
+                // clear client reference so that we can call Connect again
+                // immediately after calling Disconnect.
+                // -> this client's thread will end in the background in a few
+                //    milliseconds, we don't need to worry about it anymore
+                // -> setting it null here won't set it null in ThreadFunction,
+                //    because it's static and we pass a reference. so there
+                //    won't be any NullReferenceExceptions. the thread will just
+                //    end gracefully.
+                client = null;
+
                 Logger.Log("Client: disconnected");
             }
         }
