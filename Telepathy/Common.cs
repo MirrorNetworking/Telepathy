@@ -24,6 +24,8 @@ namespace Telepathy
         // (might want to call this until it doesn't return anything anymore)
         // -> Connected, Data, Disconnected events are all added here
         // -> bool return makes while (GetMessage(out Message)) easier!
+        // -> no 'is client connected' check because we still want to read the
+        //    Disconnected message after a disconnect
         public bool GetNextMessage(out Message message)
         {
             return messageQueue.TryDequeue(out message);
