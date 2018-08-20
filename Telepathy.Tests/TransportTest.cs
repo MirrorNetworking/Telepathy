@@ -42,6 +42,19 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void SpamConnectTest()
+        {
+            Client client = new Client();
+            for (int i = 0; i < 1000; i++)
+            {
+                client.Connect("127.0.0.1", port);
+                Assert.That(client.Connecting || client.Connected, Is.True);
+                client.Disconnect();
+                Assert.That(client.Connecting, Is.False);
+            }
+        }
+
+        [Test]
         public void ReconnectTest()
         {
             Client client = new Client();
@@ -178,5 +191,6 @@ namespace Telepathy.Tests
 
             return message;
         }
+
     }
 }
