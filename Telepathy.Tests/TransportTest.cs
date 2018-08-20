@@ -67,7 +67,7 @@ namespace Telepathy.Tests
 
             // we  should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
-            uint id = serverConnectMsg.connectionId;
+            int id = serverConnectMsg.connectionId;
 
             // we  should first receive a connected message
             Message clientConnectMsg = NextMessage(client);
