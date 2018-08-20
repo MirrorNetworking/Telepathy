@@ -96,12 +96,12 @@ namespace Telepathy
         public void Disconnect()
         {
             // only if started
-            if (!Connecting && !Connected) return;
-
-            Logger.Log("Client: disconnecting");
-
-            // close client. the thread will take care of everything else.
-            client.Close();
+            if (Connecting || Connected)
+            {
+                // close client. the thread will take care of everything else.
+                client.Close();
+                Logger.Log("Client: disconnected");
+            }
         }
 
         public bool Send(byte[] data)
