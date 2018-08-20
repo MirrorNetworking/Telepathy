@@ -101,12 +101,8 @@ namespace Telepathy
 
             Logger.Log("Client: disconnecting");
 
-            // this is supposed to disconnect gracefully, but the blocking Read
-            // calls throw a 'Read failure' exception instead of returning 0.
-            // (maybe it's Unity? maybe Mono?)
-            client.GetStream().Close();
+            // close client. the thread will take care of everything else.
             client.Close();
-            client = null;
         }
 
         public bool Send(byte[] data)
