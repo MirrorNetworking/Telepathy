@@ -7,7 +7,6 @@ namespace Telepathy
     public class Client : Common
     {
         TcpClient client;
-        Thread thread;
 
         public bool Connected
         {
@@ -89,7 +88,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() => { ThreadFunction(ip, port); });
+            Thread thread = new Thread(() => { ThreadFunction(ip, port); });
             thread.IsBackground = true;
             thread.Start();
         }
