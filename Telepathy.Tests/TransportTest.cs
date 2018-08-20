@@ -84,6 +84,22 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        [Test]
+        public void ConnectingTest()
+        {
+            Client client = new Client();
+
+            // connect
+            client.Connect("127.0.0.1", port);
+
+            // we started a connect, so 'Connecting' should be true by
+            // definition
+            // (useful test because Connect's internal thread will take a while
+            //  before it starts. this test makes sure that Connecting is true
+            //  even before the thread started)
+            Assert.That(client.Connecting, Is.EqualTo(true));
+            client.Disconnect();
+        }
 
         static Message NextMessage(Server server)
         {
