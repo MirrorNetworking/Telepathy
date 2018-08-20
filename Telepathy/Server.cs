@@ -193,13 +193,13 @@ namespace Telepathy
 
         // get connection info in case it's needed (IP etc.)
         // (we should never pass the TcpClient to the outside)
-        public bool GetConnectionInfo(int connectionId, out IPAddress address)
+        public bool GetConnectionInfo(int connectionId, out string address)
         {
             // find the connection
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
-                address = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                address = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
                 return true;
             }
             address = null;
