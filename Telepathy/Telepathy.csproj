@@ -55,6 +55,7 @@
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SafeQueue.cs" />
     <Compile Include="Server.cs" />
+    <Compile Include="ByteArrayPool.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

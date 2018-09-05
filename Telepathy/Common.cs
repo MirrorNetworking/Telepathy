@@ -1,5 +1,6 @@
 ﻿// common code used by server and client
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace Telepathy
@@ -38,13 +39,10 @@ namespace Telepathy
         //    bit shifting: 11ms
         // -> 10x speed improvement makes this optimization actually worth it
         // -> this way we don't need to allocate BinaryWriter/Reader either
-        static byte[] UShortToBytes(ushort value)
+        static void UShortToBytes(ushort value, byte[] array)
         {
-            return new byte[]
-            {
-                (byte)value,
-                (byte)(value >> 8)
-            };
+            array[0] = (byte)value;
+            array[1] = (byte)(value >> 8);
         }
         static ushort BytesToUShort(byte[] bytes)
         {
@@ -72,17 +70,15 @@ namespace Telepathy
             // frequency and the server stops
             try
             {
-                // construct header (size)
-                byte[] header = UShortToBytes((ushort)content.Length);
-
                 // write header+content at once via payload array. writing
                 // header,payload separately would cause 2 TCP packets to be
                 // sent if nagle's algorithm is disabled(2x TCP header overhead)
-                byte[] payload = new byte[header.Length + content.Length];
-                Array.Copy(header, payload, header.Length);
-                Array.Copy(content, 0, payload, header.Length, content.Length);
-                stream.Write(payload, 0, payload.Length);
-
+                byte[] payload = ByteArrayPool.Take();
+                // construct header (size)
+                UShortToBytes((ushort)content.Length, payload);
+                Array.Copy(content, 0, payload, 2, content.Length);
+                stream.Write(payload, 0, 2 + content.Length);
+                ByteArrayPool.Return(payload);
                 // flush to make sure it is being sent immediately
                 stream.Flush();
                 return true;
@@ -95,24 +91,24 @@ namespace Telepathy
             }
         }
 
+        [ThreadStatic] static byte[] header = new byte[2];
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        protected static bool ReadMessageBlocking(NetworkStream stream, byte[] content, out int size)
         {
-            content = null;
-
+            size = 0;
             // read exactly 2 bytes for header (blocking)
-            byte[] header = new byte[2];
             if (!stream.ReadExactly(header, 2))
                 return false;
-            ushort size = BytesToUShort(header);
+
+            size = BytesToUShort(header);
 
             // read exactly 'size' bytes for content (blocking)
-            content = new byte[size];
             if (!stream.ReadExactly(content, size))
                 return false;
 
             return true;
         }
+
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
@@ -130,7 +126,7 @@ namespace Telepathy
             {
                 // add connected event to queue with ip address as data in case
                 // it's needed
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null, 0));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -150,13 +146,16 @@ namespace Telepathy
                 //    + no crazy extraction logic
                 while (true)
                 {
+                    int size;
+                    byte[] content = ByteArrayPool.Take();
                     // read the next message (blocking) or stop if stream closed
-                    byte[] content;
-                    if (!ReadMessageBlocking(stream, out content))
+                    if (!ReadMessageBlocking(stream, content, out size))
                         break;
 
                     // queue it
-                    messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+                    messageQueue.Enqueue(new Message(connectionId, EventType.Data, content, size));
+                    // it is now up to the developer to Dispose the message to return the 
+                    // buffer to the pool.
 
                     // and show a warning if the queue gets too big
                     // -> we don't want to show a warning every single time,
@@ -185,7 +184,7 @@ namespace Telepathy
 
             // if we got here then either the client while loop ended, or an
             // exception happened. disconnect
-            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null, 0));
 
             // clean up no matter what
             stream.Close();

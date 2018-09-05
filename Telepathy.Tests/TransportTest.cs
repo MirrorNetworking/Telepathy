@@ -93,7 +93,7 @@ namespace Telepathy.Tests
             client.Send(utf8.GetBytes("Hello world"));
             Message dataMsg = NextMessage(server);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
-            string str = utf8.GetString(dataMsg.data);
+            string str = utf8.GetString(dataMsg.buffer, 0, dataMsg.size);
             Assert.That(str, Is.EqualTo("Hello world"));
 
             // finally when the client disconnect,  we should get a disconnected message
@@ -122,7 +122,7 @@ namespace Telepathy.Tests
             server.Send(id, utf8.GetBytes("Hello world"));
             Message dataMsg = NextMessage(client);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
-            string str = utf8.GetString(dataMsg.data);
+            string str = utf8.GetString(dataMsg.buffer, 0, dataMsg.size);
             Assert.That(str, Is.EqualTo("Hello world"));
 
             // finally if the server stops,  the clients should get a disconnect error

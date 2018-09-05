@@ -51,7 +51,7 @@ namespace Telepathy
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                messageQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+                messageQueue.Enqueue(new Message(0, EventType.Disconnected, null, 0));
             }
             catch (Exception exception)
             {
