@@ -8,22 +8,28 @@ namespace Telepathy
     {
         public int connectionId;
         public EventType eventType;
-        public ArraySegment<byte> data;
         public byte[] buffer;
-        public int size;
-        public Message(int connectionId, EventType eventType, byte[] buffer, int size)
+        public ArraySegment<byte> segment;
+        public byte[] data {
+            get {
+                var array = new byte[segment.Count - segment.Offset];
+                Array.Copy(segment.Array, segment.Offset, array, 0, segment.Count);
+                return array;
+            }
+        }
+
+        public Message(int connectionId, EventType eventType, byte[] buffer, int size=0)
         {
             this.connectionId = connectionId;
             this.eventType = eventType;
             this.buffer = buffer;
-            this.size = size;
-            this.data = new ArraySegment<byte>(this.buffer, 0, size);
+            this.segment = new ArraySegment<byte>(this.data, 0, size);
         }
 
         public void Dispose() 
         {
-            if(buffer != null)
-                ByteArrayPool.Return(buffer);
+            if(data != null)
+                ByteArrayPool.Return(data);
         }
     }
 }
