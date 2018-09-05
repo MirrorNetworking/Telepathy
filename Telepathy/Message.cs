@@ -10,6 +10,7 @@ namespace Telepathy
         public EventType eventType;
         public byte[] buffer;
         public ArraySegment<byte> segment;
+        [Obsolete("Use segment instead, and Dispose messages.")]
         public byte[] data {
             get {
                 var array = new byte[segment.Count - segment.Offset];
@@ -23,13 +24,13 @@ namespace Telepathy
             this.connectionId = connectionId;
             this.eventType = eventType;
             this.buffer = buffer;
-            this.segment = new ArraySegment<byte>(this.data, 0, size);
+            this.segment = new ArraySegment<byte>(this.buffer, 0, size);
         }
 
         public void Dispose() 
         {
-            if(data != null)
-                ByteArrayPool.Return(data);
+            if(buffer != null)
+                ByteArrayPool.Return(buffer);
         }
     }
 }
