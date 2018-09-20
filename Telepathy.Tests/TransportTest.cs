@@ -134,6 +134,21 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ServerDisconnectClientTest()
+        {
+            Client client = new Client();
+
+            client.Connect("127.0.0.1", port);
+
+            // we  should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            bool result = server.Disconnect(id);
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
         public void GetConnectionInfoTest()
         {
             // connect a client

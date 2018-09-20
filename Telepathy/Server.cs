@@ -204,5 +204,20 @@ namespace Telepathy
             address = null;
             return false;
         }
+
+        // disconnect (kick) a client
+        public bool Disconnect(int connectionId)
+        {
+            // find the connection
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
+            {
+                // just close it. client thread will take care of the rest.
+                client.Close();
+                Logger.Log("Server.Disconnect connectionId:" + connectionId);
+                return true;
+            }
+            return false;
+        }
     }
 }
