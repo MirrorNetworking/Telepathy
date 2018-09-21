@@ -7,6 +7,7 @@ namespace Telepathy
     public class Client : Common
     {
         TcpClient client;
+        Thread thread;
 
         public bool Connected
         {
@@ -21,10 +22,15 @@ namespace Telepathy
             }
         }
 
+        // there is no easy way to check if TcpClient is connecting:
+        // - TcpClient has no flag for that
+        // - using a 'bool connecting' would require locks and lots of special
+        //   cases in case of exceptions/disconect calls etc.
+        // => checking if the thread is running (while not connected yet) is the
+        //    easiest and 100% reliable solution. no race conditions or locks.
         public bool Connecting
         {
-            // client was created by Connect() call but not fully connected yet?
-            get { return client != null && !Connected; }
+            get { return thread != null && thread.IsAlive && !Connected; }
         }
 
         // the thread function
@@ -86,7 +92,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            Thread thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue); });
+            thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue); });
             thread.IsBackground = true;
             thread.Start();
         }
@@ -96,18 +102,13 @@ namespace Telepathy
             // only if started
             if (Connecting || Connected)
             {
-                // close client, ThreadFunc will end and clean up
+                // close client
                 client.Close();
 
-                // clear client reference so that we can call Connect again
-                // immediately after calling Disconnect.
-                // -> this client's thread will end in the background in a few
-                //    milliseconds, we don't need to worry about it anymore
-                // -> setting it null here won't set it null in ThreadFunction,
-                //    because it's static and we pass a reference. so there
-                //    won't be any NullReferenceExceptions. the thread will just
-                //    end gracefully.
-                client = null;
+                // wait until thread finished. this is the only way to guarantee
+                // that we can call Connect() again immediately after Disconnect
+                if (thread != null)
+                    thread.Join();
 
                 Logger.Log("Client: disconnected");
             }
