@@ -149,6 +149,36 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ClientKickedCleanupTest()
+        {
+            Client client = new Client();
+
+            client.Connect("127.0.0.1", port);
+
+            // read connected message on client
+            Message clientConnectedMsg = NextMessage(client);
+            Assert.That(clientConnectedMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // read connected message on server
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // server kicks the client
+            bool result = server.Disconnect(id);
+            Assert.That(result, Is.True);
+
+            // wait for client disconnected message
+            Message clientDisconnectedMsg = NextMessage(client);
+            Assert.That(clientDisconnectedMsg.eventType, Is.EqualTo(EventType.Disconnected));
+
+            // was everything cleaned perfectly?
+            // if Connecting or Connected is still true then we wouldn't be able
+            // to reconnect otherwise
+            Assert.That(client.Connecting, Is.False);
+            Assert.That(client.Connected, Is.False);
+        }
+
+        [Test]
         public void GetConnectionInfoTest()
         {
             // connect a client
