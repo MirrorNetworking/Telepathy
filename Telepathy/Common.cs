@@ -38,6 +38,7 @@ namespace Telepathy
         //    bit shifting: 11ms
         // -> 10x speed improvement makes this optimization actually worth it
         // -> this way we don't need to allocate BinaryWriter/Reader either
+        // -> 4 bytes because some people may want to send messages larger than 64K bytes
         static byte[] IntToBytes(int value)
         {
             return new byte[] {
