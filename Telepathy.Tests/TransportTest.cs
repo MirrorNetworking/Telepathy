@@ -200,6 +200,28 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        [Test]
+        public void LargeMessageTest()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // we  should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // Send a large message,  bigger thank 64K
+            client.Send(new byte[100000]);
+            Message dataMsg = NextMessage(server);
+            Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
+            Assert.That(dataMsg.data.Length, Is.EqualTo(100000));
+
+            // finally if the server stops,  the clients should get a disconnect error
+            server.Stop();
+            client.Disconnect();
+
+        }
 
         static Message NextMessage(Server server)
         {

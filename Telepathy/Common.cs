@@ -32,23 +32,30 @@ namespace Telepathy
         }
 
         // static helper functions /////////////////////////////////////////////
-        // fast ushort to byte[] conversion and vice versa
+        // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:
         //    BitConverter.GetBytes(ushort): 144ms
         //    bit shifting: 11ms
         // -> 10x speed improvement makes this optimization actually worth it
         // -> this way we don't need to allocate BinaryWriter/Reader either
-        static byte[] UShortToBytes(ushort value)
+        static byte[] IntToBytes(int value)
         {
-            return new byte[]
-            {
+            return new byte[] {
                 (byte)value,
-                (byte)(value >> 8)
+                (byte)(value >> 8),
+                (byte)(value >> 16),
+                (byte)(value >> 24)
             };
         }
-        static ushort BytesToUShort(byte[] bytes)
+
+        static int BytesToInt(byte[] bytes )
         {
-            return (ushort)((bytes[1] << 8) + bytes[0]);
+            return
+                bytes[0] |
+                (bytes[1] << 8) |
+                (bytes[2] << 16) |
+                (bytes[3] << 24);
+
         }
 
         // send message (via stream) with the <size,content> message structure
@@ -61,19 +68,12 @@ namespace Telepathy
                 return false;
             }
 
-            // check size
-            if (content.Length > ushort.MaxValue)
-            {
-                Logger.LogError("Send: message too big(" + content.Length + ") max=" + ushort.MaxValue);
-                return false;
-            }
-
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
             try
             {
                 // construct header (size)
-                byte[] header = UShortToBytes((ushort)content.Length);
+                byte[] header = IntToBytes(content.Length);
 
                 // write header+content at once via payload array. writing
                 // header,payload separately would cause 2 TCP packets to be
@@ -101,10 +101,11 @@ namespace Telepathy
             content = null;
 
             // read exactly 2 bytes for header (blocking)
-            byte[] header = new byte[2];
-            if (!stream.ReadExactly(header, 2))
+            byte[] header = new byte[4];
+            if (!stream.ReadExactly(header, 4))
                 return false;
-            ushort size = BytesToUShort(header);
+
+            int size = BytesToInt(header);
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];
