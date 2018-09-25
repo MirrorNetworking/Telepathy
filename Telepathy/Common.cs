@@ -101,7 +101,7 @@ namespace Telepathy
         {
             content = null;
 
-            // read exactly 2 bytes for header (blocking)
+            // read exactly 4 bytes for header (blocking)
             byte[] header = new byte[4];
             if (!stream.ReadExactly(header, 4))
                 return false;
