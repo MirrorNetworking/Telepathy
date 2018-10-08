@@ -1,11 +1,15 @@
 ﻿// replaces ConcurrentDictionary which is not available in .NET 3.5 yet.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Telepathy
 {
     public class SafeDictionary<TKey,TValue>
     {
+        ReaderWriterLock rwLock = new ReaderWriterLock();
         Dictionary<TKey,TValue> dict = new Dictionary<TKey,TValue>();
 
         // for statistics. don't call Count and assume that it's the same after the
@@ -14,26 +18,41 @@ namespace Telepathy
         {
             get
             {
-                lock(dict)
+                try
                 {
+                    rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                     return dict.Count;
+                }
+                finally
+                {
+                    rwLock.ReleaseReaderLock();
                 }
             }
         }
 
         public void Add(TKey key, TValue value)
         {
-            lock(dict)
+            try
             {
+                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict[key] = value;
+            }
+            finally
+            {
+                rwLock.ReleaseWriterLock();
             }
         }
 
         public void Remove(TKey key)
         {
-            lock(dict)
+            try
             {
+                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict.Remove(key);
+            }
+            finally
+            {
+                rwLock.ReleaseWriterLock();
             }
         }
 
@@ -41,25 +60,40 @@ namespace Telepathy
         // so we need a TryGetValue
         public bool TryGetValue(TKey key, out TValue result)
         {
-            lock(dict)
+            try
             {
+                rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                 return dict.TryGetValue(key, out result);
+            }
+            finally
+            {
+                rwLock.ReleaseReaderLock();
             }
         }
 
         public List<TValue> GetValues()
         {
-            lock(dict)
+            try
             {
+                rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                 return dict.Values.ToList();
+            }
+            finally
+            {
+                rwLock.ReleaseReaderLock();
             }
         }
 
         public void Clear()
         {
-            lock(dict)
+            try
             {
+                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict.Clear();
+            }
+            finally
+            {
+                rwLock.ReleaseWriterLock();
             }
         }
     }
