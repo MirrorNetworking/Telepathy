@@ -9,7 +9,7 @@ namespace Telepathy
 {
     public class SafeDictionary<TKey,TValue>
     {
-        ReaderWriterLock rwLock = new ReaderWriterLock();
+        ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
         Dictionary<TKey,TValue> dict = new Dictionary<TKey,TValue>();
 
         // for statistics. don't call Count and assume that it's the same after the
@@ -18,41 +18,41 @@ namespace Telepathy
         {
             get
             {
+                rwLock.EnterReadLock();
                 try
                 {
-                    rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                     return dict.Count;
                 }
                 finally
                 {
-                    rwLock.ReleaseReaderLock();
+                    rwLock.ExitReadLock();
                 }
             }
         }
 
         public void Add(TKey key, TValue value)
         {
+            rwLock.EnterWriteLock();
             try
             {
-                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict[key] = value;
             }
             finally
             {
-                rwLock.ReleaseWriterLock();
+                rwLock.ExitWriteLock();
             }
         }
 
         public void Remove(TKey key)
         {
+            rwLock.EnterWriteLock();
             try
             {
-                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict.Remove(key);
             }
             finally
             {
-                rwLock.ReleaseWriterLock();
+                rwLock.ExitWriteLock();
             }
         }
 
@@ -60,40 +60,40 @@ namespace Telepathy
         // so we need a TryGetValue
         public bool TryGetValue(TKey key, out TValue result)
         {
+            rwLock.EnterReadLock();
             try
             {
-                rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                 return dict.TryGetValue(key, out result);
             }
             finally
             {
-                rwLock.ReleaseReaderLock();
+                rwLock.ExitReadLock();
             }
         }
 
         public List<TValue> GetValues()
         {
+            rwLock.EnterReadLock();
             try
             {
-                rwLock.AcquireReaderLock(TimeSpan.MaxValue);
                 return dict.Values.ToList();
             }
             finally
             {
-                rwLock.ReleaseReaderLock();
+                rwLock.ExitReadLock();
             }
         }
 
         public void Clear()
         {
+            rwLock.EnterWriteLock();
             try
             {
-                rwLock.AcquireWriterLock(TimeSpan.MaxValue);
                 dict.Clear();
             }
             finally
             {
-                rwLock.ReleaseWriterLock();
+                rwLock.ExitWriteLock();
             }
         }
     }
