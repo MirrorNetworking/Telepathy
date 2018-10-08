@@ -14,7 +14,7 @@ namespace Telepathy.LoadTest
                 Both();
             }
 
-            if (args[0] == "server")
+            else if (args[0] == "server")
             {
                 Server(args);
             }
