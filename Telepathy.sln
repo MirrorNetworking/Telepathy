@@ -10,8 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoadTest", "LoadTest\LoadTe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelepathyStandard", "TelepathyStandard\TelepathyStandard.csproj", "{1BC19F67-7AFA-424D-B445-42C1DB3A39EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelepathyStandard.Tests", "TelepathyStandard.Tests\TelepathyStandard.Tests.csproj", "{1AFA9BB4-1E70-4499-A0A6-B13695E231FE}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +32,6 @@ Global
 		{1BC19F67-7AFA-424D-B445-42C1DB3A39EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BC19F67-7AFA-424D-B445-42C1DB3A39EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BC19F67-7AFA-424D-B445-42C1DB3A39EB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1AFA9BB4-1E70-4499-A0A6-B13695E231FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1AFA9BB4-1E70-4499-A0A6-B13695E231FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1AFA9BB4-1E70-4499-A0A6-B13695E231FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1AFA9BB4-1E70-4499-A0A6-B13695E231FE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -4,4 +4,16 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Telepathy\Client.cs" Link="Client.cs" />
+    <Compile Include="..\Telepathy\Common.cs" Link="Common.cs" />
+    <Compile Include="..\Telepathy\EventType.cs" Link="EventType.cs" />
+    <Compile Include="..\Telepathy\Logger.cs" Link="Logger.cs" />
+    <Compile Include="..\Telepathy\Message.cs" Link="Message.cs" />
+    <Compile Include="..\Telepathy\NetworkStreamExtensions.cs" Link="NetworkStreamExtensions.cs" />
+    <Compile Include="..\Telepathy\SafeDictionary.cs" Link="SafeDictionary.cs" />
+    <Compile Include="..\Telepathy\SafeQueue.cs" Link="SafeQueue.cs" />
+    <Compile Include="..\Telepathy\Server.cs" Link="Server.cs" />
+  </ItemGroup>
+
 </Project>
