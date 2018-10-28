@@ -41,20 +41,20 @@ while (server.GetNextMessage(out msg))
 {
     switch (msg.eventType)
     {
-        case Telepathy.EventType.Connect:
+        case Telepathy.EventType.Connected:
             Console.WriteLine(msg.connectionId + " Connected");
             break;
         case Telepathy.EventType.Data:
             Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));
             break;
-        case Telepathy.EventType.Disconnect:
+        case Telepathy.EventType.Disconnected:
             Console.WriteLine(msg.connectionId + " Disconnected");
             break;
     }
 }
 
 // send a message to client with connectionId = 0 (first one)
-server.Send(0, new byte[]{0x42, 0x1337});
+server.Send(0, new byte[]{0x42, 0x13, 0x37});
 
 // stop the server when you don't need it anymore
 server.Stop();
@@ -72,13 +72,13 @@ while (client.GetNextMessage(out msg))
 {
     switch (msg.eventType)
     {
-        case Telepathy.EventType.Connect:
+        case Telepathy.EventType.Connected:
             Console.WriteLine("Connected");
             break;
         case Telepathy.EventType.Data:
             Console.WriteLine("Data: " + BitConverter.ToString(msg.data));
             break;
-        case Telepathy.EventType.Disconnect:
+        case Telepathy.EventType.Disconnected:
             Console.WriteLine("Disconnected");
             break;
     }
@@ -128,13 +128,13 @@ public class SimpleExample : MonoBehaviour
                 switch (msg.eventType)
                 {
                     case Telepathy.EventType.Connected:
-                        Console.WriteLine("Connected");
+                        Debug.Log("Connected");
                         break;
                     case Telepathy.EventType.Data:
-                        Console.WriteLine("Data: " + BitConverter.ToString(msg.data));
+                        Debug.Log("Data: " + BitConverter.ToString(msg.data));
                         break;
                     case Telepathy.EventType.Disconnected:
-                        Console.WriteLine("Disconnected");
+                        Debug.Log("Disconnected");
                         break;
                 }
             }
@@ -153,13 +153,13 @@ public class SimpleExample : MonoBehaviour
                 switch (msg.eventType)
                 {
                     case Telepathy.EventType.Connected:
-                        Console.WriteLine(msg.connectionId + " Connected");
+                        Debug.Log(msg.connectionId + " Connected");
                         break;
                     case Telepathy.EventType.Data:
-                        Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));
+                        Debug.Log(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));
                         break;
                     case Telepathy.EventType.Disconnected:
-                        Console.WriteLine(msg.connectionId + " Disconnected");
+                        Debug.Log(msg.connectionId + " Disconnected");
                         break;
                 }
             }
