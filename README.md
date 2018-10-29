@@ -63,7 +63,7 @@ server.Stop();
 # Using the Telepathy Client
 ```C#
 // create and connect the client
-Telepathy.Client Client = new Telepathy.Client();
+Telepathy.Client client = new Telepathy.Client();
 client.Connect("localhost", 1337);
 
 // grab all new messages. do this in your Update loop.
