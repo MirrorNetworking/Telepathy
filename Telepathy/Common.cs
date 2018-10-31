@@ -83,8 +83,6 @@ namespace Telepathy
                 Array.Copy(content, 0, payload, header.Length, content.Length);
                 stream.Write(payload, 0, payload.Length);
 
-                // flush to make sure it is being sent immediately
-                stream.Flush();
                 return true;
             }
             catch (Exception exception)

@@ -15,6 +15,8 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<int, TcpClient> clients = new SafeDictionary<int, TcpClient>();
 
+        public bool NoDelay { get; set; } = true;
+
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
         //  multiple threads later in case of WebSockets etc.)
@@ -58,7 +60,7 @@ namespace Telepathy
                 // start listener
                 // (NoDelay disables nagle algorithm. lowers CPU% and latency)
                 listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
-                listener.Server.NoDelay = true;
+                listener.Server.NoDelay = this.NoDelay;
                 listener.Start();
                 Logger.Log("Server: listening port=" + port + " max=" + maxConnections);
 
