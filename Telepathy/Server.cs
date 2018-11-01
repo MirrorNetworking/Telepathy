@@ -15,7 +15,7 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<int, TcpClient> clients = new SafeDictionary<int, TcpClient>();
 
-        public bool NoDelay { get; set; } = true;
+        public bool NoDelay = true;
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
