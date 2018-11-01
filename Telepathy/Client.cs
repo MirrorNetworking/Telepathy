@@ -22,7 +22,7 @@ namespace Telepathy
             }
         }
 
-        public bool NoDelay { get; set; } = true;
+        public bool NoDelay = true;
 
         // there is no easy way to check if TcpClient is connecting:
         // - TcpClient has no flag for that
