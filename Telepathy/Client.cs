@@ -80,7 +80,8 @@ namespace Telepathy
             // time.
             client = new TcpClient();
 
-            // (NoDelay disables nagle algorithm. lowers CPU% and latency)
+            // NoDelay disables nagle algorithm. lowers CPU% and latency
+            // but increases bandwidth
             client.NoDelay = this.NoDelay;
 
             // clear old messages in queue, just to be sure that the caller
