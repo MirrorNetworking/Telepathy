@@ -22,7 +22,7 @@ namespace Telepathy
             }
         }
 
-        public bool NoDelay = true;
+        public bool NoDelay = false;
 
         // there is no easy way to check if TcpClient is connecting:
         // - TcpClient has no flag for that
@@ -126,6 +126,14 @@ namespace Telepathy
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;
+        }
+
+        public void Flush()
+        {
+            if (Connected)
+            {
+                client.GetStream().Flush();
+            }
         }
     }
 }

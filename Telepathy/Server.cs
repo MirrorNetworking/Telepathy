@@ -15,7 +15,10 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<int, TcpClient> clients = new SafeDictionary<int, TcpClient>();
 
-        public bool NoDelay = true;
+        // clients that need flushing
+        HashSet<int> dirtyClients = new HashSet<int>();
+
+        public bool NoDelay = false;
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -180,6 +183,10 @@ namespace Telepathy
                 // GetStream() might throw exception if client is disconnected
                 try
                 {
+                    if (!NoDelay)
+                    {
+                        dirtyClients.Add(connectionId);
+                    }
                     NetworkStream stream = client.GetStream();
                     return SendMessage(stream, data);
                 }
@@ -221,6 +228,25 @@ namespace Telepathy
                 return true;
             }
             return false;
+        }
+
+        public void Flush()
+        {
+            foreach (var connectionId in dirtyClients)
+            {
+                if (clients.TryGetValue(connectionId, out TcpClient client))
+                {
+                    try
+                    {
+                        client.GetStream().Flush();
+                    }
+                    catch (Exception exception)
+                    {
+                        Logger.LogWarning("Server.Flush exception: " + exception);
+                    }
+                }
+            }
+            dirtyClients.Clear();
         }
     }
 }
