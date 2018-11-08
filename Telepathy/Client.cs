@@ -22,6 +22,8 @@ namespace Telepathy
             }
         }
 
+        public bool NoDelay = true;
+
         // there is no easy way to check if TcpClient is connecting:
         // - TcpClient has no flag for that
         // - using a 'bool connecting' would require locks and lots of special
@@ -42,8 +44,6 @@ namespace Telepathy
             try
             {
                 // connect (blocking)
-                // (NoDelay disables nagle algorithm. lowers CPU% and latency)
-                client.NoDelay = true;
                 client.Connect(ip, port);
 
                 // run the receive loop
@@ -79,6 +79,10 @@ namespace Telepathy
             // TcpClient can only be used once. need to create a new one each
             // time.
             client = new TcpClient();
+
+            // NoDelay disables nagle algorithm. lowers CPU% and latency
+            // but increases bandwidth
+            client.NoDelay = this.NoDelay;
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
