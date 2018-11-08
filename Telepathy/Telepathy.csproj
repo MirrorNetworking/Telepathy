@@ -3,6 +3,13 @@
   <PropertyGroup>
     <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>Anne;Bob</Authors>
+    <Company>Contoso</Company>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyTitle>My library</AssemblyTitle>
+    <Description>This is my library.  And it's really great!</Description>
+    <Copyright>Nugetizer 3000</Copyright>
+    <UserSecretsId>xyz123</UserSecretsId>
   </PropertyGroup>
 
 </Project>
