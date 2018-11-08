@@ -6,7 +6,7 @@ namespace Telepathy
 {
     public class Client : Common
     {
-        TcpClient client;
+        public TcpClient client;
         Thread thread;
 
         public bool Connected
