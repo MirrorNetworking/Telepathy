@@ -50,6 +50,16 @@ namespace Telepathy
             get { return listenerThread != null && listenerThread.IsAlive; }
         }
 
+        public TcpClient GetClient(int connectionId)
+        {
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
+            {
+                return client;
+            }
+            return null;
+        }
+
         // the listener thread's listen function
         void Listen(int port, int maxConnections)
         {
