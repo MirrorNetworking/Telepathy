@@ -3,13 +3,11 @@
   <PropertyGroup>
     <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Authors>Anne;Bob</Authors>
-    <Company>Contoso</Company>
+    <Authors>Vis2K; Paul</Authors>
+    <Company>Telepathy</Company>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <AssemblyTitle>My library</AssemblyTitle>
-    <Description>This is my library.  And it's really great!</Description>
-    <Copyright>Nugetizer 3000</Copyright>
-    <UserSecretsId>xyz123</UserSecretsId>
+    <AssemblyTitle>Telepathy</AssemblyTitle>
+    <Description>TCP based transport for use in Unity</Description>
   </PropertyGroup>
 
 </Project>
