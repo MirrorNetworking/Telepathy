@@ -10,4 +10,7 @@
     <Description>TCP based transport for use in Unity</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
 </Project>
