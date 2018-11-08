@@ -9,7 +9,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Telepathy\Telepathy.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
 </Project>
