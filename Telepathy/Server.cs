@@ -22,7 +22,7 @@ namespace Telepathy
         //  multiple threads later in case of WebSockets etc.)
         // -> static so that another server instance doesn't start at 0 again.
         static int counter = 0;
-        
+
         // public next id function in case someone needs to reserve an id
         // (e.g. if hostMode should always have 0 connection and external
         //  connections should start at 1, etc.)
