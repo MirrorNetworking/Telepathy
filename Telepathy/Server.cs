@@ -50,9 +50,14 @@ namespace Telepathy
             get { return listenerThread != null && listenerThread.IsAlive; }
         }
 
-        public bool TryGetClient(int connectionId, out TcpClient client)
+        public TcpClient GetClient(int connectionId)
         {
-            return clients.TryGetValue(connectionId, out client);
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
+            {
+                return client;
+            }
+            return null;
         }
 
         // the listener thread's listen function
