@@ -15,17 +15,14 @@ namespace Telepathy
         // clients with <connectionId, TcpClient>
         SafeDictionary<int, TcpClient> clients = new SafeDictionary<int, TcpClient>();
 
-        // clients that need flushing
-        HashSet<int> dirtyClients = new HashSet<int>();
-
-        public bool NoDelay = false;
+        public bool NoDelay = true;
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
         //  multiple threads later in case of WebSockets etc.)
         // -> static so that another server instance doesn't start at 0 again.
         static int counter = 0;
-
+        
         // public next id function in case someone needs to reserve an id
         // (e.g. if hostMode should always have 0 connection and external
         //  connections should start at 1, etc.)
@@ -51,6 +48,11 @@ namespace Telepathy
         public bool Active
         {
             get { return listenerThread != null && listenerThread.IsAlive; }
+        }
+
+        public bool TryGetClient(int connectionId, out TcpClient client)
+        {
+            return clients.TryGetValue(connectionId, out client);
         }
 
         // the listener thread's listen function
@@ -183,10 +185,6 @@ namespace Telepathy
                 // GetStream() might throw exception if client is disconnected
                 try
                 {
-                    if (!NoDelay)
-                    {
-                        dirtyClients.Add(connectionId);
-                    }
                     NetworkStream stream = client.GetStream();
                     return SendMessage(stream, data);
                 }
@@ -228,25 +226,6 @@ namespace Telepathy
                 return true;
             }
             return false;
-        }
-
-        public void Flush()
-        {
-            foreach (var connectionId in dirtyClients)
-            {
-                if (clients.TryGetValue(connectionId, out TcpClient client))
-                {
-                    try
-                    {
-                        client.GetStream().Flush();
-                    }
-                    catch (Exception exception)
-                    {
-                        Logger.LogWarning("Server.Flush exception: " + exception);
-                    }
-                }
-            }
-            dirtyClients.Clear();
         }
     }
 }

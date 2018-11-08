@@ -6,7 +6,7 @@ namespace Telepathy
 {
     public class Client : Common
     {
-        TcpClient client;
+        public TcpClient client;
         Thread thread;
 
         public bool Connected
@@ -22,7 +22,7 @@ namespace Telepathy
             }
         }
 
-        public bool NoDelay = false;
+        public bool NoDelay = true;
 
         // there is no easy way to check if TcpClient is connecting:
         // - TcpClient has no flag for that
@@ -126,14 +126,6 @@ namespace Telepathy
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;
-        }
-
-        public void Flush()
-        {
-            if (Connected)
-            {
-                client.GetStream().Flush();
-            }
         }
     }
 }
