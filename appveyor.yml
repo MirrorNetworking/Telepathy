@@ -24,7 +24,7 @@ artifacts:
   - path: '**\*.nupkg'
 
   - path: Telepathy\bin\$(configuration)\
-    name: Telepathy-$(configuration)
+    name: Telepathy
     
 image: Visual Studio 2017
 
