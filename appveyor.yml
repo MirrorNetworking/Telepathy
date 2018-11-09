@@ -12,10 +12,20 @@ dotnet_csproj:
   file_version: '{version}'
   informational_version: '{version}'
 
+configuration:
+  - Debug
+  - Release
+
 build:
   project: Telepathy.sln
   verbosity: minimal
 
+artifacts:
+  - path: '**\*.nupkg'
+
+  - path: Telepathy\bin\$(configuration)\
+    name: Telepathy-$(configuration)
+    
 image: Visual Studio 2017
 
 test_script:
