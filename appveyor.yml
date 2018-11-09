@@ -2,24 +2,37 @@ version: '1.0.{build}'
 
 before_build:
   - nuget restore
-  
-assembly_info:
+
+dotnet_csproj:
   patch: true
-  file: AssemblyInfo.*
-  assembly_version: "{version}"
-  assembly_file_version: "{version}"
-  assembly_informational_version: "{version}-rc1"
+  file: '**\*.csproj'
+  version: '{version}'
+  package_version: '{version}'
+  assembly_version: '{version}'
+  file_version: '{version}'
+  informational_version: '{version}'
+
+configuration:
+  - Debug
+  - Release
 
 build:
-  publish_nuget: true
-  publish_nuget_symbols: true
   project: Telepathy.sln
   verbosity: minimal
+
+artifacts:
+  - path: '**\*.nupkg'
+
+  - path: Telepathy\bin\$(configuration)\
+    name: Telepathy
+    
+cache:
+  - '%USERPROFILE%\.nuget\packages -> **\*.csproj'
 
 image: Visual Studio 2017
 
 test_script:
-  - packages\OpenCover.4.6.519\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:"Telepathy.Tests\bin\Debug\Telepathy.Tests.dll" -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "
+  - '%USERPROFILE%\.nuget\packages\opencover\4.6.519\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:Telepathy.Tests\bin\%CONFIGURATION%\net35\Telepathy.Tests.dll -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "'
 
 after_test:
   - ps: |
