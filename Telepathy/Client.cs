@@ -124,8 +124,6 @@ namespace Telepathy
                 // that we can call Connect() again immediately after Disconnect
                 if (thread != null)
                     thread.Join();
-
-                Logger.Log("Client: disconnected");
             }
         }
 
