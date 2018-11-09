@@ -37,8 +37,7 @@ namespace Telepathy
         public bool Connecting { get { return _Connecting.State; } }
 
         // the thread function
-        // (static to reduce state for maximum reliability)
-        static void ThreadFunction(TcpClient client, string ip, int port, SafeQueue<Message> messageQueue, SafeBoolean connecting)
+        void ThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -46,7 +45,7 @@ namespace Telepathy
             {
                 // connect (blocking)
                 client.Connect(ip, port);
-                connecting.State = false;
+                _Connecting.State = false;
 
                 // run the receive loop
                 ReceiveLoop(0, client, messageQueue);
@@ -69,7 +68,7 @@ namespace Telepathy
 
             // Connect might have failed. thread might have been closed.
             // let's reset connecting state no matter what.
-            connecting.State = false;
+            _Connecting.State = false;
 
             // if we got here then we are done. ReceiveLoop cleans up already,
             // but we may never get there if connect fails. so let's clean up
@@ -105,7 +104,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue, _Connecting); });
+            thread = new Thread(() => { ThreadFunction(ip, port); });
             thread.IsBackground = true;
             thread.Start();
         }
