@@ -40,7 +40,6 @@ namespace Telepathy
         public bool Connecting { get { return _Connecting; } }
 
         // the thread function
-        // (static to reduce state for maximum reliability)
         void ThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
