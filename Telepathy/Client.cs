@@ -24,20 +24,21 @@ namespace Telepathy
 
         public bool NoDelay = true;
 
-        // there is no easy way to check if TcpClient is connecting:
-        // - TcpClient has no flag for that
-        // - using a 'bool connecting' would require locks and lots of special
-        //   cases in case of exceptions/disconect calls etc.
-        // => checking if the thread is running (while not connected yet) is the
-        //    easiest and 100% reliable solution. no race conditions or locks.
-        public bool Connecting
-        {
-            get { return thread != null && thread.IsAlive && !Connected; }
-        }
+        // TcpClient has no 'connecting' state to check. We need to keep track
+        // of it manually.
+        // -> checking 'thread.IsAlive && !Connected' is not enough because. the
+        //    thread is alive and connected is false for a short moment after
+        //    disconnecting, so this would cause race conditions.
+        // -> we use a threadsafe bool wrapper so that ThreadFunction can remain
+        //    static (it needs a common lock)
+        // => Connecting is true from first Connect() call in here, through the
+        //    thread start, until TcpClient.Connect() returns. Simple and clear.
+        SafeBoolean _Connecting = new SafeBoolean();
+        public bool Connecting { get { return _Connecting.State; } }
 
         // the thread function
         // (static to reduce state for maximum reliability)
-        static void ThreadFunction(TcpClient client, string ip, int port, SafeQueue<Message> messageQueue)
+        static void ThreadFunction(TcpClient client, string ip, int port, SafeQueue<Message> messageQueue, SafeBoolean connecting)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -45,6 +46,7 @@ namespace Telepathy
             {
                 // connect (blocking)
                 client.Connect(ip, port);
+                connecting.State = false;
 
                 // run the receive loop
                 ReceiveLoop(0, client, messageQueue);
@@ -65,6 +67,10 @@ namespace Telepathy
                 Logger.LogError("Client Exception: " + exception);
             }
 
+            // Connect might have failed. thread might have been closed.
+            // let's reset connecting state no matter what.
+            connecting.State = false;
+
             // if we got here then we are done. ReceiveLoop cleans up already,
             // but we may never get there if connect fails. so let's clean up
             // here too.
@@ -75,6 +81,9 @@ namespace Telepathy
         {
             // not if already started
             if (Connecting || Connected) return;
+
+            // We are connecting from now until Connect succeeds or fails
+            _Connecting.State = true;
 
             // TcpClient can only be used once. need to create a new one each
             // time.
@@ -96,7 +105,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue); });
+            thread = new Thread(() => { ThreadFunction(client, ip, port, messageQueue, _Connecting); });
             thread.IsBackground = true;
             thread.Start();
         }
