@@ -33,8 +33,11 @@ namespace Telepathy
         //    static (it needs a common lock)
         // => Connecting is true from first Connect() call in here, through the
         //    thread start, until TcpClient.Connect() returns. Simple and clear.
-        SafeBoolean _Connecting = new SafeBoolean();
-        public bool Connecting { get { return _Connecting.State; } }
+        // => bools are atomic according to  
+        //    https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables
+        //    made volatile so the compiler does not reorder access to it
+        volatile bool _Connecting;
+        public bool Connecting { get { return _Connecting; } }
 
         // the thread function
         void ThreadFunction(string ip, int port)
@@ -45,7 +48,7 @@ namespace Telepathy
             {
                 // connect (blocking)
                 client.Connect(ip, port);
-                _Connecting.State = false;
+                _Connecting = false;
 
                 // run the receive loop
                 ReceiveLoop(0, client, messageQueue);
@@ -68,7 +71,7 @@ namespace Telepathy
 
             // Connect might have failed. thread might have been closed.
             // let's reset connecting state no matter what.
-            _Connecting.State = false;
+            _Connecting = false;
 
             // if we got here then we are done. ReceiveLoop cleans up already,
             // but we may never get there if connect fails. so let's clean up
@@ -82,7 +85,7 @@ namespace Telepathy
             if (Connecting || Connected) return;
 
             // We are connecting from now until Connect succeeds or fails
-            _Connecting.State = true;
+            _Connecting = true;
 
             // TcpClient can only be used once. need to create a new one each
             // time.
