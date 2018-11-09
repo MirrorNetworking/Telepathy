@@ -1,4 +1,4 @@
-﻿// common code used by server and client
+// common code used by server and client
 using System;
 using System.Net.Sockets;
 using System.Threading;
@@ -184,17 +184,20 @@ namespace Telepathy
                 Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
             }
 
-            // if we got here then either the client while loop ended, or an
-            // exception happened. disconnect
-            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
-
-            // this sleep forces a race condition
-            // It causes ClientKickedCleanupTest to fail reliably.
-            Thread.Sleep(1000);
-
             // clean up no matter what
             stream.Close();
             client.Close();
+
+            // add 'Disconnected' message after disconnecting properly.
+            // -> always AFTER closing the streams to avoid a race condition
+            //    where Disconnected -> Reconnect wouldn't work because
+            //    Connected is still true for a short moment before the stream
+            //    would be closed.
+            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            
+            // this sleep forces a race condition
+            // It causes ClientKickedCleanupTest to fail reliably.
+            Thread.Sleep(1000);
         }
     }
 }
