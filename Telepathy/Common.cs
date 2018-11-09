@@ -1,6 +1,7 @@
 ﻿// common code used by server and client
 using System;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace Telepathy
 {
@@ -186,6 +187,10 @@ namespace Telepathy
             // if we got here then either the client while loop ended, or an
             // exception happened. disconnect
             messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+
+            // this sleep forces a race condition
+            // It causes ClientKickedCleanupTest to fail reliably.
+            Thread.Sleep(1000);
 
             // clean up no matter what
             stream.Close();
