@@ -191,7 +191,7 @@ namespace Telepathy
                 // GetStream() might throw exception if client is disconnected
                 try
                 {
-                    NetworkStream stream = client.GetStream();
+                    Stream stream = GetStream(client);
                     return SendMessage(stream, data);
                 }
                 catch (Exception exception)
