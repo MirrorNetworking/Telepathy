@@ -98,7 +98,7 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        protected static bool ReadMessageBlocking(Stream stream, out byte[] content)
         {
             content = null;
 
@@ -117,12 +117,17 @@ namespace Telepathy
             return true;
         }
 
+        public virtual Stream GetStream(TcpClient client)
+        {
+            return client.GetStream();
+        }
+
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
+        protected virtual void ReceiveLoop(int connectionId, TcpClient client)
         {
             // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
+            Stream stream = GetStream(client);
 
             // keep track of last message queue warning
             DateTime messageQueueLastWarning = DateTime.Now;

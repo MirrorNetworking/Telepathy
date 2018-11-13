@@ -99,7 +99,7 @@ namespace Telepathy
                             clients.Add(connectionId, client);
 
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, messageQueue);
+                            ReceiveLoop(connectionId, client);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);
@@ -156,7 +156,7 @@ namespace Telepathy
             listenerThread.Start();
         }
 
-        public virtual void Stop()
+        public void Stop()
         {
             // only if started
             if (!Active) return;
@@ -173,7 +173,7 @@ namespace Telepathy
             {
                 // close the stream if not closed yet. it may have been closed
                 // by a disconnect already, so use try/catch
-                try { client.GetStream().Close(); } catch {}
+                try { GetStream(client).Close(); } catch {}
                 client.Close();
             }
 
@@ -181,37 +181,26 @@ namespace Telepathy
             clients.Clear();
         }
 
-        public virtual Stream GetStream(int connectionId)
-        {
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
-            {
-                // GetStream() might throw exception if client is disconnected
-                NetworkStream stream = client.GetStream();
-                return stream;
-            }
-            return null;
-        }
-
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
             // find the connection
-            // GetStream() might throw exception if client is disconnected
-            try
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
             {
-                Stream stream = GetStream(connectionId);
-                if (stream == null)
-                    Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
-                else
+                // GetStream() might throw exception if client is disconnected
+                try
+                {
+                    NetworkStream stream = client.GetStream();
                     return SendMessage(stream, data);
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogWarning("Server.Send exception: " + exception);
+                    return false;
+                }
             }
-            catch (Exception exception)
-            {
-                Logger.LogWarning("Server.Send exception: " + exception);
-                return false;
-            }
-
+            Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
             return false;
         }
 

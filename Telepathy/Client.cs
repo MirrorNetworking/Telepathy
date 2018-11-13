@@ -130,16 +130,11 @@ namespace Telepathy
             }
         }
 
-        public virtual Stream GetStream()
-        {
-            return client.GetStream();
-        }
-
         public bool Send(byte[] data)
         {
             if (Connected)
             {
-                return SendMessage(GetStream(), data);
+                return SendMessage(GetStream(client), data);
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;
