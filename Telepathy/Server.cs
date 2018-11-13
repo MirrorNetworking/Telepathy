@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -155,7 +156,7 @@ namespace Telepathy
             listenerThread.Start();
         }
 
-        public void Stop()
+        public virtual void Stop()
         {
             // only if started
             if (!Active) return;
@@ -180,26 +181,37 @@ namespace Telepathy
             clients.Clear();
         }
 
-        // send message to client using socket connection.
-        public bool Send(int connectionId, byte[] data)
+        public virtual Stream GetStream(int connectionId)
         {
-            // find the connection
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
                 // GetStream() might throw exception if client is disconnected
-                try
-                {
-                    NetworkStream stream = client.GetStream();
-                    return SendMessage(stream, data);
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogWarning("Server.Send exception: " + exception);
-                    return false;
-                }
+                NetworkStream stream = client.GetStream();
+                return stream;
             }
-            Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+            return null;
+        }
+
+        // send message to client using socket connection.
+        public bool Send(int connectionId, byte[] data)
+        {
+            // find the connection
+            // GetStream() might throw exception if client is disconnected
+            try
+            {
+                Stream stream = GetStream(connectionId);
+                if (stream == null)
+                    Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+                else
+                    return SendMessage(stream, data);
+            }
+            catch (Exception exception)
+            {
+                Logger.LogWarning("Server.Send exception: " + exception);
+                return false;
+            }
+
             return false;
         }
 

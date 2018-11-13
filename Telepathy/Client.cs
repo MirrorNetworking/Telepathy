@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -129,11 +130,16 @@ namespace Telepathy
             }
         }
 
+        public virtual Stream GetStream()
+        {
+            return client.GetStream();
+        }
+
         public bool Send(byte[] data)
         {
             if (Connected)
             {
-                return SendMessage(client.GetStream(), data);
+                return SendMessage(GetStream(), data);
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;

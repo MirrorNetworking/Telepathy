@@ -1,5 +1,6 @@
 ﻿// common code used by server and client
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -62,7 +63,7 @@ namespace Telepathy
         }
 
         // send message (via stream) with the <size,content> message structure
-        protected static bool SendMessage(NetworkStream stream, byte[] content)
+        protected static bool SendMessage(Stream stream, byte[] content)
         {
             // can we still write to this socket (not disconnected?)
             if (!stream.CanWrite)
