@@ -113,7 +113,7 @@ namespace Telepathy
             thread.Start();
         }
 
-        public void Disconnect()
+        public virtual void Disconnect()
         {
             // only if started
             if (Connecting || Connected)
