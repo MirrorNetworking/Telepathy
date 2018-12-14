@@ -89,6 +89,7 @@ namespace Telepathy
             // time.
             client = new TcpClient();
             client.NoDelay = NoDelay;
+            client.SendTimeout = SendTimeout;
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.

@@ -36,6 +36,10 @@ namespace Telepathy
         // increases bandwidth
         public bool NoDelay = true;
 
+        // Send would stall forever if the network is cut off during a send, so
+        // we need a timeout (in milliseconds)
+        public int SendTimeout = 5000;
+
         // static helper functions /////////////////////////////////////////////
         // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:
