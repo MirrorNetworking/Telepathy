@@ -67,7 +67,7 @@ namespace Telepathy
             {
                 // start listener
                 listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
-                listener.Server.NoDelay = this.NoDelay;
+                listener.Server.NoDelay = NoDelay;
                 listener.Start();
                 Logger.Log("Server: listening port=" + port + " max=" + maxConnections);
 

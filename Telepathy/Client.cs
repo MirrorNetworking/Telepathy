@@ -88,7 +88,7 @@ namespace Telepathy
             // TcpClient can only be used once. need to create a new one each
             // time.
             client = new TcpClient();
-            client.NoDelay = this.NoDelay;
+            client.NoDelay = NoDelay;
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
