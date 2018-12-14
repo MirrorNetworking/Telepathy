@@ -32,6 +32,10 @@ namespace Telepathy
             return messageQueue.TryDequeue(out message);
         }
 
+        // NoDelay disables nagle algorithm. lowers CPU% and latency but
+        // increases bandwidth
+        public bool NoDelay = true;
+
         // static helper functions /////////////////////////////////////////////
         // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:

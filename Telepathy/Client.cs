@@ -22,8 +22,6 @@ namespace Telepathy
             }
         }
 
-        public bool NoDelay = true;
-
         // TcpClient has no 'connecting' state to check. We need to keep track
         // of it manually.
         // -> checking 'thread.IsAlive && !Connected' is not enough because. the
@@ -33,7 +31,7 @@ namespace Telepathy
         //    static (it needs a common lock)
         // => Connecting is true from first Connect() call in here, through the
         //    thread start, until TcpClient.Connect() returns. Simple and clear.
-        // => bools are atomic according to  
+        // => bools are atomic according to
         //    https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables
         //    made volatile so the compiler does not reorder access to it
         volatile bool _Connecting;
@@ -90,9 +88,6 @@ namespace Telepathy
             // TcpClient can only be used once. need to create a new one each
             // time.
             client = new TcpClient();
-
-            // NoDelay disables nagle algorithm. lowers CPU% and latency
-            // but increases bandwidth
             client.NoDelay = this.NoDelay;
 
             // clear old messages in queue, just to be sure that the caller
