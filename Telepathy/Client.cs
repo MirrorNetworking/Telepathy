@@ -52,13 +52,7 @@ namespace Telepathy
                 // TODO timeout again. or return immediately and wait for the connect to finish
                 socket.BeginConnect(remoteEP,
                     new AsyncCallback(ConnectCallback), socket);
-                connectDone.WaitOne();
-
-                // add connected event to queue
-                messageQueue.Enqueue(new Message(0, EventType.Connected, null));
-
-                // start receive loop
-                Receive(socket);
+                //connectDone.WaitOne(); <- don't wait. return immediately. we have Connecting() to check status
 
                 return true;
             }
@@ -83,6 +77,11 @@ namespace Telepathy
 
                 // Signal that the connection has been made.
                 connectDone.Set();
+
+                // add connected event to queue
+                messageQueue.Enqueue(new Message(0, EventType.Connected, null));
+                // start receive loop
+                Receive(socket);
             }
             catch (Exception e)
             {
