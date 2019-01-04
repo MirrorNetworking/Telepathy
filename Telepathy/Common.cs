@@ -8,6 +8,24 @@ namespace Telepathy
     public abstract class Common
     {
         // common code /////////////////////////////////////////////////////////
+        // State object for reading client data asynchronously
+        public class StateObject
+        {
+            // Connection Id
+            public int connectionId;
+            // Client  socket.
+            public Socket workSocket;
+            // Size of receive buffer.
+            public const int BufferSize = 4096;
+            // Receive buffer.
+            public byte[] header = new byte[4];
+            public int contentSize;
+            public int contentPosition;
+            public byte[] content;
+            // keep track of last message queue warning
+            public DateTime messageQueueLastWarning = DateTime.Now;
+        }
+
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
         protected SafeQueue<Message> messageQueue = new SafeQueue<Message>();
@@ -32,14 +50,6 @@ namespace Telepathy
             return messageQueue.TryDequeue(out message);
         }
 
-        // NoDelay disables nagle algorithm. lowers CPU% and latency but
-        // increases bandwidth
-        public bool NoDelay = true;
-
-        // Send would stall forever if the network is cut off during a send, so
-        // we need a timeout (in milliseconds)
-        public int SendTimeout = 5000;
-
         // static helper functions /////////////////////////////////////////////
         // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:
@@ -49,7 +59,7 @@ namespace Telepathy
         // -> this way we don't need to allocate BinaryWriter/Reader either
         // -> 4 bytes because some people may want to send messages larger than
         //    64K bytes
-        static byte[] IntToBytes(int value)
+        public static byte[] IntToBytes(int value)
         {
             return new byte[] {
                 (byte)value,
@@ -59,7 +69,7 @@ namespace Telepathy
             };
         }
 
-        static int BytesToInt(byte[] bytes )
+        public static int BytesToInt(byte[] bytes )
         {
             return
                 bytes[0] |
@@ -69,104 +79,58 @@ namespace Telepathy
 
         }
 
-        // send message (via stream) with the <size,content> message structure
-        protected static bool SendMessage(NetworkStream stream, byte[] content)
+        // receive /////////////////////////////////////////////////////////////
+        protected void ReadHeaderCallback(IAsyncResult ar)
         {
-            // can we still write to this socket (not disconnected?)
-            if (!stream.CanWrite)
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            StateObject state = (StateObject) ar.AsyncState;
+            Socket handler = state.workSocket;
+
+            // Read data from the client socket.
+            int bytesRead = handler.EndReceive(ar);
+            if (bytesRead == 4)
             {
-                Logger.LogWarning("Send: stream not writeable: " + stream);
-                return false;
+                // convert to int and save it
+                state.contentSize = BytesToInt(state.header);
+
+                // read up to 'size' content bytes (it might read less if not all is there yet)
+                state.contentPosition = 0;
+                state.content = new byte[state.contentSize];
+                handler.BeginReceive(state.content, 0, state.contentSize, 0,
+                    new AsyncCallback(ReadContentCallback), state);
             }
-
-            // stream.Write throws exceptions if client sends with high
-            // frequency and the server stops
-            try
+            else
             {
-                // construct header (size)
-                byte[] header = IntToBytes(content.Length);
+                Logger.LogWarning("ReadHeaderCallback ended for client: " + handler + " because header wasn't read fully(" + bytesRead + ")");
 
-                // write header+content at once via payload array. writing
-                // header,payload separately would cause 2 TCP packets to be
-                // sent if nagle's algorithm is disabled(2x TCP header overhead)
-                byte[] payload = new byte[header.Length + content.Length];
-                Array.Copy(header, payload, header.Length);
-                Array.Copy(content, 0, payload, header.Length, content.Length);
-                stream.Write(payload, 0, payload.Length);
+                // if we got here then either the client while loop ended, or an exception happened.
+                // disconnect
+                messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
 
-                return true;
-            }
-            catch (Exception exception)
-            {
-                // log as regular message because servers do shut down sometimes
-                Logger.Log("Send: stream.Write exception: " + exception);
-                return false;
+                Logger.LogWarning("TODO if server then remove from clients dict");
             }
         }
 
-        // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        protected void ReadContentCallback(IAsyncResult ar)
         {
-            content = null;
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            StateObject state = (StateObject)ar.AsyncState;
+            Socket handler = state.workSocket;
 
-            // read exactly 4 bytes for header (blocking)
-            byte[] header = new byte[4];
-            if (!stream.ReadExactly(header, 4))
-                return false;
-
-            int size = BytesToInt(header);
-
-            // read exactly 'size' bytes for content (blocking)
-            content = new byte[size];
-            if (!stream.ReadExactly(content, size))
-                return false;
-
-            return true;
-        }
-
-        // thread receive function is the same for client and server's clients
-        // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
-        {
-            // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
-
-            // keep track of last message queue warning
-            DateTime messageQueueLastWarning = DateTime.Now;
-
-            // absolutely must wrap with try/catch, otherwise thread exceptions
-            // are silent
-            try
+            // Read data from the client socket.
+            int bytesRead = handler.EndReceive(ar);
+            if (bytesRead > 0)
             {
-                // add connected event to queue with ip address as data in case
-                // it's needed
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                // we just read 'n' bytes, so update our content position
+                state.contentPosition += bytesRead;
 
-                // let's talk about reading data.
-                // -> normally we would read as much as possible and then
-                //    extract as many <size,content>,<size,content> messages
-                //    as we received this time. this is really complicated
-                //    and expensive to do though
-                // -> instead we use a trick:
-                //      Read(2) -> size
-                //        Read(size) -> content
-                //      repeat
-                //    Read is blocking, but it doesn't matter since the
-                //    best thing to do until the full message arrives,
-                //    is to wait.
-                // => this is the most elegant AND fast solution.
-                //    + no resizing
-                //    + no extra allocations, just one for the content
-                //    + no crazy extraction logic
-                while (true)
+                // did we read the full content yet?
+                if (state.contentPosition == state.contentSize)
                 {
-                    // read the next message (blocking) or stop if stream closed
-                    byte[] content;
-                    if (!ReadMessageBlocking(stream, out content))
-                        break;
-
                     // queue it
-                    messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+                    messageQueue.Enqueue(new Message(state.connectionId, EventType.Data, state.content));
 
                     // and show a warning if the queue gets too big
                     // -> we don't want to show a warning every single time,
@@ -176,33 +140,80 @@ namespace Telepathy
                     //    use most it's processing power to hopefully process it.
                     if (messageQueue.Count > messageQueueSizeWarning)
                     {
-                        TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
+                        TimeSpan elapsed = DateTime.Now - state.messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
                             Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                            messageQueueLastWarning = DateTime.Now;
+                            state.messageQueueLastWarning = DateTime.Now;
                         }
                     }
+
+                    // start reading the next header
+                    handler.BeginReceive(state.header, 0, 4, 0,
+                        new AsyncCallback(ReadHeaderCallback), state);
+                }
+                // otherwise keep reading content
+                else
+                {
+                    handler.BeginReceive(state.content, state.contentPosition, state.contentSize - state.contentPosition, 0,
+                        new AsyncCallback(ReadContentCallback), state);
                 }
             }
-            catch (Exception exception)
+            else
             {
-                // something went wrong. the thread was interrupted or the
-                // connection closed or we closed our own connection or ...
-                // -> either way we should stop gracefully
-                Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
+                // TODO if debug?
+                Logger.Log("ReadCallback ended for client: " + handler);
+
+                // if we got here then either the client while loop ended, or an exception happened.
+                // disconnect
+                messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
+
+                Logger.LogWarning("TODO if server then remove from clients dict");
             }
+        }
 
-            // clean up no matter what
-            stream.Close();
-            client.Close();
+        // send ////////////////////////////////////////////////////////////////
+        public void Send(Socket socket, byte[] content)
+        {
+            // construct header (size)
+            byte[] header = IntToBytes(content.Length);
 
-            // add 'Disconnected' message after disconnecting properly.
-            // -> always AFTER closing the streams to avoid a race condition
-            //    where Disconnected -> Reconnect wouldn't work because
-            //    Connected is still true for a short moment before the stream
-            //    would be closed.
-            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            // write header+content at once via payload array. writing
+            // header,payload separately would cause 2 TCP packets to be
+            // sent if nagle's algorithm is disabled(2x TCP header overhead)
+            byte[] payload = new byte[header.Length + content.Length];
+            Array.Copy(header, payload, header.Length);
+            Array.Copy(content, 0, payload, header.Length, content.Length);
+
+            // Begin sending the payload to the remote device.
+            // TODO check if previous send finished yet. otherwise we get errors
+            socket.BeginSend(payload, 0, payload.Length, 0,
+                new AsyncCallback(SendCallback), socket);
+
+            //sendDone.WaitOne();
+        }
+
+        void SendCallback(IAsyncResult ar)
+        {
+            // TODO how to make sure that we wait for existing send to finish?
+            // because apparently we can't spawn another send if one is not finished yet
+            // OR use a send queue and just start the next sendcallback if any in queue!
+            try
+            {
+                // Retrieve the socket from the state object.
+                Socket handler = (Socket)ar.AsyncState;
+
+                // Complete sending the data to the remote device.
+                int bytesSent = handler.EndSend(ar);
+                Logger.Log("Sent " + bytesSent + " bytes");
+
+                // Signal that all bytes have been sent.
+                //sendDone.Set();
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("Server Send exception: " + e);
+            }
         }
     }
 }
