@@ -84,10 +84,24 @@ namespace Telepathy
                         allDone.WaitOne();
                     }
                 }
+                catch (ThreadAbortException exception)
+                {
+                    // UnityEditor causes AbortException if thread is still
+                    // running when we press Play again next time. that's okay.
+                    // (or simply when calling Stop() which stops the thread)
+                    CloseSafely(listener);
+                    Logger.Log("Server thread aborted. That's okay. " + exception);
+                }
                 catch (Exception e)
                 {
-                    Logger.LogError(e.ToString());
+                    // something went wrong or thread was aborted. close before
+                    // exiting the thread.
+                    CloseSafely(listener);
+                    Logger.LogError("Server listen exception: " + e);
                 }
+
+                // close listener socket so we can listen on the port again
+                CloseSafely(listener);
                 Logger.Log("Server thread ended");
             });
             listenerThread.IsBackground = true;
