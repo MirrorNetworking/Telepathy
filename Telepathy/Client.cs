@@ -103,7 +103,7 @@ namespace Telepathy
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Logger.LogError(e.ToString());
             }
         }
 
