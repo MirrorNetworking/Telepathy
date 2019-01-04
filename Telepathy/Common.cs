@@ -15,8 +15,6 @@ namespace Telepathy
             public int connectionId;
             // Client  socket.
             public Socket workSocket;
-            // Size of receive buffer.
-            public const int BufferSize = 4096;
             // Receive buffer.
             public byte[] header = new byte[4];
             public int contentSize;
