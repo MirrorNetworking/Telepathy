@@ -7,12 +7,12 @@ namespace Telepathy
 {
     public class Client : Common
     {
-        // ManualResetEvent instances signal completion.
-        static ManualResetEvent connectDone = new ManualResetEvent(false);
-        //static ManualResetEvent sendDone =
-        //    new ManualResetEvent(false);
-        //static ManualResetEvent receiveDone =
-        //    new ManualResetEvent(false);
+        // connect done event:
+        //   false while connecting
+        //   true before/afterwards
+        static ManualResetEvent connectDone = new ManualResetEvent(true);
+        //static ManualResetEvent sendDone = new ManualResetEvent(false);
+        //static ManualResetEvent receiveDone = new ManualResetEvent(false);
 
         Socket socket;
 
@@ -21,15 +21,15 @@ namespace Telepathy
             get { return socket != null && socket.Connected; }
         }
 
-        public bool Connecting
-        {
-            get { return socket != null && !socket.Connected; } // TODO does this work? maybe try connectDone event?
-        }
+        // check the connectDone event for connecting status:
+        //   WaitOne(0) simply returns the internal state, which is false while
+        //   connecting and true otherwise
+        public bool Connecting { get { return !connectDone.WaitOne(0); }}
 
         public bool Connect(string ip, int port, int timeoutSeconds = 6)
         {
             // not if already started
-            if (Connected) return false;
+            if (Connecting || Connected) return false;
 
             // Connect to a remote device.
             try
@@ -48,6 +48,9 @@ namespace Telepathy
                 socket = new Socket(ipAddress.AddressFamily,
                     SocketType.Stream, ProtocolType.Tcp);
 
+                // reset the event so we can wait for it again if needed
+                connectDone.Reset();
+
                 // Connect to the remote endpoint.
                 // TODO timeout again. or return immediately and wait for the connect to finish
                 socket.BeginConnect(remoteEP,
@@ -59,6 +62,7 @@ namespace Telepathy
             catch (Exception e)
             {
                 Logger.Log("Client Connect failed: " + e);
+                connectDone.Set(); // set it, so we don't wait for it anywhere else (e.g. in Disconnect)
                 return false;
             }
         }
@@ -80,11 +84,13 @@ namespace Telepathy
 
                 // add connected event to queue
                 messageQueue.Enqueue(new Message(0, EventType.Connected, null));
+
                 // start receive loop
                 Receive(socket);
             }
             catch (Exception e)
             {
+                connectDone.Set(); // reset no matter what. we aren't connecting anymore.
                 Logger.Log("Client ConnectCallback error: " + e);
             }
         }
@@ -120,9 +126,19 @@ namespace Telepathy
 
         public void Disconnect()
         {
-            // Release the socket.
-            CloseSafely(socket);
-            Logger.Log("Disconnected");
+            // only if started
+            if (Connecting || Connected)
+            {
+                // is there a connect in progress? then wait until finished
+                // this is the only way to guarantee that we can call Connect()
+                // again immediately after Disconnect
+                connectDone.WaitOne();
+
+                // Release the socket.
+                CloseSafely(socket);
+
+                Logger.Log("Client Disconnected");
+            }
         }
     }
 }
