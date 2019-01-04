@@ -215,5 +215,20 @@ namespace Telepathy
                 Logger.LogWarning("Server Send exception: " + e);
             }
         }
+
+        // close ///////////////////////////////////////////////////////////////
+        protected static void CloseSafely(Socket socket)
+        {
+            // C#'s built in TcpClient wraps this in try/finally too
+            try
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
+            catch {} // will get an exception if not connected anymore, etc.
+            finally
+            {
+                socket.Close();
+            }
+        }
     }
 }

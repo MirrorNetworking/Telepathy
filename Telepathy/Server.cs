@@ -152,16 +152,7 @@ namespace Telepathy
             List<Socket> connections = clients.GetValues();
             foreach (Socket socket in connections)
             {
-                // C#'s built in TcpClient wraps this in try/finally too
-                try
-                {
-                    socket.Shutdown(SocketShutdown.Both);
-                }
-                catch {} // will get an exception if not connected anymore, etc.
-                finally
-                {
-                    socket.Close();
-                }
+                CloseSafely(socket);
             }
 
             // clear clients list

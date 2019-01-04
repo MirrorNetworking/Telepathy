@@ -122,8 +122,7 @@ namespace Telepathy
         public void Disconnect()
         {
             // Release the socket.
-            socket.Shutdown(SocketShutdown.Both);
-            socket.Close();
+            CloseSafely(socket);
             Logger.Log("Disconnected");
         }
     }
