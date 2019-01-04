@@ -83,11 +83,10 @@ namespace Telepathy
                         // Wait until a connection is made before continuing.
                         allDone.WaitOne();
                     }
-
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    Logger.LogError(e.ToString());
                 }
                 Logger.Log("Server thread ended");
             });
