@@ -106,6 +106,13 @@ namespace Telepathy
 
                 // if we got here then either the client while loop ended, or an exception happened.
                 // disconnect
+                CloseSafely(handler);
+
+                // add 'Disconnected' message after disconnecting properly.
+                // -> always AFTER closing the streams to avoid a race condition
+                //    where Disconnected -> Reconnect wouldn't work because
+                //    Connected is still true for a short moment before the stream
+                //    would be closed.
                 messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
 
                 Logger.LogWarning("TODO if server then remove from clients dict");
@@ -166,6 +173,13 @@ namespace Telepathy
 
                 // if we got here then either the client while loop ended, or an exception happened.
                 // disconnect
+                CloseSafely(handler);
+
+                // add 'Disconnected' message after disconnecting properly.
+                // -> always AFTER closing the streams to avoid a race condition
+                //    where Disconnected -> Reconnect wouldn't work because
+                //    Connected is still true for a short moment before the stream
+                //    would be closed.
                 messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
 
                 Logger.LogWarning("TODO if server then remove from clients dict");
