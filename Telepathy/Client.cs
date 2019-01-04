@@ -11,9 +11,8 @@ namespace Telepathy
         //   false while connecting
         //   true before/afterwards
         static ManualResetEvent connectDone = new ManualResetEvent(true);
-        //static ManualResetEvent sendDone = new ManualResetEvent(false);
-        //static ManualResetEvent receiveDone = new ManualResetEvent(false);
 
+        // the socket
         Socket socket;
 
         public bool Connected
