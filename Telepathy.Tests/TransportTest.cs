@@ -39,6 +39,7 @@ namespace Telepathy.Tests
             client.Disconnect();
 
             Assert.That(client.Connected, Is.False);
+            Assert.That(client.Connecting, Is.False);
         }
 
         [Test]
@@ -50,6 +51,7 @@ namespace Telepathy.Tests
                 client.Connect("127.0.0.1", port);
                 Assert.That(client.Connecting || client.Connected, Is.True);
                 client.Disconnect();
+                Assert.That(client.Connected, Is.False);
                 Assert.That(client.Connecting, Is.False);
             }
         }
@@ -65,15 +67,17 @@ namespace Telepathy.Tests
             Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
             // disconnect and lets try again
             client.Disconnect();
-
+            Assert.That(client.Connected, Is.False);
+            Assert.That(client.Connecting, Is.False);
 
             // connecting should flush message queue  right?
             client.Connect("127.0.0.1", port);
             // wait for successful connection
             connectMsg = NextMessage(client);
             Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
-
             client.Disconnect();
+            Assert.That(client.Connected, Is.False);
+            Assert.That(client.Connecting, Is.False);
         }
 
         [Test]
@@ -84,10 +88,9 @@ namespace Telepathy.Tests
 
             client.Connect("127.0.0.1", port);
 
-            // we  should first receive a connected message
+            // we should first receive a connected message
             Message connectMsg = NextMessage(server);
             Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
-
 
             // then we should receive the data
             client.Send(utf8.GetBytes("Hello world"));
@@ -220,7 +223,6 @@ namespace Telepathy.Tests
             // finally if the server stops,  the clients should get a disconnect error
             server.Stop();
             client.Disconnect();
-
         }
 
         static Message NextMessage(Server server)
