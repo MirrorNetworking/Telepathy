@@ -9,6 +9,13 @@ namespace Telepathy
 {
     public class Server : Common
     {
+        // State object to pass listener AND max connections in Accept
+        public class AcceptStateObject
+        {
+            public Socket listener;
+            public int maxConnections;
+        }
+
         // listener
         Thread listenerThread;
 
@@ -47,7 +54,7 @@ namespace Telepathy
 
         public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
 
-        public void Start(int port)
+        public void Start(int port, int maxConnections = int.MaxValue)
         {
             // not if already started
             if (Active) return;
@@ -75,10 +82,15 @@ namespace Telepathy
                         // Set the event to nonsignaled state.
                         allDone.Reset();
 
+                        // Create the state object.
+                        AcceptStateObject state = new AcceptStateObject();
+                        state.listener = listener;
+                        state.maxConnections = maxConnections;
+
                         // Start an asynchronous socket to listen for connections.
                         listener.BeginAccept(
                             new AsyncCallback(AcceptCallback),
-                            listener);
+                            state);
 
                         // Wait until a connection is made before continuing.
                         allDone.WaitOne();
@@ -113,29 +125,47 @@ namespace Telepathy
             // Signal the main thread to continue.
             allDone.Set();
 
-            // Get the socket that handles the client request.
-            Socket listener = (Socket)ar.AsyncState;
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            AcceptStateObject acceptState = (AcceptStateObject)ar.AsyncState;
+            Socket listener = acceptState.listener;
             Socket handler = listener.EndAccept(ar);
 
-            // generate the next connection id (thread safely)
-            int connectionId = NextConnectionId();
-            // TODO if debug?
-            //Logger.Log("Server: client connected. connectionId=" + connectionId);
+            // are more connections allowed?
+            if (clients.Count < acceptState.maxConnections)
+            {
+                // generate the next connection id (thread safely)
+                int connectionId = NextConnectionId();
+                // TODO if debug?
+                //Logger.Log("Server: client connected. connectionId=" + connectionId);
 
-            // Create the state object.
-            StateObject state = new StateObject();
-            state.connectionId = connectionId;
-            state.workSocket = handler;
+                // Create the state object.
+                StateObject state = new StateObject();
+                state.connectionId = connectionId;
+                state.workSocket = handler;
 
-            // add to clients
-            clients.Add(connectionId, handler);
+                // add to clients
+                clients.Add(connectionId, handler);
 
-            // add connected event to queue
-            messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                // add connected event to queue
+                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
 
-            // start receiving the 4 header bytes
-            handler.BeginReceive(state.header, 0, 4, 0,
-                new AsyncCallback(ReadHeaderCallback), state);
+                // start receiving the 4 header bytes
+                handler.BeginReceive(state.header, 0, 4, 0,
+                    new AsyncCallback(ReadHeaderCallback), state);
+            }
+            // connection limit reached? then immediately disconnect
+            // this client and show a small log message so we know
+            // why it happened
+            //
+            // note: don't check before Accept because then the
+            //       clients would try connecting forever. we want
+            //       them to disconnect immediately instead.
+            else
+            {
+                CloseSafely(handler);
+                Logger.Log("Server too full, disconnected a client");
+            }
         }
 
         public bool Send(int connectionId, byte[] content)
