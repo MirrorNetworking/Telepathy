@@ -173,8 +173,6 @@ namespace Telepathy
             //    Connected is still true for a short moment before the stream
             //    would be closed.
             messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
-
-            Logger.LogWarning("TODO if server then remove from clients dict");
         }
 
         // send ////////////////////////////////////////////////////////////////

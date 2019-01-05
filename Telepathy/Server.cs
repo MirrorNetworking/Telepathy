@@ -168,6 +168,16 @@ namespace Telepathy
             }
         }
 
+        // overwrite OnReadCallbackEnd to also remove connection from clients
+        protected override void OnReadCallbackEnd(StateObject state)
+        {
+            // call base logic first to end everything properly!
+            base.OnReadCallbackEnd(state);
+
+            // remove client from clients dict afterwards
+            clients.Remove(state.connectionId);
+        }
+
         public bool Send(int connectionId, byte[] content)
         {
             // find the connection
