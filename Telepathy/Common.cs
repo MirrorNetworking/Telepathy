@@ -185,7 +185,7 @@ namespace Telepathy
         }
 
         // send ////////////////////////////////////////////////////////////////
-        public void Send(Socket socket, byte[] content)
+        protected void Send(Socket socket, byte[] content)
         {
             // construct header (size)
             byte[] header = IntToBytes(content.Length);
