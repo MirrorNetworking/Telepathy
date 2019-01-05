@@ -125,7 +125,7 @@ namespace Telepathy
 
                 // start receiving the 4 header bytes
                 handler.BeginReceive(state.header, 0, 4, 0,
-                    new AsyncCallback(ReadHeaderCallback), state);
+                    ReadHeaderCallback, state);
             }
             // connection limit reached? then immediately disconnect
             // this client and show a small log message so we know
