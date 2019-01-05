@@ -19,8 +19,6 @@ namespace Telepathy
             public int contentSize;
             public int contentPosition;
             public byte[] content;
-            // keep track of last message queue warning
-            public DateTime messageQueueLastWarning = DateTime.Now;
         }
 
         // incoming message queue of <connectionId, message>
@@ -35,6 +33,9 @@ namespace Telepathy
         // 2MB are not that much, but it is a bad sign if the caller process
         // can't call GetNextMessage faster than the incoming messages.
         public static int messageQueueSizeWarning = 100000;
+
+        // keep track of last message queue warning
+        DateTime messageQueueLastWarning = DateTime.Now;
 
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
         // increases bandwidth
@@ -135,11 +136,11 @@ namespace Telepathy
                     //    use most it's processing power to hopefully process it.
                     if (messageQueue.Count > messageQueueSizeWarning)
                     {
-                        TimeSpan elapsed = DateTime.Now - state.messageQueueLastWarning;
+                        TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
                             Logger.LogWarning("ReceiveLoop: messageQueue for: " + state.connectionId + " is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
-                            state.messageQueueLastWarning = DateTime.Now;
+                            messageQueueLastWarning = DateTime.Now;
                         }
                     }
 
