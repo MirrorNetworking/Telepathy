@@ -150,7 +150,8 @@ namespace Telepathy
                 // otherwise keep reading content
                 else
                 {
-                    handler.BeginReceive(state.content, state.contentPosition, state.contentSize - state.contentPosition, 0,
+                    handler.BeginReceive(state.content, state.contentPosition,
+                        state.contentSize - state.contentPosition, 0,
                         ReadContentCallback, state);
                 }
             }
