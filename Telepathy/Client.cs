@@ -37,9 +37,6 @@ namespace Telepathy
                 if (ip.ToLower() == "localhost") ip = "127.0.0.1";
 
                 // Establish the remote endpoint for the socket.
-                // The name of the
-                // remote device is "host.contoso.com".
-                //IPHostEntry ipHostInfo = Dns.GetHostEntry("host.contoso.com");
                 IPAddress ipAddress = IPAddress.Parse(ip);
                 IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
 
@@ -52,7 +49,6 @@ namespace Telepathy
                 connectDone.Reset();
 
                 // Connect to the remote endpoint.
-                // TODO timeout again. or return immediately and wait for the connect to finish
                 socket.BeginConnect(remoteEP, ConnectCallback, socket);
                 //connectDone.WaitOne(); <- don't wait. return immediately. we have Connecting() to check status
 
