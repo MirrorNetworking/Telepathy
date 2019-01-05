@@ -95,7 +95,7 @@ namespace Telepathy
                             clients.Add(connectionId, client);
 
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue);
+                            ReceiveLoop("Server", connectionId, client, receiveQueue);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);

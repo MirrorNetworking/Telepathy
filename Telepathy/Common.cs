@@ -143,7 +143,7 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> receiveQueue)
+        protected static void ReceiveLoop(string ownerName, int connectionId, TcpClient client, SafeQueue<Message> receiveQueue)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -196,7 +196,7 @@ namespace Telepathy
                         TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Logger.LogWarning("ReceiveLoop: receiveQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessages more often!");
+                            Logger.LogWarning(ownerName + " receiveQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessages more often!");
                             messageQueueLastWarning = DateTime.Now;
                         }
                     }
