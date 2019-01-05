@@ -44,6 +44,18 @@ namespace Telepathy
             }
         }
 
+        // for when we want to dequeue and remove all of them at once without
+        // locking every single TryDequeue.
+        public bool TryDequeueAll(out T[] result)
+        {
+            lock(queue)
+            {
+                result = queue.ToArray();
+                queue.Clear();
+                return result.Length > 0;
+            }
+        }
+
         public void Clear()
         {
             lock(queue)

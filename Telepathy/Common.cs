@@ -27,9 +27,18 @@ namespace Telepathy
         // -> bool return makes while (GetMessage(out Message)) easier!
         // -> no 'is client connected' check because we still want to read the
         //    Disconnected message after a disconnect
-        public bool GetNextMessage(out Message message)
+        /*public bool GetNextMessage(out Message message)
         {
             return messageQueue.TryDequeue(out message);
+        }*/
+
+        // GetNextMessage is way too slow. it locks up everything every single
+        // time. if we have 1000 new messages then it locks it 1000 times.
+        // -> return all new messages at once instead
+        public bool GetNextMessages(out Message[] messages)
+        {
+            // get all messages
+            return messageQueue.TryDequeueAll(out messages);
         }
 
         // NoDelay disables nagle algorithm. lowers CPU% and latency but

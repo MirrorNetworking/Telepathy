@@ -22,15 +22,18 @@ namespace Telepathy.LoadTest
             while (true)
             {
                 // reply to each incoming message
-                Message msg;
-                while (server.GetNextMessage(out msg))
+                Message[] messages;
+                if (server.GetNextMessages(out messages))
                 {
-                    if (msg.eventType == EventType.Data)
+                    foreach (Message msg in messages)
                     {
-                        server.Send(msg.connectionId, msg.data);
+                        if (msg.eventType == EventType.Data)
+                        {
+                            server.Send(msg.connectionId, msg.data);
 
-                        messagesReceived++;
-                        dataReceived += msg.data.Length;
+                            messagesReceived++;
+                            dataReceived += msg.data.Length;
+                        }
                     }
                 }
 
