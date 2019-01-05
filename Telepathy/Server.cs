@@ -83,19 +83,9 @@ namespace Telepathy
                     new AsyncCallback(AcceptCallback),
                     state);
             }
-            catch (ThreadAbortException exception)
-            {
-                // UnityEditor causes AbortException if thread is still
-                // running when we press Play again next time. that's okay.
-                // (or simply when calling Stop() which stops the thread)
-                CloseSafely(listener);
-                listener = null; // so that Active returns false now
-                Logger.Log("Server thread aborted. That's okay. " + exception);
-            }
             catch (Exception e)
             {
-                // something went wrong or thread was aborted. close before
-                // exiting the thread.
+                // something went wrong. close everything.
                 CloseSafely(listener);
                 listener = null; // so that Active returns false now
                 Logger.LogError("Server listen exception: " + e);
