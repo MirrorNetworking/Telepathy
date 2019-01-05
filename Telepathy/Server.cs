@@ -16,9 +16,6 @@ namespace Telepathy
             public int maxConnections;
         }
 
-        // listener
-        Thread listenerThread;
-
         // clients with <clientId, socket>
         SafeDictionary<int, Socket> clients = new SafeDictionary<int, Socket>();
 
@@ -49,10 +46,10 @@ namespace Telepathy
             return id;
         }
 
-        // Thread signal.
-        ManualResetEvent allDone = new ManualResetEvent(false);
+        // keep track of listener socket so we can close it when needed
+        Socket listener;
 
-        public bool Active { get { return listenerThread != null && listenerThread.IsAlive; } }
+        public bool Active { get { return listener != null; } }
 
         public void Start(int port, int maxConnections = int.MaxValue)
         {
@@ -64,72 +61,59 @@ namespace Telepathy
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
 
             // Create a TCP/IP socket.
-            Socket listener = new Socket(ipAddress.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp );
+            listener = new Socket(ipAddress.AddressFamily,
+                SocketType.Stream, ProtocolType.Tcp);
 
             // Bind the socket to the local endpoint and listen for incoming connections.
             Logger.Log("Server: starting listener thread on port=" + port);
-            listenerThread = new Thread(() =>
+
+            try
             {
-                try
-                {
-                    // 1000 backlog makes sense for benchmarks etc.
-                    listener.Bind(localEndPoint);
-                    listener.Listen(1000);
+                // 1000 backlog makes sense for benchmarks etc.
+                listener.Bind(localEndPoint);
+                listener.Listen(1000);
 
-                    while (true)
-                    {
-                        // Set the event to nonsignaled state.
-                        allDone.Reset();
+                // Create the state object.
+                AcceptStateObject state = new AcceptStateObject();
+                state.listener = listener;
+                state.maxConnections = maxConnections;
 
-                        // Create the state object.
-                        AcceptStateObject state = new AcceptStateObject();
-                        state.listener = listener;
-                        state.maxConnections = maxConnections;
-
-                        // Start an asynchronous socket to listen for connections.
-                        listener.BeginAccept(
-                            new AsyncCallback(AcceptCallback),
-                            state);
-
-                        // Wait until a connection is made before continuing.
-                        allDone.WaitOne();
-                    }
-                }
-                catch (ThreadAbortException exception)
-                {
-                    // UnityEditor causes AbortException if thread is still
-                    // running when we press Play again next time. that's okay.
-                    // (or simply when calling Stop() which stops the thread)
-                    CloseSafely(listener);
-                    Logger.Log("Server thread aborted. That's okay. " + exception);
-                }
-                catch (Exception e)
-                {
-                    // something went wrong or thread was aborted. close before
-                    // exiting the thread.
-                    CloseSafely(listener);
-                    Logger.LogError("Server listen exception: " + e);
-                }
-
-                // close listener socket so we can listen on the port again
+                // Start an asynchronous socket to listen for connections.
+                listener.BeginAccept(
+                    new AsyncCallback(AcceptCallback),
+                    state);
+            }
+            catch (ThreadAbortException exception)
+            {
+                // UnityEditor causes AbortException if thread is still
+                // running when we press Play again next time. that's okay.
+                // (or simply when calling Stop() which stops the thread)
                 CloseSafely(listener);
-                Logger.Log("Server thread ended");
-            });
-            listenerThread.IsBackground = true;
-            listenerThread.Start();
+                listener = null; // so that Active returns false now
+                Logger.Log("Server thread aborted. That's okay. " + exception);
+            }
+            catch (Exception e)
+            {
+                // something went wrong or thread was aborted. close before
+                // exiting the thread.
+                CloseSafely(listener);
+                listener = null; // so that Active returns false now
+                Logger.LogError("Server listen exception: " + e);
+            }
         }
 
         void AcceptCallback(IAsyncResult ar)
         {
-            // Signal the main thread to continue.
-            allDone.Set();
-
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             AcceptStateObject acceptState = (AcceptStateObject)ar.AsyncState;
             Socket listener = acceptState.listener;
             Socket handler = listener.EndAccept(ar);
+
+            // Start an asynchronous socket to listen for connections.
+            listener.BeginAccept(
+                new AsyncCallback(AcceptCallback),
+                acceptState);
 
             // are more connections allowed?
             if (clients.Count < acceptState.maxConnections)
@@ -200,7 +184,8 @@ namespace Telepathy
 
             // stop listening to connections so that no one can connect while we
             // close the client connections
-            listenerThread.Abort();
+            CloseSafely(listener);
+            listener = null; // so that Active returns false now
 
             // close all client connections.
             List<Socket> connections = clients.GetValues();
