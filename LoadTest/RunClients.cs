@@ -64,7 +64,7 @@ namespace Telepathy.LoadTest
 
 
                 // report every 10 seconds
-                if (stopwatch.ElapsedMilliseconds > 1000 * 10)
+                if (stopwatch.ElapsedMilliseconds > 1000 * 2)
                 {
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
