@@ -65,7 +65,7 @@ namespace Telepathy
                 SocketType.Stream, ProtocolType.Tcp);
 
             // Bind the socket to the local endpoint and listen for incoming connections.
-            Logger.Log("Server: starting listener thread on port=" + port);
+            Logger.Log("Server: starting listening on port=" + port);
 
             try
             {
