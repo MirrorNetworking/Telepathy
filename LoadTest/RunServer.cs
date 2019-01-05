@@ -46,10 +46,7 @@ namespace Telepathy.LoadTest
                     messagesReceived = 0;
                     dataReceived = 0;
                 }
-
             }
         }
-
-
     }
 }
