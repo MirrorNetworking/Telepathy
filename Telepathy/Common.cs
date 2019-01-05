@@ -100,20 +100,7 @@ namespace Telepathy
             }
             else
             {
-                Logger.LogWarning("ReadHeaderCallback ended for client: " + handler + " because header wasn't read fully(" + bytesRead + ")");
-
-                // if we got here then either the client while loop ended, or an exception happened.
-                // disconnect
-                CloseSafely(handler);
-
-                // add 'Disconnected' message after disconnecting properly.
-                // -> always AFTER closing the streams to avoid a race condition
-                //    where Disconnected -> Reconnect wouldn't work because
-                //    Connected is still true for a short moment before the stream
-                //    would be closed.
-                messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
-
-                Logger.LogWarning("TODO if server then remove from clients dict");
+                OnReadCallbackEnd(state);
             }
         }
 
@@ -166,22 +153,28 @@ namespace Telepathy
             }
             else
             {
-                // TODO if debug?
-                Logger.Log("ReadCallback ended for client: " + handler);
-
-                // if we got here then either the client while loop ended, or an exception happened.
-                // disconnect
-                CloseSafely(handler);
-
-                // add 'Disconnected' message after disconnecting properly.
-                // -> always AFTER closing the streams to avoid a race condition
-                //    where Disconnected -> Reconnect wouldn't work because
-                //    Connected is still true for a short moment before the stream
-                //    would be closed.
-                messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
-
-                Logger.LogWarning("TODO if server then remove from clients dict");
+                OnReadCallbackEnd(state);
             }
+        }
+
+        // both read callbacks react the same way when ending. might as well
+        // reuse code
+        protected virtual void OnReadCallbackEnd(StateObject state)
+        {
+            Logger.Log("ReadCallback ended for client: " + state.workSocket);
+
+            // if we got here then either the client while loop ended, or an exception happened.
+            // disconnect
+            CloseSafely(state.workSocket);
+
+            // add 'Disconnected' message after disconnecting properly.
+            // -> always AFTER closing the streams to avoid a race condition
+            //    where Disconnected -> Reconnect wouldn't work because
+            //    Connected is still true for a short moment before the stream
+            //    would be closed.
+            messageQueue.Enqueue(new Message(state.connectionId, EventType.Disconnected, null));
+
+            Logger.LogWarning("TODO if server then remove from clients dict");
         }
 
         // send ////////////////////////////////////////////////////////////////
