@@ -13,6 +13,8 @@ namespace Telepathy.LoadTest
     {
         public static void StartClients(string host, int port, int clientAmount)
         {
+            Logger.LogError("starting " + clientAmount + " clients...");
+
             // start n clients and get queue messages all in this thread
             string message = "Sometimes we just need a good networking library";
             byte[] messageBytes = Encoding.ASCII.GetBytes(message);
