@@ -89,19 +89,35 @@ namespace Telepathy
 
                         // spawn a thread for each client to listen to his
                         // messages
-                        Thread thread = new Thread(() =>
+                        Thread receiveThread = new Thread(() =>
                         {
                             // add to dict immediately
                             clients.Add(connectionId, client);
 
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, messageQueue);
+                            ReceiveLoop(connectionId, client, receiveQueue);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);
                         });
-                        thread.IsBackground = true;
-                        thread.Start();
+                        receiveThread.IsBackground = true;
+                        receiveThread.Start();
+
+                        // spawn a thread for each client to send him messages
+                        Thread sendThread = new Thread(() =>
+                        {
+                            // create send queue immediately
+                            SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+                            sendQueues.Add(connectionId, sendQueue);
+
+                            // run the send loop
+                            SendLoop(connectionId, client, sendQueue);
+
+                            // remove queue from queues afterwards
+                            sendQueues.Remove(connectionId);
+                        });
+                        sendThread.IsBackground = true;
+                        sendThread.Start();
                     }
                     // connection limit reached. disconnect the client and show
                     // a small log message so we know why it happened.
@@ -143,7 +159,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            messageQueue.Clear();
+            receiveQueue.Clear();
 
             // start the listener thread
             Logger.Log("Server: Start port=" + port + " max=" + maxConnections);
@@ -180,21 +196,15 @@ namespace Telepathy
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
-            // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            // was the sendqueue created yet?
+            SafeQueue<byte[]> sendQueue;
+            if (sendQueues.TryGetValue(connectionId, out sendQueue))
             {
-                // GetStream() might throw exception if client is disconnected
-                try
-                {
-                    NetworkStream stream = client.GetStream();
-                    return SendMessage(stream, data);
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogWarning("Server.Send exception: " + exception);
-                    return false;
-                }
+                // add to send queue and return immediately.
+                // calling Send here would be blocking (sometimes for long times
+                // if other side lags or wire was disconnected)
+                sendQueue.Enqueue(data);
+                return true;
             }
             Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
             return false;

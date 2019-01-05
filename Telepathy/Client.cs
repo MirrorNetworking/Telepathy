@@ -7,7 +7,8 @@ namespace Telepathy
     public class Client : Common
     {
         public TcpClient client;
-        Thread thread;
+        Thread receiveThread;
+        Thread sendThread;
 
         public bool Connected
         {
@@ -38,7 +39,7 @@ namespace Telepathy
         public bool Connecting { get { return _Connecting; } }
 
         // the thread function
-        void ThreadFunction(string ip, int port)
+        void ReceiveThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -48,23 +49,32 @@ namespace Telepathy
                 client.Connect(ip, port);
                 _Connecting = false;
 
-                // run the receive loop
-                ReceiveLoop(0, client, messageQueue);
+                // create send queue for this client
+                SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+                sendQueues.Add(0, sendQueue);
+
+                // start send thread only after connected
+                sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });
+                sendThread.IsBackground = true;
+                sendThread.Start();
+
+                // run the receive loop in this thread
+                ReceiveLoop(0, client, receiveQueue);
             }
             catch (SocketException exception)
             {
                 // this happens if (for example) the ip address is correct
                 // but there is no server running on that ip/port
-                Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
+                Logger.Log("Client Recv Thread: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                messageQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+                receiveQueue.Enqueue(new Message(0, EventType.Disconnected, null));
             }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
-                Logger.LogError("Client Exception: " + exception);
+                Logger.LogError("Client Recv Thread Exception: " + exception);
             }
 
             // Connect might have failed. thread might have been closed.
@@ -91,11 +101,12 @@ namespace Telepathy
             client.NoDelay = NoDelay;
             client.SendTimeout = SendTimeout;
 
-            // clear old messages in queue, just to be sure that the caller
+            // clear old messages in queues, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            messageQueue.Clear();
+            receiveQueue.Clear();
+            sendQueues.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
@@ -103,9 +114,9 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() => { ThreadFunction(ip, port); });
-            thread.IsBackground = true;
-            thread.Start();
+            receiveThread = new Thread(() => { ReceiveThreadFunction(ip, port); });
+            receiveThread.IsBackground = true;
+            receiveThread.Start();
         }
 
         public void Disconnect()
@@ -118,8 +129,13 @@ namespace Telepathy
 
                 // wait until thread finished. this is the only way to guarantee
                 // that we can call Connect() again immediately after Disconnect
-                if (thread != null)
-                    thread.Join();
+                if (receiveThread != null)
+                    receiveThread.Join();
+                if (sendThread != null)
+                    sendThread.Join();
+
+                // clear send queues. no need to hold on to them.
+                sendQueues.Clear();
             }
         }
 
@@ -127,7 +143,16 @@ namespace Telepathy
         {
             if (Connected)
             {
-                return SendMessage(client.GetStream(), data);
+                // was the sendqueue created yet?
+                SafeQueue<byte[]> sendQueue;
+                if (sendQueues.TryGetValue(0, out sendQueue))
+                {
+                    // add to send queue and return immediately.
+                    // calling Send here would be blocking (sometimes for long times
+                    // if other side lags or wire was disconnected)
+                    sendQueue.Enqueue(data);
+                    return true;
+                }
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;

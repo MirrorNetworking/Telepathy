@@ -10,7 +10,11 @@ namespace Telepathy
         // common code /////////////////////////////////////////////////////////
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        protected SafeQueue<Message> messageQueue = new SafeQueue<Message>();
+        protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
+
+        // outgoing message queue of <connectionId, sendQueue>
+        // (not a HashSet because one connection can have multiple new messages)
+        protected SafeDictionary<int, SafeQueue<byte[]>> sendQueues = new SafeDictionary<int, SafeQueue<byte[]>>();
 
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
@@ -38,7 +42,7 @@ namespace Telepathy
         public bool GetNextMessages(out Message[] messages)
         {
             // get all messages
-            return messageQueue.TryDequeueAll(out messages);
+            return receiveQueue.TryDequeueAll(out messages);
         }
 
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
@@ -79,7 +83,10 @@ namespace Telepathy
         }
 
         // send message (via stream) with the <size,content> message structure
-        protected static bool SendMessage(NetworkStream stream, byte[] content)
+        // this function is blocking sometimes, whether we like it or not.
+        // (if someone has high latency or wire was cut off then this blocks)
+        // (private so we only call it from Common.SendLoop (no blocking))
+        static bool SendMessageBlocking(NetworkStream stream, byte[] content)
         {
             // can we still write to this socket (not disconnected?)
             if (!stream.CanWrite)
@@ -135,7 +142,7 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> receiveQueue)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -149,7 +156,7 @@ namespace Telepathy
             {
                 // add connected event to queue with ip address as data in case
                 // it's needed
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                receiveQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -175,7 +182,7 @@ namespace Telepathy
                         break;
 
                     // queue it
-                    messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+                    receiveQueue.Enqueue(new Message(connectionId, EventType.Data, content));
 
                     // and show a warning if the queue gets too big
                     // -> we don't want to show a warning every single time,
@@ -183,12 +190,12 @@ namespace Telepathy
                     //    logging, which will make the queue pile up even more.
                     // -> instead we show it every 10s, so that the system can
                     //    use most it's processing power to hopefully process it.
-                    if (messageQueue.Count > messageQueueSizeWarning)
+                    if (receiveQueue.Count > messageQueueSizeWarning)
                     {
                         TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            Logger.LogWarning("ReceiveLoop: receiveQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessages more often!");
                             messageQueueLastWarning = DateTime.Now;
                         }
                     }
@@ -211,7 +218,67 @@ namespace Telepathy
             //    where Disconnected -> Reconnect wouldn't work because
             //    Connected is still true for a short moment before the stream
             //    would be closed.
-            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+        }
+
+        // thread send function
+        // note: we really do need one per connection, so that if one connection
+        //       blocks, the rest will still continue to get sends
+        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue)
+        {
+            // get NetworkStream from client
+            NetworkStream stream = client.GetStream();
+
+            // keep track of last message queue warning
+            DateTime messageQueueLastWarning = DateTime.Now;
+
+            try
+            {
+                while (client.Connected) // try this. client will get closed eventually.
+                {
+                    // show a warning if the queue gets too big
+                    // -> we don't want to show a warning every single time,
+                    //    because then a lot of processing power gets wasted on
+                    //    logging, which will make the queue pile up even more.
+                    // -> instead we show it every 10s, so that the system can
+                    //    use most it's processing power to hopefully process it.
+                    if (sendQueue.Count > messageQueueSizeWarning)
+                    {
+                        TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
+                        if (elapsed.TotalSeconds > 10)
+                        {
+                            Logger.LogWarning("SendLoop: sendQueue is getting big(" + sendQueue.Count + ")! Try calling Send less often so the thread can keep up with sends.");
+                            messageQueueLastWarning = DateTime.Now;
+                        }
+                    }
+
+                    // dequeue all
+                    byte[][] messages;
+                    if (sendQueue.TryDequeueAll(out messages))
+                    {
+                        // TODO combine them? but Send is the one that generates
+                        // the header and we need one for each message.
+                        foreach (byte[] message in messages)
+                        {
+                            // send message (blocking) or stop if stream is closed
+                            if (!SendMessageBlocking(stream, message))
+                                return;
+                        }
+                    }
+
+                    // don't choke up the CPU
+                    // TODO ManualResetEvent?
+                    // TODO SendInterval and merge all messages?
+                    Thread.Sleep(10);
+                }
+            }
+            catch (Exception exception)
+            {
+                // something went wrong. the thread was interrupted or the
+                // connection closed or we closed our own connection or ...
+                // -> either way we should stop gracefully
+                Logger.Log("SendLoop: finished send function for connectionId=" + connectionId + " reason: " + exception);
+            }
         }
     }
 }
