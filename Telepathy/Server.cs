@@ -111,7 +111,7 @@ namespace Telepathy
                             sendQueues.Add(connectionId, sendQueue);
 
                             // run the send loop
-                            SendLoop(connectionId, client, sendQueue);
+                            SendLoop(connectionId, client, sendQueue, sendInterval);
 
                             // remove queue from queues afterwards
                             sendQueues.Remove(connectionId);

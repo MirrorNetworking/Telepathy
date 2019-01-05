@@ -54,6 +54,10 @@ namespace Telepathy
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
 
+        // SendLoop Sleep time so we don't choke up the CPU
+        // probably wise not to change this. 10ms works good in benchmarks.
+        public int SendInterval = 10;
+
         // static helper functions /////////////////////////////////////////////
         // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:
@@ -225,7 +229,7 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue)
+        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, int sendInterval)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -270,7 +274,7 @@ namespace Telepathy
                     // don't choke up the CPU
                     // TODO ManualResetEvent?
                     // TODO SendInterval and merge all messages?
-                    Thread.Sleep(10);
+                    Thread.Sleep(sendInterval);
                 }
             }
             catch (Exception exception)
