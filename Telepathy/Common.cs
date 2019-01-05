@@ -207,9 +207,6 @@ namespace Telepathy
 
         void SendCallback(IAsyncResult ar)
         {
-            // TODO how to make sure that we wait for existing send to finish?
-            // because apparently we can't spawn another send if one is not finished yet
-            // OR use a send queue and just start the next sendcallback if any in queue!
             try
             {
                 // Retrieve the socket from the state object.
