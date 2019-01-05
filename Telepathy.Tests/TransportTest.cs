@@ -57,6 +57,30 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void SpamSendTest()
+        {
+            // BeginSend can't be called again after previous one finished. try
+            // to trigger that case.
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // wait for successful connection
+            Message connectMsg = NextMessage(client);
+            Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
+            Assert.That(client.Connected, Is.True);
+
+            byte[] data = new byte[99999];
+            for (int i = 0; i < 1000; i++)
+            {
+                client.Send(data);
+            }
+
+            client.Disconnect();
+            Assert.That(client.Connected, Is.False);
+            Assert.That(client.Connecting, Is.False);
+        }
+
+        [Test]
         public void ReconnectTest()
         {
             Client client = new Client();
