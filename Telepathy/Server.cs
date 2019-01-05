@@ -99,6 +99,7 @@ namespace Telepathy
             AcceptStateObject acceptState = (AcceptStateObject)ar.AsyncState;
             Socket listener = acceptState.listener;
             Socket handler = listener.EndAccept(ar);
+            handler.NoDelay = NoDelay;
 
             // Start an asynchronous socket to listen for connections.
             listener.BeginAccept(

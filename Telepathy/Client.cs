@@ -46,6 +46,7 @@ namespace Telepathy
                 // Create a TCP/IP socket.
                 socket = new Socket(ipAddress.AddressFamily,
                     SocketType.Stream, ProtocolType.Tcp);
+                socket.NoDelay = NoDelay;
 
                 // reset the event so we can wait for it again if needed
                 connectDone.Reset();
