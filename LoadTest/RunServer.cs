@@ -11,6 +11,7 @@ namespace Telepathy.LoadTest
         {
             // start server
             Server server = new Server();
+            server.NoDelay = false; // TRY NAGLE
             server.Start(port);
             int serverFrequency = 60;
             Logger.Log("started server");
@@ -56,7 +57,7 @@ namespace Telepathy.LoadTest
                 // report every 10 seconds
                 if (stopwatch.ElapsedMilliseconds > 1000 * 2)
                 {
-                    Logger.Log(string.Format("Server in={0} ({1} KB/s)  out={0} ({1} KB/s)", messagesReceived, (dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024))));
+                    Logger.Log(string.Format("Server in={0} ({1} KB/s)  out={0} ({1} KB/s) ReceiveQueue={2}", messagesReceived, (dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024)), server.ReceiveQueueCount.ToString()));
                     stopwatch.Stop();
                     stopwatch = Stopwatch.StartNew();
                     messagesReceived = 0;
