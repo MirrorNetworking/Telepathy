@@ -11,6 +11,7 @@ namespace Telepathy
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
         protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
+        public int ReceiveQueueCount { get { return receiveQueue.Count; } } // useful for benchmarks / debugging
 
         // outgoing message queue of <connectionId, sendQueue>
         // (not a HashSet because one connection can have multiple new messages)
