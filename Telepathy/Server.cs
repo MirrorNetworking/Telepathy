@@ -234,8 +234,7 @@ namespace Telepathy
             Socket socket;
             if (clients.TryGetValue(connectionId, out socket))
             {
-                socket.Shutdown(SocketShutdown.Both);
-                socket.Close();
+                CloseSafely(socket);
                 clients.Remove(connectionId);
                 Logger.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
