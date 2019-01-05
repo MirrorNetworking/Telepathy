@@ -98,12 +98,11 @@ namespace Telepathy
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             AcceptStateObject acceptState = (AcceptStateObject)ar.AsyncState;
-            Socket listener = acceptState.listener;
-            Socket handler = listener.EndAccept(ar);
+            Socket handler = acceptState.listener.EndAccept(ar);
             handler.NoDelay = NoDelay;
 
             // Start an asynchronous socket to listen for connections.
-            listener.BeginAccept(AcceptCallback, acceptState);
+            acceptState.listener.BeginAccept(AcceptCallback, acceptState);
 
             // are more connections allowed?
             if (clients.Count < acceptState.maxConnections)
