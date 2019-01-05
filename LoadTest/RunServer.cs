@@ -37,6 +37,19 @@ namespace Telepathy.LoadTest
                     }
                 }
 
+                // reply to each incoming message
+                /*Message msg;
+                while (server.GetNextMessage(out msg))
+                {
+                    if (msg.eventType == EventType.Data)
+                    {
+                        server.Send(msg.connectionId, msg.data);
+
+                        messagesReceived++;
+                        dataReceived += msg.data.Length;
+                    }
+                }*/
+
                 // sleep
                 Thread.Sleep(1000 / serverFrequency);
 

@@ -62,6 +62,17 @@ namespace Telepathy.LoadTest
                                 }
                             }
                         }
+
+                        // get new messages from queue
+                        /*Message msg;
+                        while (client.GetNextMessage(out msg))
+                        {
+                            if (msg.eventType == EventType.Data)
+                            {
+                                messagesReceived++;
+                                dataReceived += msg.data.Length;
+                            }
+                        }*/
                     }
                 }
 
