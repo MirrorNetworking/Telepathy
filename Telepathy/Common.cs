@@ -31,14 +31,15 @@ namespace Telepathy
         // -> bool return makes while (GetMessage(out Message)) easier!
         // -> no 'is client connected' check because we still want to read the
         //    Disconnected message after a disconnect
-        /*public bool GetNextMessage(out Message message)
+        public bool GetNextMessage(out Message message)
         {
-            return messageQueue.TryDequeue(out message);
-        }*/
+            return receiveQueue.TryDequeue(out message);
+        }
 
-        // GetNextMessage is way too slow. it locks up everything every single
-        // time. if we have 1000 new messages then it locks it 1000 times.
-        // -> return all new messages at once instead
+        // calling GetNextMessage multiple times per tick will lock up the
+        // queue multiple times per tick, which can be slow.
+        // this version locks it only once
+        // (note: no noticeable difference when testing 1000 connections though)
         public bool GetNextMessages(out Message[] messages)
         {
             // get all messages
