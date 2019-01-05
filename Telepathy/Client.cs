@@ -54,7 +54,7 @@ namespace Telepathy
                 sendQueues.Add(0, sendQueue);
 
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendInterval); });
+                sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 
