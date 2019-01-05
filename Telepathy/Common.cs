@@ -82,7 +82,7 @@ namespace Telepathy
         {
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
-            StateObject state = (StateObject) ar.AsyncState;
+            StateObject state = (StateObject)ar.AsyncState;
             Socket handler = state.workSocket;
 
             // Read data from the client socket.
