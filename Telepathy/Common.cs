@@ -138,7 +138,7 @@ namespace Telepathy
                         TimeSpan elapsed = DateTime.Now - state.messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            Logger.LogWarning("ReceiveLoop: messageQueue for: " + state.connectionId + " is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                             state.messageQueueLastWarning = DateTime.Now;
                         }
                     }
