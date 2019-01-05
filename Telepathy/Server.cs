@@ -109,7 +109,6 @@ namespace Telepathy
             {
                 // generate the next connection id (thread safely)
                 int connectionId = NextConnectionId();
-                // TODO if debug?
                 //Logger.Log("Server: client connected. connectionId=" + connectionId);
 
                 // Create the state object.
