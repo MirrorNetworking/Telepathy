@@ -1,7 +1,6 @@
 ﻿// common code used by server and client
 using System;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace Telepathy
 {
