@@ -13,6 +13,11 @@ namespace Telepathy.LoadTest
     {
         public static void StartClients(string host, int port, int clientAmount)
         {
+            Logger.Log("starting " + clientAmount + " clients");
+            long messagesSent = 0;
+            long messagesReceived = 0;
+            long dataReceived = 0;
+
             // start n clients and get queue messages all in this thread
             string message = "Sometimes we just need a good networking library";
             byte[] messageBytes = Encoding.ASCII.GetBytes(message);
@@ -21,6 +26,13 @@ namespace Telepathy.LoadTest
             for (int i = 0; i < clientAmount; ++i)
             {
                 Client client = new Client();
+
+                // dispatch events from the client
+                client.OnConnected += () => { };
+                client.OnDisconnected += () => { };
+                client.OnReceivedData += (data) => { ++messagesReceived; dataReceived += data.Length; };
+                client.OnReceivedError += (exception) => { Logger.LogError("cl error: " + exception); };
+
                 client.Connect(host, port);
                 clients.Add(client);
                 Thread.Sleep(15);
@@ -29,9 +41,6 @@ namespace Telepathy.LoadTest
 
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            long messagesSent = 0;
-            long messagesReceived = 0;
-            long dataReceived = 0;
 
             var timer = new System.Timers.Timer(1000.0 / clientFrequency);
 
@@ -45,24 +54,13 @@ namespace Telepathy.LoadTest
                         // send 2 messages each time
                         client.Send(messageBytes);
                         client.Send(messageBytes);
-
                         messagesSent += 2;
-                        // get new messages from queue
-                        Message msg;
-                        while (client.GetNextMessage(out msg))
-                        {
-                            if (msg.eventType == EventType.Data)
-                            {
-                                messagesReceived++;
-                                dataReceived += msg.data.Length;
-                            }
-                        }
                     }
                 }
 
 
-                // report every 10 seconds
-                if (stopwatch.ElapsedMilliseconds > 1000 * 10)
+                // report every 2 seconds
+                if (stopwatch.ElapsedMilliseconds > 1000 * 2)
                 {
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);

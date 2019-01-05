@@ -1,25 +1,22 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace Mirror.Transport.Tcp
+namespace Telepathy
 {
     public class Client : Common
     {
-        public event Action Connected;
-        public event Action<byte[]> ReceivedData;
-        public event Action Disconnected;
-        public event Action<Exception> ReceivedError;
+        public event Action OnConnected;
+        public event Action<byte[]> OnReceivedData;
+        public event Action OnDisconnected;
+        public event Action<Exception> OnReceivedError;
 
         public TcpClient client;
 
-        public bool NoDelay = true;
-               
-        public bool Connecting { get; set; }
-        public bool IsConnected { get; set; }
+        public bool Connecting { get; private set; }
+        public bool Connected { get; private set; }
 
         public async void Connect(string host, int port)
         {
@@ -27,14 +24,12 @@ namespace Mirror.Transport.Tcp
             if (client != null)
             {
                 // paul:  exceptions are better than silence
-                ReceivedError?.Invoke(new Exception("Client already connected"));
+                OnReceivedError?.Invoke(new Exception("Client already connected"));
                 return;
             }
 
             // We are connecting from now until Connect succeeds or fails
             Connecting = true;
-
-
 
             try
             {
@@ -46,15 +41,15 @@ namespace Mirror.Transport.Tcp
 
                 // NoDelay disables nagle algorithm. lowers CPU% and latency
                 // but increases bandwidth
-                client.NoDelay = this.NoDelay;
+                client.NoDelay = NoDelay;
 
                 await client.ConnectAsync(host, port);
 
                 // now we are connected:
-                IsConnected = true;
+                Connected = true;
                 Connecting = false;
 
-                Connected?.Invoke();
+                OnConnected?.Invoke();
                 await ReceiveLoop(client);
             }
             catch (ObjectDisposedException)
@@ -63,18 +58,18 @@ namespace Mirror.Transport.Tcp
             }
             catch (Exception ex)
             {
-                ReceivedError?.Invoke(ex);
+                OnReceivedError?.Invoke(ex);
             }
             finally
             {
                 Disconnect();
-                Disconnected?.Invoke();
+                OnDisconnected?.Invoke();
             }
         }
 
-        private async Task ReceiveLoop(TcpClient client)
+        async Task ReceiveLoop(TcpClient client)
         {
-            using (Stream networkStream = client.GetStream())
+            using (NetworkStream networkStream = client.GetStream())
             {
                 while (true)
                 {
@@ -83,8 +78,8 @@ namespace Mirror.Transport.Tcp
                     if (data == null)
                         break;
 
-                    // we received some data,  raise event
-                    ReceivedData?.Invoke(data);
+                    // we received some data, raise event
+                    OnReceivedData?.Invoke(data);
                 }
             }
         }
@@ -98,7 +93,7 @@ namespace Mirror.Transport.Tcp
                 client.Close();
                 client = null;
                 Connecting = false;
-                IsConnected = false;
+                Connected = false;
             }
         }
 
@@ -107,7 +102,7 @@ namespace Mirror.Transport.Tcp
         {
             if (client == null)
             {
-                ReceivedError?.Invoke(new SocketException((int)SocketError.NotConnected));
+                OnReceivedError?.Invoke(new SocketException((int)SocketError.NotConnected));
                 return;
             }
 
@@ -118,23 +113,8 @@ namespace Mirror.Transport.Tcp
             catch (Exception ex)
             {
                 Disconnect();
-                ReceivedError?.Invoke(ex);
+                OnReceivedError?.Invoke(ex);
             }
-        }
-
-
-        public override string ToString()
-        {
-            if (IsConnected )
-            {
-                return $"TCP connected to {client.Client.RemoteEndPoint}";
-            }
-            if (Connecting)
-            {
-                return $"TCP connecting to {client.Client.RemoteEndPoint}";
-            }
-            return "";
         }
     }
-    
 }

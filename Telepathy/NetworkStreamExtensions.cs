@@ -2,16 +2,15 @@
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace Mirror.Transport.Tcp
+namespace Telepathy
 {
-
     public static class NetworkStreamExtensions
     {
         // helper function to read EXACTLY 'n' bytes
         // -> default .Read reads up to 'n' bytes. this function reads exactly 'n'
         //    bytes
         // -> either return all the bytes requested or null if end of stream
-        public static async Task<byte[]> ReadExactlyAsync(this Stream stream, int size)
+        public static async Task<byte[]> ReadExactlyAsync(this NetworkStream stream, int size)
         {
             byte[] data = new byte[size];
 
@@ -22,13 +21,9 @@ namespace Mirror.Transport.Tcp
             {
                 int received = 0;
 
-                if (stream is NetworkStream && ((NetworkStream)stream).DataAvailable)
+                if (stream.DataAvailable)
                 {
                     // read available data immediatelly
-                    // this is an important optimization because unity seems
-                    // to wait until the next frame every time we call ReadAsync
-                    // so if we have a bunch of data waiting in the buffer it takes a long
-                    // time to receive it.
                     received = stream.Read(data, offset, size - offset);
                 }
                 else

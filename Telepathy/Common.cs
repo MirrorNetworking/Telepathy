@@ -1,14 +1,14 @@
 ﻿// common code used by server and client
 using System;
-using System.IO;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace Mirror.Transport.Tcp
+namespace Telepathy
 {
     public abstract class Common
     {
-    
+        public bool NoDelay = true;
+
         // static helper functions /////////////////////////////////////////////
         // fast int to byte[] conversion and vice versa
         // -> test with 100k conversions:
@@ -44,7 +44,7 @@ namespace Mirror.Transport.Tcp
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
-           
+
             // construct header (size)
             byte[] header = IntToBytes(content.Length);
 
@@ -58,7 +58,7 @@ namespace Mirror.Transport.Tcp
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static async Task<byte[]> ReadMessageAsync(Stream stream)
+        protected static async Task<byte[]> ReadMessageAsync(NetworkStream stream)
         {
             byte[] messageSizeBuffer = await stream.ReadExactlyAsync(4);
 

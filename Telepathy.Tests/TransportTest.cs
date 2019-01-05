@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Telepathy.Tests
 {
-    [TestFixture]
+    /*[TestFixture]
     public class TransportTest
     {
         // just a random port that will hopefully not be taken
@@ -19,7 +19,6 @@ namespace Telepathy.Tests
         {
             server = new Server();
             server.Start(port);
-
         }
 
         [TearDown]
@@ -286,6 +285,5 @@ namespace Telepathy.Tests
 
             return message;
         }
-
-    }
+    }*/
 }

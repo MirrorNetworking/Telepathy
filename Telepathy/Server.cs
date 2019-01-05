@@ -1,27 +1,24 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using UnityEngine;
 
-namespace Mirror.Transport.Tcp
+namespace Telepathy
 {
     public class Server : Common
     {
-        public event Action<int> Connected;
-        public event Action<int, byte[]> ReceivedData;
-        public event Action<int> Disconnected;
-        public event Action<int, Exception> ReceivedError;
+        public event Action<int> OnConnected;
+        public event Action<int, byte[]> OnReceivedData;
+        public event Action<int> OnDisconnected;
+        public event Action<int, Exception> OnReceivedError;
 
         // listener
         TcpListener listener;
 
         // clients with <connectionId, TcpClient>
-        Dictionary<int, TcpClient> clients = new Dictionary<int, TcpClient>();
-
-        public bool NoDelay = true;
+        ConcurrentDictionary<int, TcpClient> clients = new ConcurrentDictionary<int, TcpClient>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -51,19 +48,10 @@ namespace Mirror.Transport.Tcp
         }
 
         // check if the server is running
-        public bool Active
-        {
-            get { return listener != null; }
-        }
-
-        public TcpClient GetClient(int connectionId)
-        {
-            // paul:  null is evil,  throw exception if not found
-            return clients[connectionId];
-        }
+        public bool Active { get { return listener != null; } }
 
         // the listener thread's listen function
-        async public void Listen(int port, int maxConnections = int.MaxValue)
+        public async void Start(int port, int maxConnections = int.MaxValue)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -72,18 +60,15 @@ namespace Mirror.Transport.Tcp
 
                 if (listener != null)
                 {
-                    ReceivedError?.Invoke(0, new Exception("Already listening"));
+                    OnReceivedError?.Invoke(0, new Exception("Already listening"));
                     return;
                 }
 
                 // start listener
                 listener = TcpListener.Create(port);
-
-                // NoDelay disables nagle algorithm. lowers CPU% and latency
-                // but increases bandwidth
-                listener.Server.NoDelay = this.NoDelay;
+                listener.Server.NoDelay = NoDelay;
                 listener.Start();
-                Debug.Log($"Tcp server started listening on port {port}");
+                Logger.Log($"Tcp server started listening on port {port}");
 
                 // keep accepting new clients
                 while (true)
@@ -91,17 +76,30 @@ namespace Mirror.Transport.Tcp
                     // wait for a tcp client;
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync();
 
-                    // non blocking receive loop
-                    ReceiveLoop(tcpClient);
+                    // are more connections allowed?
+                    if (clients.Count < maxConnections)
+                    {
+                        // non blocking receive loop
+                        ReceiveLoop(tcpClient);
+                    }
+                    else
+                    {
+                        // connection limit reached. disconnect the client and show
+                        // a small log message so we know why it happened.
+                        // note: no extra Sleep because Accept is blocking anyway
+
+                        tcpClient.Close();
+                        Logger.Log("Server too full, disconnected a client");
+                    }
                 }
             }
             catch(ObjectDisposedException)
             {
-                Debug.Log("Server dispossed");
+                Logger.Log("Server disposed");
             }
             catch (Exception exception)
             {
-                ReceivedError?.Invoke(0, exception);
+                OnReceivedError?.Invoke(0, exception);
             }
             finally
             {
@@ -109,17 +107,17 @@ namespace Mirror.Transport.Tcp
             }
         }
 
-        private async void ReceiveLoop(TcpClient tcpClient)
+        async void ReceiveLoop(TcpClient tcpClient)
         {
             int connectionId = NextConnectionId();
-            clients.Add(connectionId, tcpClient);
+            clients.TryAdd(connectionId, tcpClient);
 
             try
-            { 
+            {
                 // someone connected,  raise event
-                Connected?.Invoke(connectionId);
+                OnConnected?.Invoke(connectionId);
 
-                using (Stream networkStream = tcpClient.GetStream())
+                using (NetworkStream networkStream = tcpClient.GetStream())
                 {
                     while (true)
                     {
@@ -129,18 +127,19 @@ namespace Mirror.Transport.Tcp
                             break;
 
                         // we received some data,  raise event
-                        ReceivedData?.Invoke(connectionId, data);
+                        OnReceivedData?.Invoke(connectionId, data);
                     }
                 }
             }
             catch (Exception exception)
             {
-                ReceivedError?.Invoke(connectionId, exception);
+                OnReceivedError?.Invoke(connectionId, exception);
             }
             finally
             {
-                clients.Remove(connectionId);
-                Disconnected?.Invoke(connectionId);
+                TcpClient temp;
+                clients.TryRemove(connectionId, out temp);
+                OnDisconnected?.Invoke(connectionId);
             }
         }
 
@@ -149,7 +148,7 @@ namespace Mirror.Transport.Tcp
             // only if started
             if (!Active) return;
 
-            Debug.Log("Server: stopping...");
+            Logger.Log("Server: stopping...");
 
             // stop listening to connections so that no one can connect while we
             // close the client connections
@@ -193,9 +192,9 @@ namespace Mirror.Transport.Tcp
                         // because all the WriteAsync wake up at once and throw exceptions
 
                         // by hiding inside this if, I ensure that we only report the first error
-                        // all other errors are swallowed.  
+                        // all other errors are swallowed.
                         // this prevents a log storm that freezes the server for several seconds
-                        ReceivedError?.Invoke(connectionId, exception);
+                        OnReceivedError?.Invoke(connectionId, exception);
                     }
 
                     Disconnect(connectionId);
@@ -203,7 +202,7 @@ namespace Mirror.Transport.Tcp
             }
             else
             {
-                ReceivedError?.Invoke(connectionId, new SocketException((int)SocketError.NotConnected));
+                OnReceivedError?.Invoke(connectionId, new SocketException((int)SocketError.NotConnected));
             }
         }
 
@@ -229,22 +228,14 @@ namespace Mirror.Transport.Tcp
             TcpClient client;
             if (clients.TryGetValue(connectionId, out client))
             {
-                clients.Remove(connectionId);
+                TcpClient temp;
+                clients.TryRemove(connectionId, out temp);
                 // just close it. client thread will take care of the rest.
                 client.Close();
-                Debug.Log("Server.Disconnect connectionId:" + connectionId);
+                Logger.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
             return false;
-        }
-
-        public override string ToString()
-        {
-            if (Active)
-            {
-                return $"TCP server {listener.LocalEndpoint}";
-            }
-            return "";
         }
     }
 }
