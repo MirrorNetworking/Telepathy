@@ -263,18 +263,16 @@ namespace Telepathy
                     {
                         // TODO combine them? but Send is the one that generates
                         // the header and we need one for each message.
-                        foreach (byte[] message in messages)
+                        for (int i = 0; i < messages.Length; ++i) // foreach would copy the array
                         {
                             // send message (blocking) or stop if stream is closed
-                            if (!SendMessageBlocking(stream, message))
+                            if (!SendMessageBlocking(stream, messages[i]))
                                 return;
                         }
                     }
 
-                    // don't choke up the CPU
-                    // TODO ManualResetEvent?
-                    // TODO SendInterval and merge all messages?
-                    Thread.Sleep(sendInterval);
+                    // don't choke up the CPU: wait until queue not empty anymore
+                    sendQueue.notEmpty.WaitOne();
                 }
             }
             catch (Exception exception)
