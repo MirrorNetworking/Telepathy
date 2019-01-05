@@ -82,9 +82,7 @@ namespace Telepathy
                 state.maxConnections = maxConnections;
 
                 // Start an asynchronous socket to listen for connections.
-                listener.BeginAccept(
-                    new AsyncCallback(AcceptCallback),
-                    state);
+                listener.BeginAccept(AcceptCallback, state);
             }
             catch (Exception e)
             {
@@ -105,9 +103,7 @@ namespace Telepathy
             handler.NoDelay = NoDelay;
 
             // Start an asynchronous socket to listen for connections.
-            listener.BeginAccept(
-                new AsyncCallback(AcceptCallback),
-                acceptState);
+            listener.BeginAccept(AcceptCallback, acceptState);
 
             // are more connections allowed?
             if (clients.Count < acceptState.maxConnections)

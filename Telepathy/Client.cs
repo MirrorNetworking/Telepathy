@@ -53,8 +53,7 @@ namespace Telepathy
 
                 // Connect to the remote endpoint.
                 // TODO timeout again. or return immediately and wait for the connect to finish
-                socket.BeginConnect(remoteEP,
-                    new AsyncCallback(ConnectCallback), socket);
+                socket.BeginConnect(remoteEP, ConnectCallback, socket);
                 //connectDone.WaitOne(); <- don't wait. return immediately. we have Connecting() to check status
 
                 return true;
@@ -105,7 +104,7 @@ namespace Telepathy
 
                 // start receiving the 4 header bytes
                 client.BeginReceive(state.header, 0, 4, 0,
-                    new AsyncCallback(ReadHeaderCallback), state);
+                    ReadHeaderCallback, state);
             }
             catch (Exception e)
             {

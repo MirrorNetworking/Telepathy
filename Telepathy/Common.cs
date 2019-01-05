@@ -100,7 +100,7 @@ namespace Telepathy
                 state.contentPosition = 0;
                 state.content = new byte[state.contentSize];
                 handler.BeginReceive(state.content, 0, state.contentSize, 0,
-                    new AsyncCallback(ReadContentCallback), state);
+                    ReadContentCallback, state);
             }
             else
             {
@@ -146,13 +146,13 @@ namespace Telepathy
 
                     // start reading the next header
                     handler.BeginReceive(state.header, 0, 4, 0,
-                        new AsyncCallback(ReadHeaderCallback), state);
+                        ReadHeaderCallback, state);
                 }
                 // otherwise keep reading content
                 else
                 {
                     handler.BeginReceive(state.content, state.contentPosition, state.contentSize - state.contentPosition, 0,
-                        new AsyncCallback(ReadContentCallback), state);
+                        ReadContentCallback, state);
                 }
             }
             else
@@ -195,7 +195,7 @@ namespace Telepathy
             // Begin sending the payload to the remote device.
             // TODO check if previous send finished yet. otherwise we get errors
             socket.BeginSend(payload, 0, payload.Length, 0,
-                new AsyncCallback(SendCallback), socket);
+                SendCallback, socket);
 
             //sendDone.WaitOne();
         }
