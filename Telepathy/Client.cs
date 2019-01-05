@@ -1,139 +1,140 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
+using System.Threading.Tasks;
 
-namespace Telepathy
+namespace Mirror.Transport.Tcp
 {
     public class Client : Common
     {
-        // connect done event:
-        //   false while connecting
-        //   true before/afterwards
-        static ManualResetEvent connectDone = new ManualResetEvent(true);
+        public event Action Connected;
+        public event Action<byte[]> ReceivedData;
+        public event Action Disconnected;
+        public event Action<Exception> ReceivedError;
 
-        // the socket
-        Socket socket;
+        public TcpClient client;
 
-        public bool Connected
-        {
-            get { return socket != null && socket.Connected; }
-        }
+        public bool NoDelay = true;
+               
+        public bool Connecting { get; set; }
+        public bool IsConnected { get; set; }
 
-        // check the connectDone event for connecting status:
-        //   WaitOne(0) simply returns the internal state, which is false while
-        //   connecting and true otherwise
-        public bool Connecting { get { return !connectDone.WaitOne(0); } }
-
-        public bool Connect(string ip, int port, int timeoutSeconds = 6)
+        public async void Connect(string host, int port)
         {
             // not if already started
-            if (Connecting || Connected) return false;
+            if (client != null)
+            {
+                // paul:  exceptions are better than silence
+                ReceivedError?.Invoke(new Exception("Client already connected"));
+                return;
+            }
 
-            // Connect to a remote device.
+            // We are connecting from now until Connect succeeds or fails
+            Connecting = true;
+
+
+
             try
             {
-                // localhost support so .Parse doesn't throw errors
-                if (ip.ToLower() == "localhost") ip = "127.0.0.1";
+                // TcpClient can only be used once. need to create a new one each
+                // time.
+                client = new TcpClient(AddressFamily.InterNetworkV6);
+                // works with IPv6 and IPv4
+                client.Client.DualMode = true;
 
-                // Establish the remote endpoint for the socket.
-                IPAddress ipAddress = IPAddress.Parse(ip);
-                IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
+                // NoDelay disables nagle algorithm. lowers CPU% and latency
+                // but increases bandwidth
+                client.NoDelay = this.NoDelay;
 
-                // Create a TCP/IP socket.
-                socket = new Socket(ipAddress.AddressFamily,
-                    SocketType.Stream, ProtocolType.Tcp);
-                socket.NoDelay = NoDelay;
+                await client.ConnectAsync(host, port);
 
-                // reset the event so we can wait for it again if needed
-                connectDone.Reset();
+                // now we are connected:
+                IsConnected = true;
+                Connecting = false;
 
-                // Connect to the remote endpoint.
-                socket.BeginConnect(remoteEP, ConnectCallback, socket);
-                //connectDone.WaitOne(); <- don't wait. return immediately. we have Connecting() to check status
-
-                return true;
+                Connected?.Invoke();
+                await ReceiveLoop(client);
             }
-            catch (Exception e)
+            catch (ObjectDisposedException)
             {
-                Logger.Log("Client Connect failed: " + e);
-                connectDone.Set(); // set it, so we don't wait for it anywhere else (e.g. in Disconnect)
-                return false;
+                // No error, the client got closed
+            }
+            catch (Exception ex)
+            {
+                ReceivedError?.Invoke(ex);
+            }
+            finally
+            {
+                Disconnect();
+                Disconnected?.Invoke();
             }
         }
 
-        void ConnectCallback(IAsyncResult ar)
+        private async Task ReceiveLoop(TcpClient client)
         {
-            try
+            using (Stream networkStream = client.GetStream())
             {
-                // Retrieve the socket from the state object.
-                Socket client = (Socket) ar.AsyncState;
+                while (true)
+                {
+                    byte[] data = await ReadMessageAsync(networkStream);
 
-                // Complete the connection.
-                client.EndConnect(ar);
+                    if (data == null)
+                        break;
 
-                //Logger.Log("Socket connected to: " +client.RemoteEndPoint);
-
-                // Signal that the connection has been made.
-                connectDone.Set();
-
-                // add connected event to queue
-                messageQueue.Enqueue(new Message(0, EventType.Connected, null));
-
-                // start receive loop
-                Receive(socket);
+                    // we received some data,  raise event
+                    ReceivedData?.Invoke(data);
+                }
             }
-            catch (Exception e)
-            {
-                connectDone.Set(); // reset no matter what. we aren't connecting anymore.
-                Logger.Log("Client ConnectCallback error: " + e);
-            }
-        }
-
-        void Receive(Socket client)
-        {
-            try
-            {
-                // Create the state object.
-                StateObject state = new StateObject();
-                state.workSocket = client;
-
-                // start receiving the 4 header bytes
-                client.BeginReceive(state.header, 0, 4, 0,
-                    ReadHeaderCallback, state);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e.ToString());
-            }
-        }
-
-        public bool Send(byte[] data)
-        {
-            if (Connected)
-            {
-                Send(socket, data);
-                return true;
-            }
-            Logger.LogWarning("Client.Send: not connected!");
-            return false;
         }
 
         public void Disconnect()
         {
             // only if started
-            if (Connecting || Connected)
+            if (client != null)
             {
-                // is there a connect in progress? then wait until finished
-                // this is the only way to guarantee that we can call Connect()
-                // again immediately after Disconnect
-                connectDone.WaitOne();
-
-                // Release the socket.
-                CloseSafely(socket);
-
-                //Logger.Log("Client Disconnected");
+                // close client
+                client.Close();
+                client = null;
+                Connecting = false;
+                IsConnected = false;
             }
         }
+
+        // send the data or throw exception
+        public async void Send(byte[] data)
+        {
+            if (client == null)
+            {
+                ReceivedError?.Invoke(new SocketException((int)SocketError.NotConnected));
+                return;
+            }
+
+            try
+            {
+                await SendMessage(client.GetStream(), data);
+            }
+            catch (Exception ex)
+            {
+                Disconnect();
+                ReceivedError?.Invoke(ex);
+            }
+        }
+
+
+        public override string ToString()
+        {
+            if (IsConnected )
+            {
+                return $"TCP connected to {client.Client.RemoteEndPoint}";
+            }
+            if (Connecting)
+            {
+                return $"TCP connecting to {client.Client.RemoteEndPoint}";
+            }
+            return "";
+        }
     }
+    
 }

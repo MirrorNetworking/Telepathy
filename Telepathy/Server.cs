@@ -1,26 +1,27 @@
-﻿// original source: https://docs.microsoft.com/en-us/dotnet/framework/network-programming/asynchronous-server-socket-example
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using UnityEngine;
 
-namespace Telepathy
+namespace Mirror.Transport.Tcp
 {
     public class Server : Common
     {
-        // State object to pass listener AND max connections in Accept
-        public class AcceptStateObject
-        {
-            // save listener in state to avoid NullReferenceException if we set
-            // Server.listener=null in Stop. It's just safer this way.
-            public Socket listener;
-            // max allowed connections
-            public int maxConnections;
-        }
+        public event Action<int> Connected;
+        public event Action<int, byte[]> ReceivedData;
+        public event Action<int> Disconnected;
+        public event Action<int, Exception> ReceivedError;
 
-        // clients with <clientId, socket>
-        SafeDictionary<int, Socket> clients = new SafeDictionary<int, Socket>();
+        // listener
+        TcpListener listener;
+
+        // clients with <connectionId, TcpClient>
+        Dictionary<int, TcpClient> clients = new Dictionary<int, TcpClient>();
+
+        public bool NoDelay = true;
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -49,118 +50,98 @@ namespace Telepathy
             return id;
         }
 
-        // keep track of listener socket so we can close it when needed
-        Socket listener;
-
-        public bool Active { get { return listener != null; } }
-
-        public void Start(int port, int maxConnections = int.MaxValue)
+        // check if the server is running
+        public bool Active
         {
-            // not if already started
-            if (Active) return;
+            get { return listener != null; }
+        }
 
-            // Establish the local endpoint for the socket.
-            IPAddress ipAddress = IPAddress.Any;
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
+        public TcpClient GetClient(int connectionId)
+        {
+            // paul:  null is evil,  throw exception if not found
+            return clients[connectionId];
+        }
 
-            // Create a TCP/IP socket.
-            listener = new Socket(ipAddress.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp);
-
-            // Bind the socket to the local endpoint and listen for incoming connections.
-            Logger.Log("Server: starting listening on port=" + port);
-
+        // the listener thread's listen function
+        async public void Listen(int port, int maxConnections = int.MaxValue)
+        {
+            // absolutely must wrap with try/catch, otherwise thread
+            // exceptions are silent
             try
             {
-                // 1000 backlog makes sense for benchmarks etc.
-                listener.Bind(localEndPoint);
-                listener.Listen(1000);
 
-                // Create the state object.
-                AcceptStateObject state = new AcceptStateObject();
-                state.listener = listener;
-                state.maxConnections = maxConnections;
+                if (listener != null)
+                {
+                    ReceivedError?.Invoke(0, new Exception("Already listening"));
+                    return;
+                }
 
-                // Start an asynchronous socket to listen for connections.
-                listener.BeginAccept(AcceptCallback, state);
+                // start listener
+                listener = TcpListener.Create(port);
+
+                // NoDelay disables nagle algorithm. lowers CPU% and latency
+                // but increases bandwidth
+                listener.Server.NoDelay = this.NoDelay;
+                listener.Start();
+                Debug.Log($"Tcp server started listening on port {port}");
+
+                // keep accepting new clients
+                while (true)
+                {
+                    // wait for a tcp client;
+                    TcpClient tcpClient = await listener.AcceptTcpClientAsync();
+
+                    // non blocking receive loop
+                    ReceiveLoop(tcpClient);
+                }
             }
-            catch (Exception e)
+            catch(ObjectDisposedException)
             {
-                // something went wrong. close everything.
-                CloseSafely(listener);
-                listener = null; // so that Active returns false now
-                Logger.LogError("Server listen exception: " + e);
+                Debug.Log("Server dispossed");
+            }
+            catch (Exception exception)
+            {
+                ReceivedError?.Invoke(0, exception);
+            }
+            finally
+            {
+                listener = null;
             }
         }
 
-        void AcceptCallback(IAsyncResult ar)
+        private async void ReceiveLoop(TcpClient tcpClient)
         {
-            // Retrieve the state object and the handler socket
-            // from the asynchronous state object.
-            AcceptStateObject acceptState = (AcceptStateObject)ar.AsyncState;
-            Socket handler = acceptState.listener.EndAccept(ar);
-            handler.NoDelay = NoDelay;
+            int connectionId = NextConnectionId();
+            clients.Add(connectionId, tcpClient);
 
-            // Start an asynchronous socket to listen for connections.
-            acceptState.listener.BeginAccept(AcceptCallback, acceptState);
+            try
+            { 
+                // someone connected,  raise event
+                Connected?.Invoke(connectionId);
 
-            // are more connections allowed?
-            if (clients.Count < acceptState.maxConnections)
-            {
-                // generate the next connection id (thread safely)
-                int connectionId = NextConnectionId();
-                //Logger.Log("Server: client connected. connectionId=" + connectionId);
+                using (Stream networkStream = tcpClient.GetStream())
+                {
+                    while (true)
+                    {
+                        byte[] data = await ReadMessageAsync(networkStream);
 
-                // Create the state object.
-                StateObject state = new StateObject();
-                state.connectionId = connectionId;
-                state.workSocket = handler;
+                        if (data == null)
+                            break;
 
-                // add to clients
-                clients.Add(connectionId, handler);
-
-                // add connected event to queue
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
-
-                // start receiving the 4 header bytes
-                handler.BeginReceive(state.header, 0, 4, 0,
-                    ReadHeaderCallback, state);
+                        // we received some data,  raise event
+                        ReceivedData?.Invoke(connectionId, data);
+                    }
+                }
             }
-            // connection limit reached? then immediately disconnect
-            // this client and show a small log message so we know
-            // why it happened
-            //
-            // note: don't check before Accept because then the
-            //       clients would try connecting forever. we want
-            //       them to disconnect immediately instead.
-            else
+            catch (Exception exception)
             {
-                CloseSafely(handler);
-                Logger.Log("Server too full, disconnected a client");
+                ReceivedError?.Invoke(connectionId, exception);
             }
-        }
-
-        // overwrite OnReadCallbackEnd to also remove connection from clients
-        protected override void OnReadCallbackEnd(StateObject state)
-        {
-            // call base logic first to end everything properly!
-            base.OnReadCallbackEnd(state);
-
-            // remove client from clients dict afterwards
-            clients.Remove(state.connectionId);
-        }
-
-        public bool Send(int connectionId, byte[] content)
-        {
-            // find the connection
-            Socket socket;
-            if (clients.TryGetValue(connectionId, out socket))
+            finally
             {
-                Send(socket, content);
-                return true;
+                clients.Remove(connectionId);
+                Disconnected?.Invoke(connectionId);
             }
-            Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
-            return false;
         }
 
         public void Stop()
@@ -168,22 +149,62 @@ namespace Telepathy
             // only if started
             if (!Active) return;
 
-            Logger.Log("Server: stopping...");
+            Debug.Log("Server: stopping...");
 
             // stop listening to connections so that no one can connect while we
             // close the client connections
-            CloseSafely(listener);
-            listener = null; // so that Active returns false now
+            listener.Stop();
 
-            // close all client connections.
-            List<Socket> connections = clients.GetValues();
-            foreach (Socket socket in connections)
+            // close all client connections
+            foreach (var kvp in clients)
             {
-                CloseSafely(socket);
+                // close the stream if not closed yet. it may have been closed
+                // by a disconnect already, so use try/catch
+                try { kvp.Value.Close(); } catch {}
             }
 
             // clear clients list
             clients.Clear();
+            listener = null;
+        }
+
+        // send message to client using socket connection or throws exception
+        public async void Send(int connectionId, byte[] data)
+        {
+            // find the connection
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
+            {
+                try
+                {
+                    NetworkStream stream = client.GetStream();
+                    await SendMessage(stream, data);
+                }
+                catch (ObjectDisposedException) {
+                    // connection has been closed,  swallow exception
+                    Disconnect(connectionId);
+                }
+                catch (Exception exception)
+                {
+                    if (clients.ContainsKey(connectionId))
+                    {
+                        // paul:  If someone unplugs their internet
+                        // we can potentially get hundreds of errors here all at once
+                        // because all the WriteAsync wake up at once and throw exceptions
+
+                        // by hiding inside this if, I ensure that we only report the first error
+                        // all other errors are swallowed.  
+                        // this prevents a log storm that freezes the server for several seconds
+                        ReceivedError?.Invoke(connectionId, exception);
+                    }
+
+                    Disconnect(connectionId);
+                }
+            }
+            else
+            {
+                ReceivedError?.Invoke(connectionId, new SocketException((int)SocketError.NotConnected));
+            }
         }
 
         // get connection info in case it's needed (IP etc.)
@@ -191,28 +212,39 @@ namespace Telepathy
         public bool GetConnectionInfo(int connectionId, out string address)
         {
             // find the connection
-            Socket socket;
-            if (clients.TryGetValue(connectionId, out socket))
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
             {
-                address = ((IPEndPoint)socket.RemoteEndPoint).Address.ToString();
+                address = ((IPEndPoint)client.Client.RemoteEndPoint).ToString();
                 return true;
             }
             address = null;
             return false;
         }
 
+        // disconnect (kick) a client
         public bool Disconnect(int connectionId)
         {
             // find the connection
-            Socket socket;
-            if (clients.TryGetValue(connectionId, out socket))
+            TcpClient client;
+            if (clients.TryGetValue(connectionId, out client))
             {
-                CloseSafely(socket);
                 clients.Remove(connectionId);
-                Logger.Log("Server.Disconnect connectionId:" + connectionId);
+                // just close it. client thread will take care of the rest.
+                client.Close();
+                Debug.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
             return false;
+        }
+
+        public override string ToString()
+        {
+            if (Active)
+            {
+                return $"TCP server {listener.LocalEndpoint}";
+            }
+            return "";
         }
     }
 }
