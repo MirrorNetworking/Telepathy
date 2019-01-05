@@ -136,7 +136,7 @@ namespace Telepathy
                 // Release the socket.
                 CloseSafely(socket);
 
-                Logger.Log("Client Disconnected");
+                //Logger.Log("Client Disconnected");
             }
         }
     }

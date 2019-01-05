@@ -161,7 +161,7 @@ namespace Telepathy
         // reuse code
         protected virtual void OnReadCallbackEnd(StateObject state)
         {
-            Logger.Log("ReadCallback ended for client: " + state.workSocket);
+            //Logger.Log("ReadCallback ended for client: " + state.workSocket);
 
             // if we got here then either the client while loop ended, or an exception happened.
             // disconnect
@@ -205,7 +205,7 @@ namespace Telepathy
 
                 // Complete sending the data to the remote device.
                 int bytesSent = handler.EndSend(ar);
-                Logger.Log("Sent " + bytesSent + " bytes");
+                //Logger.Log("Sent " + bytesSent + " bytes");
 
                 // Signal that all bytes have been sent.
                 //sendDone.Set();
