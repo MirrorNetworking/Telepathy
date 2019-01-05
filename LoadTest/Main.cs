@@ -44,7 +44,7 @@ namespace Telepathy.LoadTest
             serverThread.Start();
 
 
-            RunClients.StartClients("127.0.0.1", 1337, 500);
+            RunClients.StartClients("127.0.0.1", 1337, 1000);
 
         }
 
