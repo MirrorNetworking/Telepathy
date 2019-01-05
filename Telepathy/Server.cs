@@ -165,6 +165,7 @@ namespace Telepathy
             Logger.Log("Server: Start port=" + port + " max=" + maxConnections);
             listenerThread = new Thread(() => { Listen(port, maxConnections); });
             listenerThread.IsBackground = true;
+            listenerThread.Priority = ThreadPriority.Lowest; // worry about everything else before accepting new clients. perfect example for lowest priority.
             listenerThread.Start();
         }
 
