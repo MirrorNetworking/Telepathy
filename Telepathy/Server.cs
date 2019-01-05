@@ -12,7 +12,10 @@ namespace Telepathy
         // State object to pass listener AND max connections in Accept
         public class AcceptStateObject
         {
+            // save listener in state to avoid NullReferenceException if we set
+            // Server.listener=null in Stop. It's just safer this way.
             public Socket listener;
+            // max allowed connections
             public int maxConnections;
         }
 
