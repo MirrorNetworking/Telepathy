@@ -23,7 +23,7 @@ namespace Telepathy
         // check the connectDone event for connecting status:
         //   WaitOne(0) simply returns the internal state, which is false while
         //   connecting and true otherwise
-        public bool Connecting { get { return !connectDone.WaitOne(0); }}
+        public bool Connecting { get { return !connectDone.WaitOne(0); } }
 
         public bool Connect(string ip, int port, int timeoutSeconds = 6)
         {
