@@ -192,7 +192,6 @@ namespace Telepathy
             Array.Copy(content, 0, payload, header.Length, content.Length);
 
             // Begin sending the payload to the remote device.
-            // TODO check if previous send finished yet. otherwise we get errors
             socket.BeginSend(payload, 0, payload.Length, 0,
                 SendCallback, socket);
 
