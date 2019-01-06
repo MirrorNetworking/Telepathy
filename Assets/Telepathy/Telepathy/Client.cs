@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -109,6 +110,17 @@ namespace Telepathy
             try
             {
                 await SendMessage(client.GetStream(), data);
+            }
+            catch (ObjectDisposedException)
+            {
+                // happens when pressing stop in Unity
+                Disconnect();
+            }
+            catch (IOException)
+            {
+                // happens when pressing stop in Unity
+                // ('The Socket has been shut down.')
+                Disconnect();
             }
             catch (Exception ex)
             {
