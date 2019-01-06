@@ -49,7 +49,7 @@ namespace Telepathy.LoadTest
 
                 // dispatch events from the client
                 client.OnConnected += () => { /*Debug.Log("client connected @ Thread=" + Thread.CurrentThread.ManagedThreadId);*/ };
-                client.OnDisconnected += () => { Debug.Log("client disconnected @ Thread=" + Thread.CurrentThread.ManagedThreadId); };
+                client.OnDisconnected += () => { /*Debug.Log("client disconnected @ Thread=" + Thread.CurrentThread.ManagedThreadId);*/ };
                 client.OnReceivedData += (data) =>
                 {
                     ++messagesReceived;
