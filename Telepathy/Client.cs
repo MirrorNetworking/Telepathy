@@ -131,7 +131,7 @@ namespace Telepathy
         {
             if (Connected)
             {
-                return SendMessage(client.GetStream(), data);
+                return SendMessageBlocking(client.GetStream(), data);
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;

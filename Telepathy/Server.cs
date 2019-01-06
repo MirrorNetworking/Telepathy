@@ -188,7 +188,7 @@ namespace Telepathy
                 try
                 {
                     NetworkStream stream = client.GetStream();
-                    return SendMessage(stream, data);
+                    return SendMessageBlocking(stream, data);
                 }
                 catch (Exception exception)
                 {

@@ -73,7 +73,9 @@ namespace Telepathy
         }
 
         // send message (via stream) with the <size,content> message structure
-        protected static bool SendMessage(NetworkStream stream, byte[] content)
+        // this function is blocking sometimes!
+        // (e.g. if someone has high latency or wire was cut off)
+        protected static bool SendMessageBlocking(NetworkStream stream, byte[] content)
         {
             // can we still write to this socket (not disconnected?)
             if (!stream.CanWrite)
