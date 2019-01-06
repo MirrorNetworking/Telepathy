@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
-
 using System.Timers;
-
 
 namespace Telepathy.LoadTest
 {
@@ -69,11 +68,12 @@ namespace Telepathy.LoadTest
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
 
-                    Logger.Log(string.Format("Client in={0} ({1} KB/s)  out={2} ({3} KB/s)",
+                    Logger.Log(string.Format("Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
                                              messagesReceived,
                                              bandwithIn,
                                              messagesSent,
-                                             bandwithOut));
+                                             bandwithOut,
+                                             (clients.Sum(cl => cl.ReceiveQueueCount) / clients.Count)));
                     stopwatch.Stop();
                     stopwatch = Stopwatch.StartNew();
                     messagesSent = 0;

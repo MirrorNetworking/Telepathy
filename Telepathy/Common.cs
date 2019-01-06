@@ -12,6 +12,9 @@ namespace Telepathy
         // (not a HashSet because one connection can have multiple new messages)
         protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
 
+        // queue count, useful for debugging / benchmarks
+        public int ReceiveQueueCount { get { return receiveQueue.Count; } }
+
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
         // -   1k messages are   20KB
