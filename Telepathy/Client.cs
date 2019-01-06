@@ -49,7 +49,7 @@ namespace Telepathy
                 _Connecting = false;
 
                 // run the receive loop
-                ReceiveLoop(0, client, messageQueue);
+                ReceiveLoop(0, client, receiveQueue);
             }
             catch (SocketException exception)
             {
@@ -59,7 +59,7 @@ namespace Telepathy
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                messageQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+                receiveQueue.Enqueue(new Message(0, EventType.Disconnected, null));
             }
             catch (Exception exception)
             {
@@ -95,7 +95,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            messageQueue.Clear();
+            receiveQueue.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.

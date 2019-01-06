@@ -95,7 +95,7 @@ namespace Telepathy
                             clients.Add(connectionId, client);
 
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, messageQueue);
+                            ReceiveLoop(connectionId, client, receiveQueue);
 
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);
@@ -143,7 +143,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            messageQueue.Clear();
+            receiveQueue.Clear();
 
             // start the listener thread
             Logger.Log("Server: Start port=" + port + " max=" + maxConnections);

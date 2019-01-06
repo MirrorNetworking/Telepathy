@@ -10,7 +10,7 @@ namespace Telepathy
         // common code /////////////////////////////////////////////////////////
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        protected SafeQueue<Message> messageQueue = new SafeQueue<Message>();
+        protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
 
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
@@ -29,7 +29,7 @@ namespace Telepathy
         //    Disconnected message after a disconnect
         public bool GetNextMessage(out Message message)
         {
-            return messageQueue.TryDequeue(out message);
+            return receiveQueue.TryDequeue(out message);
         }
 
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
@@ -126,7 +126,7 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> messageQueue)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> receiveQueue)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -140,7 +140,7 @@ namespace Telepathy
             {
                 // add connected event to queue with ip address as data in case
                 // it's needed
-                messageQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                receiveQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -166,7 +166,7 @@ namespace Telepathy
                         break;
 
                     // queue it
-                    messageQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+                    receiveQueue.Enqueue(new Message(connectionId, EventType.Data, content));
 
                     // and show a warning if the queue gets too big
                     // -> we don't want to show a warning every single time,
@@ -174,12 +174,12 @@ namespace Telepathy
                     //    logging, which will make the queue pile up even more.
                     // -> instead we show it every 10s, so that the system can
                     //    use most it's processing power to hopefully process it.
-                    if (messageQueue.Count > messageQueueSizeWarning)
+                    if (receiveQueue.Count > messageQueueSizeWarning)
                     {
                         TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + messageQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                             messageQueueLastWarning = DateTime.Now;
                         }
                     }
@@ -202,7 +202,7 @@ namespace Telepathy
             //    where Disconnected -> Reconnect wouldn't work because
             //    Connected is still true for a short moment before the stream
             //    would be closed.
-            messageQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
         }
     }
 }
