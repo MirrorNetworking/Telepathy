@@ -38,7 +38,7 @@ namespace Telepathy
         public bool Connecting { get { return _Connecting; } }
 
         // the thread function
-        void ThreadFunction(string ip, int port)
+        void ReceiveThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -103,7 +103,7 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            receiveThread = new Thread(() => { ThreadFunction(ip, port); });
+            receiveThread = new Thread(() => { ReceiveThreadFunction(ip, port); });
             receiveThread.IsBackground = true;
             receiveThread.Start();
         }
