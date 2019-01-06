@@ -87,8 +87,32 @@ namespace Telepathy
                         // generate the next connection id (thread safely)
                         int connectionId = NextConnectionId();
 
-                        // spawn a thread for each client to listen to his
-                        // messages
+                        // spawn a send thread for each client
+                        Thread sendThread = new Thread(() =>
+                        {
+                            // wrap in try-catch, otherwise Thread exceptions
+                            // are silent
+                            try
+                            {
+                                // create send queue immediately
+                                SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+                                sendQueues.Add(connectionId, sendQueue);
+
+                                // run the send loop
+                                SendLoop(connectionId, client, sendQueue);
+
+                                // remove queue from queues afterwards
+                                sendQueues.Remove(connectionId);
+                            }
+                            catch (Exception exception)
+                            {
+                                Logger.LogError("Server send thread exception: " + exception);
+                            }
+                        });
+                        sendThread.IsBackground = true;
+                        sendThread.Start();
+
+                        // spawn a receive thread for each client
                         Thread receiveThread = new Thread(() =>
                         {
                             // wrap in try-catch, otherwise Thread exceptions
@@ -192,21 +216,15 @@ namespace Telepathy
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
-            // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            // was the sendqueue created yet?
+            SafeQueue<byte[]> sendQueue;
+            if (sendQueues.TryGetValue(connectionId, out sendQueue))
             {
-                // GetStream() might throw exception if client is disconnected
-                try
-                {
-                    NetworkStream stream = client.GetStream();
-                    return SendMessageBlocking(stream, data);
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogWarning("Server.Send exception: " + exception);
-                    return false;
-                }
+                // add to send queue and return immediately.
+                // calling Send here would be blocking (sometimes for long times
+                // if other side lags or wire was disconnected)
+                sendQueue.Enqueue(data);
+                return true;
             }
             Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
             return false;
