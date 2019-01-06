@@ -120,6 +120,10 @@ namespace Telepathy
                 // that we can call Connect() again immediately after Disconnect
                 if (thread != null)
                     thread.Join();
+
+                // let go of this one completely. the thread ended, no one uses
+                // it anymore and this way Connected is false again immediately.
+                client = null;
             }
         }
 
