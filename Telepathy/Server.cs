@@ -146,9 +146,12 @@ namespace Telepathy
             receiveQueue.Clear();
 
             // start the listener thread
+            // (on low priority. if main thread is too busy then there is not
+            //  much value in accepting even more clients)
             Logger.Log("Server: Start port=" + port + " max=" + maxConnections);
             listenerThread = new Thread(() => { Listen(port, maxConnections); });
             listenerThread.IsBackground = true;
+            listenerThread.Priority = ThreadPriority.BelowNormal;
             listenerThread.Start();
         }
 
