@@ -7,7 +7,7 @@ namespace Telepathy
     public class Client : Common
     {
         public TcpClient client;
-        Thread thread;
+        Thread receiveThread;
 
         public bool Connected
         {
@@ -103,9 +103,9 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            thread = new Thread(() => { ThreadFunction(ip, port); });
-            thread.IsBackground = true;
-            thread.Start();
+            receiveThread = new Thread(() => { ThreadFunction(ip, port); });
+            receiveThread.IsBackground = true;
+            receiveThread.Start();
         }
 
         public void Disconnect()
@@ -118,8 +118,8 @@ namespace Telepathy
 
                 // wait until thread finished. this is the only way to guarantee
                 // that we can call Connect() again immediately after Disconnect
-                if (thread != null)
-                    thread.Join();
+                if (receiveThread != null)
+                    receiveThread.Join();
 
                 // let go of this one completely. the thread ended, no one uses
                 // it anymore and this way Connected is false again immediately.
