@@ -91,14 +91,23 @@ namespace Telepathy
                         // messages
                         Thread receiveThread = new Thread(() =>
                         {
-                            // add to dict immediately
-                            clients.Add(connectionId, client);
+                            // wrap in try-catch, otherwise Thread exceptions
+                            // are silent
+                            try
+                            {
+                                // add to dict immediately
+                                clients.Add(connectionId, client);
 
-                            // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue);
+                                // run the receive loop
+                                ReceiveLoop(connectionId, client, receiveQueue);
 
-                            // remove client from clients dict afterwards
-                            clients.Remove(connectionId);
+                                // remove client from clients dict afterwards
+                                clients.Remove(connectionId);
+                            }
+                            catch (Exception exception)
+                            {
+                                Logger.LogError("Server client thread exception: " + exception);
+                            }
                         });
                         receiveThread.IsBackground = true;
                         receiveThread.Start();
