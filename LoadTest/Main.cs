@@ -13,7 +13,6 @@ namespace Telepathy.LoadTest
             {
                 Both();
             }
-
             else if (args[0] == "server")
             {
                 Server(args);
@@ -22,7 +21,6 @@ namespace Telepathy.LoadTest
             {
                 Client(args);
             }
-
             else
             {
                 Console.WriteLine("Usage:");
