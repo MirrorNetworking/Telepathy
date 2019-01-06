@@ -1,8 +1,8 @@
 # =============== #
 # Unity generated #
 # =============== #
-Source/Temp/
-Source/Library/
+Temp/
+Library/
 
 # ===================================== #
 # Project specific #
@@ -18,25 +18,21 @@ obj/
 *.svd
 *.userprefs
 /*.csproj
-Source/Assembly-CSharp.csproj
-Source/Assembly-CSharp-Editor.csproj
-Source/Assembly-CSharp-firstpass.csproj
-Source/Source.sln
+Assembly-CSharp.csproj
+Assembly-CSharp-Editor.csproj
+Assembly-CSharp-firstpass.csproj
+Source.sln
 *.pidb
 *.suo
+/*.sln
 *.user
 *.unityproj
 *.booproj
+Output/
 bin/
 .vs/
 .idea/
-*.nupkg
-
-/packages
-
-# ============ #
-# OS generated #
-# ============ #
+Mirror/packages
 
 # ============ #
 # OS generated #
@@ -48,3 +44,6 @@ bin/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+
+
