@@ -55,7 +55,7 @@ namespace Telepathy
             {
                 // this happens if (for example) the ip address is correct
                 // but there is no server running on that ip/port
-                Logger.Log("Client: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
+                Logger.Log("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
@@ -64,7 +64,7 @@ namespace Telepathy
             catch (Exception exception)
             {
                 // something went wrong. probably important.
-                Logger.LogError("Client Exception: " + exception);
+                Logger.LogError("Client Recv Exception: " + exception);
             }
 
             // Connect might have failed. thread might have been closed.
