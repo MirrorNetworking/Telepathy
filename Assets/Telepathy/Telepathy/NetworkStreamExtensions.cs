@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -21,15 +22,23 @@ namespace Telepathy
             {
                 int received = 0;
 
-                if (stream.DataAvailable)
+                try
                 {
-                    // read available data immediatelly
-                    received = stream.Read(data, offset, size - offset);
+                    if (stream.DataAvailable)
+                    {
+                        // read available data immediatelly
+                        received = stream.Read(data, offset, size - offset);
+                    }
+                    else
+                    {
+                        // wait for more data
+                        received = await stream.ReadAsync(data, offset, size - offset);
+                    }
                 }
-                else
+                catch (ObjectDisposedException)
                 {
-                    // wait for more data
-                    received = await stream.ReadAsync(data, offset, size - offset);
+                    // happens after pressing stop in Unity
+                    // (stream.DataAvailable will cause it)
                 }
 
                 // we just got disconnected
