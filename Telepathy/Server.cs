@@ -89,7 +89,7 @@ namespace Telepathy
 
                         // spawn a thread for each client to listen to his
                         // messages
-                        Thread thread = new Thread(() =>
+                        Thread receiveThread = new Thread(() =>
                         {
                             // add to dict immediately
                             clients.Add(connectionId, client);
@@ -100,8 +100,8 @@ namespace Telepathy
                             // remove client from clients dict afterwards
                             clients.Remove(connectionId);
                         });
-                        thread.IsBackground = true;
-                        thread.Start();
+                        receiveThread.IsBackground = true;
+                        receiveThread.Start();
                     }
                     // connection limit reached. disconnect the client and show
                     // a small log message so we know why it happened.
