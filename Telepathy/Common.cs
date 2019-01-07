@@ -66,7 +66,7 @@ namespace Telepathy
             };
         }
 
-        static int BytesToInt(byte[] bytes )
+        static int BytesToInt(byte[] bytes)
         {
             return
                 bytes[0] |
