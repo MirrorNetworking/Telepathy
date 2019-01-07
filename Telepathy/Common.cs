@@ -263,12 +263,16 @@ namespace Telepathy
                     sendQueue.notEmpty.WaitOne();
                 }
             }
+            catch (ThreadAbortException)
+            {
+                // happens on stop. don't log anything.
+            }
             catch (Exception exception)
             {
                 // something went wrong. the thread was interrupted or the
                 // connection closed or we closed our own connection or ...
                 // -> either way we should stop gracefully
-                Logger.Log("SendLoop: finished send function for connectionId=" + connectionId + " reason: " + exception);
+                Logger.Log("SendLoop Exception: connectionId=" + connectionId + " reason: " + exception);
             }
         }
     }
