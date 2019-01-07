@@ -59,7 +59,9 @@ namespace Telepathy
         }
 
         // the listener thread's listen function
-        void Listen(int port, int maxConnections)
+        // note: no maxConnections parameter. high level API should handle that.
+        //       (Transport can't send a 'too full' message anyway)
+        void Listen(int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -70,7 +72,7 @@ namespace Telepathy
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
-                Logger.Log("Server: listening port=" + port + " max=" + maxConnections);
+                Logger.Log("Server: listening port=" + port);
 
                 // keep accepting new clients
                 while (true)
@@ -81,69 +83,57 @@ namespace Telepathy
                     // in the thread
                     TcpClient client = listener.AcceptTcpClient();
 
-                    // are more connections allowed?
-                    if (clients.Count < maxConnections)
+                    // generate the next connection id (thread safely)
+                    int connectionId = NextConnectionId();
+
+                    // spawn a send thread for each client
+                    Thread sendThread = new Thread(() =>
                     {
-                        // generate the next connection id (thread safely)
-                        int connectionId = NextConnectionId();
-
-                        // spawn a send thread for each client
-                        Thread sendThread = new Thread(() =>
+                        // wrap in try-catch, otherwise Thread exceptions
+                        // are silent
+                        try
                         {
-                            // wrap in try-catch, otherwise Thread exceptions
-                            // are silent
-                            try
-                            {
-                                // create send queue immediately
-                                SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                                sendQueues.Add(connectionId, sendQueue);
+                            // create send queue immediately
+                            SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+                            sendQueues.Add(connectionId, sendQueue);
 
-                                // run the send loop
-                                SendLoop(connectionId, client, sendQueue);
+                            // run the send loop
+                            SendLoop(connectionId, client, sendQueue);
 
-                                // remove queue from queues afterwards
-                                sendQueues.Remove(connectionId);
-                            }
-                            catch (Exception exception)
-                            {
-                                Logger.LogError("Server send thread exception: " + exception);
-                            }
-                        });
-                        sendThread.IsBackground = true;
-                        sendThread.Start();
-
-                        // spawn a receive thread for each client
-                        Thread receiveThread = new Thread(() =>
+                            // remove queue from queues afterwards
+                            sendQueues.Remove(connectionId);
+                        }
+                        catch (Exception exception)
                         {
-                            // wrap in try-catch, otherwise Thread exceptions
-                            // are silent
-                            try
-                            {
-                                // add to dict immediately
-                                clients.Add(connectionId, client);
+                            Logger.LogError("Server send thread exception: " + exception);
+                        }
+                    });
+                    sendThread.IsBackground = true;
+                    sendThread.Start();
 
-                                // run the receive loop
-                                ReceiveLoop(connectionId, client, receiveQueue);
-
-                                // remove client from clients dict afterwards
-                                clients.Remove(connectionId);
-                            }
-                            catch (Exception exception)
-                            {
-                                Logger.LogError("Server client thread exception: " + exception);
-                            }
-                        });
-                        receiveThread.IsBackground = true;
-                        receiveThread.Start();
-                    }
-                    // connection limit reached. disconnect the client and show
-                    // a small log message so we know why it happened.
-                    // note: no extra Sleep because Accept is blocking anyway
-                    else
+                    // spawn a receive thread for each client
+                    Thread receiveThread = new Thread(() =>
                     {
-                        client.Close();
-                        Logger.Log("Server too full, disconnected a client");
-                    }
+                        // wrap in try-catch, otherwise Thread exceptions
+                        // are silent
+                        try
+                        {
+                            // add to dict immediately
+                            clients.Add(connectionId, client);
+
+                            // run the receive loop
+                            ReceiveLoop(connectionId, client, receiveQueue);
+
+                            // remove client from clients dict afterwards
+                            clients.Remove(connectionId);
+                        }
+                        catch (Exception exception)
+                        {
+                            Logger.LogError("Server client thread exception: " + exception);
+                        }
+                    });
+                    receiveThread.IsBackground = true;
+                    receiveThread.Start();
                 }
             }
             catch (ThreadAbortException exception)
@@ -167,7 +157,7 @@ namespace Telepathy
 
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
-        public void Start(int port, int maxConnections = int.MaxValue)
+        public void Start(int port)
         {
             // not if already started
             if (Active) return;
@@ -181,8 +171,8 @@ namespace Telepathy
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
             //  much value in accepting even more clients)
-            Logger.Log("Server: Start port=" + port + " max=" + maxConnections);
-            listenerThread = new Thread(() => { Listen(port, maxConnections); });
+            Logger.Log("Server: Start port=" + port);
+            listenerThread = new Thread(() => { Listen(port); });
             listenerThread.IsBackground = true;
             listenerThread.Priority = ThreadPriority.BelowNormal;
             listenerThread.Start();
