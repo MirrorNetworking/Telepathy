@@ -103,6 +103,13 @@ namespace Telepathy
                             // remove queue from queues afterwards
                             sendQueues.Remove(connectionId);
                         }
+                        catch (ThreadAbortException)
+                        {
+                            // happens on stop. don't log anything.
+                            // (we catch it in SendLoop too, but it still gets
+                            //  through to here when aborting. don't show an
+                            //  error.)
+                        }
                         catch (Exception exception)
                         {
                             Logger.LogError("Server send thread exception: " + exception);
