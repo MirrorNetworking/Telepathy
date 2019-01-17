@@ -9,7 +9,7 @@ namespace Telepathy
     public class Server : Common
     {
         // listener
-        TcpListener listener;
+        public TcpListener listener;
         Thread listenerThread;
 
         // clients with <connectionId, TcpClient>
