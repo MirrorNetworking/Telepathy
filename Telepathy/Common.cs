@@ -65,7 +65,7 @@ namespace Telepathy
             try
             {
                 // construct header (size)
-                byte[] header = Utils.IntToBytesLittle(content.Length);
+                byte[] header = Utils.IntToBytesBigEndian(content.Length);
 
                 // write header+content at once via payload array. writing
                 // header,payload separately would cause 2 TCP packets to be
@@ -95,7 +95,7 @@ namespace Telepathy
             if (!stream.ReadExactly(header, 4))
                 return false;
 
-            int size = Utils.BytesToIntLittle(header);
+            int size = Utils.BytesToIntBigEndian(header);
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];

@@ -250,47 +250,17 @@ namespace Telepathy.Tests
         }
 
         [Test]
-        public void IntToBytesLittleTest()
-        {
-            int number = 0x01020304;
-
-            byte[] numberBytes = Utils.IntToBytesLittle(number);
-            Assert.That(numberBytes[0], Is.EqualTo(0x04));
-            Assert.That(numberBytes[1], Is.EqualTo(0x03));
-            Assert.That(numberBytes[2], Is.EqualTo(0x02));
-            Assert.That(numberBytes[3], Is.EqualTo(0x01));
-
-            int converted = Utils.BytesToIntLittle(numberBytes);
-            Assert.That(converted, Is.EqualTo(number));
-
-            // test a few more random values, compare with BitConverter result
-            for (int i = 0; i < 100000; ++i)
-            {
-                int rand = new Random().Next(int.MinValue, int.MaxValue);
-                byte[] bitBytes = BitConverter.GetBytes(rand);
-                byte[] ourBytes = Utils.IntToBytesLittle(rand);
-                Assert.That(ourBytes[0], Is.EqualTo(bitBytes[0]));
-                Assert.That(ourBytes[1], Is.EqualTo(bitBytes[1]));
-                Assert.That(ourBytes[2], Is.EqualTo(bitBytes[2]));
-                Assert.That(ourBytes[3], Is.EqualTo(bitBytes[3]));
-
-                // little endian?
-                Assert.That(BitConverter.IsLittleEndian, Is.EqualTo(true));
-            }
-        }
-
-        [Test]
         public void IntToBytesBigTest()
         {
             int number = 0x01020304;
 
-            byte[] numberBytes = Utils.IntToBytesBig(number);
+            byte[] numberBytes = Utils.IntToBytesBigEndian(number);
             Assert.That(numberBytes[0], Is.EqualTo(0x01));
             Assert.That(numberBytes[1], Is.EqualTo(0x02));
             Assert.That(numberBytes[2], Is.EqualTo(0x03));
             Assert.That(numberBytes[3], Is.EqualTo(0x04));
 
-            int converted = Utils.BytesToIntBig(numberBytes);
+            int converted = Utils.BytesToIntBigEndian(numberBytes);
             Assert.That(converted, Is.EqualTo(number));
         }
 
