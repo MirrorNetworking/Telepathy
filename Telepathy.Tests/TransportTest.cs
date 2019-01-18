@@ -273,6 +273,9 @@ namespace Telepathy.Tests
                 Assert.That(ourBytes[1], Is.EqualTo(bitBytes[1]));
                 Assert.That(ourBytes[2], Is.EqualTo(bitBytes[2]));
                 Assert.That(ourBytes[3], Is.EqualTo(bitBytes[3]));
+
+                // little endian?
+                Assert.That(BitConverter.IsLittleEndian, Is.EqualTo(true));
             }
         }
 
