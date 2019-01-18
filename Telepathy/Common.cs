@@ -48,34 +48,6 @@ namespace Telepathy
         public int SendTimeout = 5000;
 
         // static helper functions /////////////////////////////////////////////
-        // fast int to byte[] conversion and vice versa
-        // -> test with 100k conversions:
-        //    BitConverter.GetBytes(ushort): 144ms
-        //    bit shifting: 11ms
-        // -> 10x speed improvement makes this optimization actually worth it
-        // -> this way we don't need to allocate BinaryWriter/Reader either
-        // -> 4 bytes because some people may want to send messages larger than
-        //    64K bytes
-        static byte[] IntToBytes(int value)
-        {
-            return new byte[] {
-                (byte)value,
-                (byte)(value >> 8),
-                (byte)(value >> 16),
-                (byte)(value >> 24)
-            };
-        }
-
-        static int BytesToInt(byte[] bytes)
-        {
-            return
-                bytes[0] |
-                (bytes[1] << 8) |
-                (bytes[2] << 16) |
-                (bytes[3] << 24);
-
-        }
-
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
@@ -93,7 +65,7 @@ namespace Telepathy
             try
             {
                 // construct header (size)
-                byte[] header = IntToBytes(content.Length);
+                byte[] header = Utils.IntToBytes(content.Length);
 
                 // write header+content at once via payload array. writing
                 // header,payload separately would cause 2 TCP packets to be
@@ -123,7 +95,7 @@ namespace Telepathy
             if (!stream.ReadExactly(header, 4))
                 return false;
 
-            int size = BytesToInt(header);
+            int size = Utils.BytesToInt(header);
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];
