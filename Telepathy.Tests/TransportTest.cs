@@ -250,17 +250,17 @@ namespace Telepathy.Tests
         }
 
         [Test]
-        public void IntToBytesTest()
+        public void IntToBytesLittleTest()
         {
             int number = 0x01020304;
 
-            byte[] numberBytes = Utils.IntToBytes(number);
+            byte[] numberBytes = Utils.IntToBytesLittle(number);
             Assert.That(numberBytes[0], Is.EqualTo(0x04));
             Assert.That(numberBytes[1], Is.EqualTo(0x03));
             Assert.That(numberBytes[2], Is.EqualTo(0x02));
             Assert.That(numberBytes[3], Is.EqualTo(0x01));
 
-            int converted = Utils.BytesToInt(numberBytes);
+            int converted = Utils.BytesToIntLittle(numberBytes);
             Assert.That(converted, Is.EqualTo(number));
 
             // test a few more random values, compare with BitConverter result
@@ -268,7 +268,7 @@ namespace Telepathy.Tests
             {
                 int rand = new Random().Next(int.MinValue, int.MaxValue);
                 byte[] bitBytes = BitConverter.GetBytes(rand);
-                byte[] ourBytes = Utils.IntToBytes(rand);
+                byte[] ourBytes = Utils.IntToBytesLittle(rand);
                 Assert.That(ourBytes[0], Is.EqualTo(bitBytes[0]));
                 Assert.That(ourBytes[1], Is.EqualTo(bitBytes[1]));
                 Assert.That(ourBytes[2], Is.EqualTo(bitBytes[2]));

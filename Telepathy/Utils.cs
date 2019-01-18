@@ -10,7 +10,9 @@ namespace Telepathy
         // -> this way we don't need to allocate BinaryWriter/Reader either
         // -> 4 bytes because some people may want to send messages larger than
         //    64K bytes
-        public static byte[] IntToBytes(int value)
+
+        // little endian versions
+        public static byte[] IntToBytesLittle(int value)
         {
             return new byte[] {
                 (byte)value,
@@ -20,7 +22,7 @@ namespace Telepathy
             };
         }
 
-        public static int BytesToInt(byte[] bytes)
+        public static int BytesToIntLittle(byte[] bytes)
         {
             return
                 bytes[0] |
