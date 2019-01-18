@@ -262,6 +262,18 @@ namespace Telepathy.Tests
 
             int converted = Utils.BytesToInt(numberBytes);
             Assert.That(converted, Is.EqualTo(number));
+
+            // test a few more random values, compare with BitConverter result
+            for (int i = 0; i < 100000; ++i)
+            {
+                int rand = new Random().Next(int.MinValue, int.MaxValue);
+                byte[] bitBytes = BitConverter.GetBytes(rand);
+                byte[] ourBytes = Utils.IntToBytes(rand);
+                Assert.That(ourBytes[0], Is.EqualTo(bitBytes[0]));
+                Assert.That(ourBytes[1], Is.EqualTo(bitBytes[1]));
+                Assert.That(ourBytes[2], Is.EqualTo(bitBytes[2]));
+                Assert.That(ourBytes[3], Is.EqualTo(bitBytes[3]));
+            }
         }
 
         static Message NextMessage(Server server)
