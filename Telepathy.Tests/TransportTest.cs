@@ -249,6 +249,21 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        [Test]
+        public void IntToBytesTest()
+        {
+            int number = 0x01020304;
+
+            byte[] numberBytes = Utils.IntToBytes(number);
+            Assert.That(numberBytes[0], Is.EqualTo(0x04));
+            Assert.That(numberBytes[1], Is.EqualTo(0x03));
+            Assert.That(numberBytes[2], Is.EqualTo(0x02));
+            Assert.That(numberBytes[3], Is.EqualTo(0x01));
+
+            int converted = Utils.BytesToInt(numberBytes);
+            Assert.That(converted, Is.EqualTo(number));
+        }
+
         static Message NextMessage(Server server)
         {
             Message message;
