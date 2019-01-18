@@ -279,6 +279,21 @@ namespace Telepathy.Tests
             }
         }
 
+        [Test]
+        public void IntToBytesBigTest()
+        {
+            int number = 0x01020304;
+
+            byte[] numberBytes = Utils.IntToBytesBig(number);
+            Assert.That(numberBytes[0], Is.EqualTo(0x01));
+            Assert.That(numberBytes[1], Is.EqualTo(0x02));
+            Assert.That(numberBytes[2], Is.EqualTo(0x03));
+            Assert.That(numberBytes[3], Is.EqualTo(0x04));
+
+            int converted = Utils.BytesToIntBig(numberBytes);
+            Assert.That(converted, Is.EqualTo(number));
+        }
+
         static Message NextMessage(Server server)
         {
             Message message;
