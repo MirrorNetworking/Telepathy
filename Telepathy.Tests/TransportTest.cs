@@ -255,7 +255,7 @@ namespace Telepathy.Tests
             // create a server that only starts and stops without ever accepting
             // a connection
             Server sv = new Server();
-            sv.Start(port + 1);
+            Assert.That(sv.Start(port + 1), Is.EqualTo(true));
             Assert.That(sv.Active, Is.EqualTo(true));
             sv.Stop();
             Assert.That(sv.Active, Is.EqualTo(false));
