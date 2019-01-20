@@ -250,6 +250,18 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ServerStartStopTest()
+        {
+            // create a server that only starts and stops without ever accepting
+            // a connection
+            Server sv = new Server();
+            sv.Start(port + 1);
+            Assert.That(sv.Active, Is.EqualTo(true));
+            sv.Stop();
+            Assert.That(sv.Active, Is.EqualTo(false));
+        }
+
+        [Test]
         public void IntToBytesBigTest()
         {
             int number = 0x01020304;
