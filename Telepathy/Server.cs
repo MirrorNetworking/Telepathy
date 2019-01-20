@@ -196,6 +196,11 @@ namespace Telepathy
             // close the client connections
             listener.Stop();
 
+            // wait for listener thread to finish. only way to guarantee that
+            // .Active is immediately false after Stop
+            if (listenerThread != null)
+                listenerThread.Join();
+
             // close all client connections
             List<TcpClient> connections = clients.GetValues();
             foreach (TcpClient client in connections)
