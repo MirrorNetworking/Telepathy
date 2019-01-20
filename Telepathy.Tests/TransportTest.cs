@@ -262,6 +262,20 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ServerStartStopRepeatedTest()
+        {
+            // can we start/stop on the same port repeatedly?
+            Server sv = new Server();
+            for (int i = 0; i < 10; ++i)
+            {
+                Assert.That(sv.Start(port + 1), Is.EqualTo(true));
+                Assert.That(sv.Active, Is.EqualTo(true));
+                sv.Stop();
+                Assert.That(sv.Active, Is.EqualTo(false));
+            }
+        }
+
+        [Test]
         public void IntToBytesBigTest()
         {
             int number = 0x01020304;
