@@ -195,7 +195,10 @@ namespace Telepathy
 
             // stop listening to connections so that no one can connect while we
             // close the client connections
-            listener.Stop();
+            // (might be null if we call Stop so quickly after Start that the
+            //  thread was interrupted before even creating the listener)
+            if (listener != null)
+                listener.Stop();
 
             // kill listener thread at all costs. only way to guarantee that
             // .Active is immediately false after Stop.
