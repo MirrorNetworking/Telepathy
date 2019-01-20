@@ -164,10 +164,10 @@ namespace Telepathy
 
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
-        public void Start(int port)
+        public bool Start(int port)
         {
             // not if already started
-            if (Active) return;
+            if (Active) return false;
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
@@ -183,6 +183,7 @@ namespace Telepathy
             listenerThread.IsBackground = true;
             listenerThread.Priority = ThreadPriority.BelowNormal;
             listenerThread.Start();
+            return true;
         }
 
         public void Stop()
