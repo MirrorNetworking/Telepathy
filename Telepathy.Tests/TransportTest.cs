@@ -321,7 +321,7 @@ namespace Telepathy.Tests
 
                 if (count >= 100)
                 {
-                    Assert.Fail("The message did not get to the server");
+                    Assert.Fail("The message did not get to the client");
                 }
             }
 
