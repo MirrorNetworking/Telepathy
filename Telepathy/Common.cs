@@ -53,13 +53,6 @@ namespace Telepathy
         // (e.g. if someone has high latency or wire was cut off)
         protected static bool SendMessageBlocking(NetworkStream stream, byte[] content)
         {
-            // can we still write to this socket (not disconnected?)
-            if (!stream.CanWrite)
-            {
-                Logger.LogWarning("Send: stream not writeable: " + stream);
-                return false;
-            }
-
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
             try
