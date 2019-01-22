@@ -51,21 +51,33 @@ namespace Telepathy
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected static bool SendMessageBlocking(NetworkStream stream, byte[] content)
+        protected static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
             try
             {
-                // construct header (size)
-                byte[] header = Utils.IntToBytesBigEndian(content.Length);
+                // we might have multiple pending messages. merge into one
+                // packet to avoid TCP overheads and improve performance.
+                int packetSize = 0;
+                for (int i = 0; i < messages.Length; ++i)
+                    packetSize += sizeof(int) + messages[i].Length; // header + content
 
-                // write header+content at once via payload array. writing
-                // header,payload separately would cause 2 TCP packets to be
-                // sent if nagle's algorithm is disabled(2x TCP header overhead)
-                byte[] payload = new byte[header.Length + content.Length];
-                Array.Copy(header, payload, header.Length);
-                Array.Copy(content, 0, payload, header.Length, content.Length);
+                // create the packet
+                byte[] payload = new byte[packetSize];
+                int position = 0;
+                for (int i = 0; i < messages.Length; ++i)
+                {
+                    // construct header (size)
+                    byte[] header = Utils.IntToBytesBigEndian(messages[i].Length);
+
+                    // copy header + message into buffer
+                    Array.Copy(header, 0, payload, position, header.Length);
+                    Array.Copy(messages[i], 0, payload, position + header.Length, messages[i].Length);
+                    position += header.Length + messages[i].Length;
+                }
+
+                // write the whole thing
                 stream.Write(payload, 0, payload.Length);
 
                 return true;
@@ -214,14 +226,8 @@ namespace Telepathy
                     byte[][] messages;
                     if (sendQueue.TryDequeueAll(out messages))
                     {
-                        // loop through messages via for-int to avoid
-                        // unnecessary byte[] copying with foreach
-                        for (int i = 0; i < messages.Length; ++i)
-                        {
-                            // send message (blocking) or stop if stream is closed
-                            if (!SendMessageBlocking(stream, messages[i]))
-                                return;
-                        }
+                        // send them all at once
+                        SendMessagesBlocking(stream, messages);
                     }
 
                     // don't choke up the CPU: wait until queue not empty anymore
