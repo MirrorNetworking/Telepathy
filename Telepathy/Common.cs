@@ -207,8 +207,9 @@ namespace Telepathy
                     byte[][] messages;
                     if (sendQueue.TryDequeueAll(out messages))
                     {
-                        // send them all at once
-                        SendMessagesBlocking(stream, messages);
+                        // send message (blocking) or stop if stream is closed
+                        if (!SendMessagesBlocking(stream, messages))
+                            return;
                     }
 
                     // don't choke up the CPU: wait until queue not empty anymore
