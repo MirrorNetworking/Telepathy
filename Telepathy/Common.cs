@@ -199,29 +199,10 @@ namespace Telepathy
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
 
-            // keep track of last message queue warning
-            DateTime messageQueueLastWarning = DateTime.Now;
-
             try
             {
                 while (client.Connected) // try this. client will get closed eventually.
                 {
-                    // show a warning if the queue gets too big
-                    // -> we don't want to show a warning every single time,
-                    //    because then a lot of processing power gets wasted on
-                    //    logging, which will make the queue pile up even more.
-                    // -> instead we show it every 10s, so that the system can
-                    //    use most it's processing power to hopefully process it.
-                    if (sendQueue.Count > messageQueueSizeWarning)
-                    {
-                        TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
-                        if (elapsed.TotalSeconds > 10)
-                        {
-                            Logger.LogWarning("SendLoop: sendQueue is getting big(" + sendQueue.Count + ")! Try calling Send less often so the thread can keep up with sends.");
-                            messageQueueLastWarning = DateTime.Now;
-                        }
-                    }
-
                     // dequeue all
                     byte[][] messages;
                     if (sendQueue.TryDequeueAll(out messages))
