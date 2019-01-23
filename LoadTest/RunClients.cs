@@ -36,6 +36,8 @@ namespace Telepathy.LoadTest
 
             var timer = new System.Timers.Timer(1000.0 / clientFrequency);
 
+            // THIS HAPPENS IN DIFFERENT THREADS.
+            // so make sure that GetNextMessage is thread safe!
             timer.Elapsed += (object sender, ElapsedEventArgs e) =>
             {
 
@@ -68,7 +70,7 @@ namespace Telepathy.LoadTest
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
 
-                    Logger.Log(string.Format("Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
+                    Logger.Log(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
                                              messagesReceived,
                                              bandwithIn,
                                              messagesSent,
