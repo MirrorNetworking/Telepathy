@@ -210,7 +210,7 @@ namespace Telepathy
         // a SocketException according to the SocketError.
         private void ProcessError(SocketAsyncEventArgs e)
         {
-            var s = (Socket)e.UserToken;
+            Socket s = (Socket)e.UserToken;
             if (s.Connected)
             {
                 // close the socket associated with the client
