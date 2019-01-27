@@ -99,30 +99,11 @@ namespace Telepathy
                 ProcessReceive(_receiveEventArgs);
         }
 
-        void IO_Completed(object sender, SocketAsyncEventArgs e)
-        {
-            // determine which type of operation just completed and call the associated handler
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.Receive:
-                    ProcessReceive(e);
-                    break;
-
-                case SocketAsyncOperation.Send:
-                    Logger.LogError("Client.IO_Completed: Send should never happen.");
-                    break;
-
-                default:
-                    Logger.LogError("The last operation completed on the socket was not a receive or send");
-                    break;
-            }
-        }
-
         // This method is invoked when an asynchronous receive operation completes.
         // If the remote host closed the connection, then the socket is closed.
         // If data was received then the data is echoed back to the client.
         //
-        void ProcessReceive(SocketAsyncEventArgs e)
+        protected override void ProcessReceive(SocketAsyncEventArgs e)
         {
             try
             {
