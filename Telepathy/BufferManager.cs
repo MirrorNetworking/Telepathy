@@ -5,11 +5,11 @@ namespace Telepathy
 {
     internal class BufferManager
     {
-        private readonly int _numBytes; // the total number of bytes controlled by the buffer pool
-        private byte[] _buffer; // the underlying byte array maintained by the Buffer Manager
-        private readonly Stack<int> _freeIndexPool;
-        private int _currentIndex;
-        private readonly int _bufferSize;
+        readonly int _numBytes; // the total number of bytes controlled by the buffer pool
+        byte[] _buffer; // the underlying byte array maintained by the Buffer Manager
+        readonly Stack<int> _freeIndexPool;
+        int _currentIndex;
+        readonly int _bufferSize;
 
         public BufferManager(int totalBytes, int bufferSize)
         {
