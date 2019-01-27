@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Telepathy
 {
-    class Server
+    public class Server
     {
         readonly int _maxConnectNum;
         readonly int _revBufferSize;
