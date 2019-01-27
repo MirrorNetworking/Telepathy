@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace Telepathy
 
         BufferManager _bufferManager;
 
-        List<byte> _buffer;
+        MemoryStream buffer = new MemoryStream();
 
         readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
         readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
@@ -53,7 +54,6 @@ namespace Telepathy
             _hostEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             _clientSocket = new Socket(_hostEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _bufferManager = new BufferManager(BuffSize * 2, BuffSize);
-            _buffer = new List<byte>();
 
             SocketAsyncEventArgs connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
             connectArgs.Completed += OnConnect;
@@ -154,30 +154,51 @@ namespace Telepathy
                 Socket token = (Socket)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
-                    byte[] data = new byte[e.BytesTransferred];
-                    Array.Copy(e.Buffer, e.Offset, data, 0, e.BytesTransferred);
-                    lock (_buffer)
-                    {
-                        _buffer.AddRange(data);
-                        do
-                        {
-                            byte[] header = _buffer.GetRange(0, 4).ToArray();
-                            int packageLen = Utils.BytesToIntBigEndian(header);
-                            if (packageLen <= _buffer.Count - 4)
-                            {
-                                byte[] rev = _buffer.GetRange(4, packageLen).ToArray();
+                    // write it all into our memory stream first
+                    buffer.Write(e.Buffer, e.Offset, e.BytesTransferred);
 
-                                lock (_buffer)
-                                {
-                                    _buffer.RemoveRange(0, packageLen + 4);
-                                }
-                                DoReceiveEvent(rev);
-                            }
-                            else
+                    // keep trying headers (we might need to process >1 message)
+                    while (buffer.Position >= 4)
+                    {
+                        // we can read a header. so read it.
+                        long bufferSize = buffer.Position;
+                        buffer.Position = 0;
+                        byte[] header = new byte[4]; // TODO cache
+                        buffer.Read(header, 0, header.Length);
+                        int contentSize = Utils.BytesToIntBigEndian(header);
+
+                        // avoid -1 attacks from hackers
+                        if (contentSize > 0)
+                        {
+                            // enough content to finish the message?
+                            if (bufferSize - buffer.Position >= contentSize)
                             {
-                                break;
+                                // read content
+                                byte[] content = new byte[contentSize];
+                                buffer.Read(content, 0, content.Length);
+
+                                // process message
+                                DoReceiveEvent(content);
+
+                                // read what's left in the buffer. this is valid
+                                // data that we received at some point. can't lose
+                                // it.
+                                byte[] remainder = new byte[bufferSize - buffer.Position];
+                                buffer.Read(remainder, 0, remainder.Length);
+
+                                // write it to the beginning of the buffer. this
+                                // sets position to the new true end automatically.
+                                buffer.Position = 0;
+                                buffer.Write(remainder, 0, remainder.Length);
                             }
-                        } while (_buffer.Count > 4);
+                            // otherwise we just need to receive more.
+                            else break;
+                        }
+                        else
+                        {
+                            ProcessError(e);
+                            Logger.LogWarning("Client.ProcessReceive: received negative contentSize: " + contentSize + ". Maybe an attacker tries to exploit the server?");
+                        }
                     }
 
                     if (!token.ReceiveAsync(e))
