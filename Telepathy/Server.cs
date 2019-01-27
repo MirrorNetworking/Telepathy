@@ -232,8 +232,6 @@ namespace Telepathy
 
         // This method is invoked when an asynchronous receive operation completes.
         // If the remote host closed the connection, then the socket is closed.
-        // If data was received then the data is echoed back to the client.
-        //
         protected override void ProcessReceive(SocketAsyncEventArgs e)
         {
             try
