@@ -289,7 +289,7 @@ namespace Telepathy
             if (e.SocketError == SocketError.Success)
             {
                 // done echoing data back to the client
-                var token = (AsyncUserToken)e.UserToken;
+                AsyncUserToken token = (AsyncUserToken)e.UserToken;
                 // read the next block of data send from the client
                 bool willRaiseEvent = token.Socket.ReceiveAsync(e);
                 if (!willRaiseEvent)
@@ -305,7 +305,7 @@ namespace Telepathy
 
         void CloseClientSocket(SocketAsyncEventArgs e)
         {
-            var token = e.UserToken as AsyncUserToken;
+            AsyncUserToken token = e.UserToken as AsyncUserToken;
 
             lock (clients) { clients.Remove(token.connectionId); }
 
