@@ -206,8 +206,14 @@ namespace Telepathy
             }
 
             // Accept the next connection request
-            if (e.SocketError == SocketError.OperationAborted) return;
-            StartAccept(e);
+            if (e.SocketError != SocketError.OperationAborted)
+            {
+                StartAccept(e);
+            }
+            else
+            {
+                Logger.LogError("Server.ProcessAccept: aborted");
+            }
         }
 
         void IO_Completed(object sender, SocketAsyncEventArgs e)
