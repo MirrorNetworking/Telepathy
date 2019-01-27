@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Telepathy.Client
+namespace Telepathy
 {
     internal class Client : IDisposable
     {
