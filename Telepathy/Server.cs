@@ -282,9 +282,9 @@ namespace Telepathy
                     CloseClientSocket(e);
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                //log;
+                Logger.LogError("Server.ProcessReceive failed: " + exception);
             }
         }
 
