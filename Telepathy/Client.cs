@@ -86,7 +86,7 @@ namespace Telepathy
 
         MySocketEventArgs InitSendArgs()
         {
-            var sendArg = new MySocketEventArgs();
+            MySocketEventArgs sendArg = new MySocketEventArgs();
             sendArg.Completed += IO_Completed;
             sendArg.UserToken = _clientSocket;
             sendArg.RemoteEndPoint = _hostEndPoint;
@@ -103,7 +103,7 @@ namespace Telepathy
 
         void IO_Completed(object sender, SocketAsyncEventArgs e)
         {
-            var mys = (MySocketEventArgs)e;
+            MySocketEventArgs mys = (MySocketEventArgs)e;
 
             // determine which type of operation just completed and call the associated handler
             switch (e.LastOperation)
@@ -131,7 +131,7 @@ namespace Telepathy
             try
             {
                 // check if the remote host closed the connection
-                var token = (Socket)e.UserToken;
+                Socket token = (Socket)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
                     byte[] data = new byte[e.BytesTransferred];
