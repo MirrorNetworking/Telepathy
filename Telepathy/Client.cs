@@ -226,7 +226,7 @@ namespace Telepathy
         }
 
         // Exchange a message with the host.
-        public void Send(byte[] sendBuffer)
+        public bool Send(byte[] sendBuffer)
         {
             if (_connected)
             {
@@ -244,10 +244,12 @@ namespace Telepathy
                 }
 
                 _clientSocket.SendAsync(sendArgs);
+                return true;
             }
             else
             {
                 //throw new SocketException((int)SocketError.NotConnected);
+                return false;
             }
         }
 
