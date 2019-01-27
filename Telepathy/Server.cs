@@ -213,7 +213,8 @@ namespace Telepathy
                     break;
 
                 default:
-                    throw new ArgumentException("The last operation completed on the socket was not a receive or send");
+                    Logger.LogError("The last operation completed on the socket was not a receive or send");
+                    break;
             }
         }
 
