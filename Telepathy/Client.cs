@@ -188,8 +188,6 @@ namespace Telepathy
             }
         }
 
-        #region read write
-
         // Close socket in case of failure and throws
         // a SocketException according to the SocketError.
         private void ProcessError(SocketAsyncEventArgs e)
@@ -258,10 +256,6 @@ namespace Telepathy
             incomingQueue.Enqueue(new Message(0, EventType.Data, buff));
         }
 
-        #endregion
-
-        #region IDisposable Members
-
         // Disposes the instance of SocketClient.
         public void Dispose()
         {
@@ -271,7 +265,5 @@ namespace Telepathy
                 _clientSocket.Close();
             }
         }
-
-        #endregion
     }
 }
