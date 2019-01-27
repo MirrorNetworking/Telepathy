@@ -207,6 +207,7 @@ namespace Telepathy
                 else
                 {
                     ProcessError(e);
+                    Logger.LogWarning("Client.ProcessReceive ended: " + e.BytesTransferred + " transferred. socketerror=" + e.SocketError);
                 }
             }
             catch (Exception exception)
