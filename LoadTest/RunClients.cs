@@ -32,7 +32,7 @@ namespace Telepathy.LoadTest
             // the sleep might be too small, or other reasons. no point in
             // load testing if the connect failed already.
             Thread.Sleep(1000);
-            if (clients.All(cl => cl.Connected))
+            if (!clients.All(cl => cl.Connected))
             {
                 Logger.Log("only " + clients.Count(cl => cl.Connected) + " clients were connected successfully.");
             }
