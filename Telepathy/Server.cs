@@ -17,7 +17,7 @@ namespace Telepathy
         readonly Semaphore _maxNumberAcceptedClients;
 
         // Dict<connId, token>
-        Dictionary<int, AsyncUserToken> clients = new Dictionary<int, AsyncUserToken>();
+        ConcurrentDictionary<int, AsyncUserToken> clients = new ConcurrentDictionary<int, AsyncUserToken>();
 
         // incoming message queue
         ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
@@ -53,7 +53,7 @@ namespace Telepathy
         {
             try
             {
-                lock (clients) { clients.Clear(); }
+                clients.Clear();
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
                 _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 _listenSocket.Bind(localEndPoint);
@@ -74,18 +74,15 @@ namespace Telepathy
 
         public void Stop()
         {
-            lock (clients)
+            foreach (KeyValuePair<int, AsyncUserToken> kvp in clients)
             {
-                foreach (KeyValuePair<int, AsyncUserToken> kvp in clients)
+                AsyncUserToken token = kvp.Value;
+                try
                 {
-                    AsyncUserToken token = kvp.Value;
-                    try
-                    {
-                        token.Socket.Shutdown(SocketShutdown.Both);
-                        OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
-                    }
-                    catch (Exception) { }
+                    token.Socket.Shutdown(SocketShutdown.Both);
+                    OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
                 }
+                catch (Exception) { }
             }
 
             try
@@ -96,22 +93,19 @@ namespace Telepathy
 
             _listenSocket.Close();
 
-            lock (clients) { clients.Clear(); }
+            clients.Clear();
         }
 
         public void Disconnect(int connectionId)
         {
-            lock (clients)
+            AsyncUserToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
-                AsyncUserToken token;
-                if (clients.TryGetValue(connectionId, out token))
+                try
                 {
-                    try
-                    {
-                        token.Socket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (Exception) { }
+                    token.Socket.Shutdown(SocketShutdown.Both);
                 }
+                catch (Exception) { }
             }
         }
 
@@ -180,7 +174,7 @@ namespace Telepathy
                 userToken.IpAddress = ((IPEndPoint)(e.AcceptSocket.RemoteEndPoint)).Address;
                 userToken.connectionId = _clientCount;
 
-                lock (clients) { clients[_clientCount] = userToken; }
+                clients[_clientCount] = userToken;
 
                 OnClientConnected(new EventArgs<AsyncUserToken>(userToken));
 
@@ -311,7 +305,7 @@ namespace Telepathy
         {
             AsyncUserToken token = e.UserToken as AsyncUserToken;
 
-            lock (clients) { clients.Remove(token.connectionId); }
+            clients.TryRemove(token.connectionId, out AsyncUserToken temp);
 
             // close the socket associated with the client
             try
@@ -334,33 +328,30 @@ namespace Telepathy
         public bool Send(int connectionId, byte[] message)
         {
             // find it
-            lock (clients)
+            AsyncUserToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
-                AsyncUserToken token;
-                if (clients.TryGetValue(connectionId, out token))
+                if (token?.Socket == null || !token.Socket.Connected)
+                    return false;
+
+                try
                 {
-                    if (token?.Socket == null || !token.Socket.Connected)
-                        return false;
+                    byte[] buff = new byte[message.Length + 4];
+                    byte[] header = Utils.IntToBytesBigEndian(message.Length);
+                    Array.Copy(header, buff, 4);
+                    Array.Copy(message, 0, buff, 4, message.Length);
 
-                    try
-                    {
-                        byte[] buff = new byte[message.Length + 4];
-                        byte[] header = Utils.IntToBytesBigEndian(message.Length);
-                        Array.Copy(header, buff, 4);
-                        Array.Copy(message, 0, buff, 4, message.Length);
+                    //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
 
-                        //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
-
-                        SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
-                        sendArg.SetBuffer(buff, 0, buff.Length);
-                        token.Socket.SendAsync(sendArg);
-                        return true;
-                    }
-                    catch (Exception e)
-                    {
-                        // log
-                        Logger.LogError("Server.Send failed: " + e);
-                    }
+                    SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
+                    sendArg.SetBuffer(buff, 0, buff.Length);
+                    token.Socket.SendAsync(sendArg);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    // log
+                    Logger.LogError("Server.Send failed: " + e);
                 }
             }
 
