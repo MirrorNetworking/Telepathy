@@ -200,9 +200,9 @@ namespace Telepathy
                     ProcessReceive(readEventArgs);
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                // log
+                Logger.LogError("Server.ProcessAccept failed: " + exception);
             }
 
             // Accept the next connection request
