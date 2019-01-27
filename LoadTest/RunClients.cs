@@ -25,6 +25,9 @@ namespace Telepathy.LoadTest
                 client.Connect(host, port);
                 clients.Add(client);
                 Thread.Sleep(15);
+
+                if (i % 100 == 0)
+                    Logger.Log("..started " + i + " / " + clientAmount + " clients");
             }
             Logger.Log("started all clients");
 
