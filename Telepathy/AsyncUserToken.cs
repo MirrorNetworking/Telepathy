@@ -12,6 +12,7 @@ namespace Telepathy
         public Socket Socket;
         public DateTime ConnectTime;
         public string UserInfo;
+        public int connectionId;
         public List<byte> Buffer = new List<byte>();
     }
 }

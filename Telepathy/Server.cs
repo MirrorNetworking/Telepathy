@@ -177,6 +177,7 @@ namespace Telepathy
                 userToken.ConnectTime = DateTime.Now;
                 userToken.Remote = e.AcceptSocket.RemoteEndPoint;
                 userToken.IpAddress = ((IPEndPoint)(e.AcceptSocket.RemoteEndPoint)).Address;
+                userToken.connectionId = _clientCount;
 
                 lock (ClientList) { ClientList.Add(userToken); }
 
