@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -33,7 +34,7 @@ namespace Telepathy
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
         // incoming message queue
-        SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
+        ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)

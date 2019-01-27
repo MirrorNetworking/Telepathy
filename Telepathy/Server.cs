@@ -21,7 +21,7 @@ namespace Telepathy
         public Dictionary<int, AsyncUserToken> clients = new Dictionary<int, AsyncUserToken>();
 
         // incoming message queue
-        SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
+        ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
