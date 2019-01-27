@@ -46,7 +46,7 @@ namespace Telepathy
             return incomingQueue.TryDequeue(out message);
         }
 
-        public SocketError Connect(string ip, int port)
+        public bool Connect(string ip, int port)
         {
             // Instantiate the endpoint and socket.
             _hostEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
@@ -59,7 +59,13 @@ namespace Telepathy
 
             _clientSocket.ConnectAsync(connectArgs);
             AutoConnectEvent.WaitOne();
-            return connectArgs.SocketError;
+
+            if (connectArgs.SocketError != SocketError.Success)
+            {
+                Logger.LogWarning("Client.Connect failed: " + connectArgs.SocketError);
+                return false;
+            }
+            return true;
         }
 
         // Disconnect from the host.
