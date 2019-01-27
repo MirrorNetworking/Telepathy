@@ -217,7 +217,6 @@ namespace Telepathy
                 }
             }
 
-            //这里一定要记得把事件移走,如果不移走,当断开服务器后再次连接上,会造成多次事件触发.
             foreach (MySocketEventArgs arg in _listArgs)
                 arg.Completed -= IO_Completed;
 
@@ -230,15 +229,14 @@ namespace Telepathy
         {
             if (_connected)
             {
-                //先对数据进行包装,就是把包的大小作为头加入,这必须与服务器端的协议保持一致,否则造成服务器无法处理数据.
                 var buff = new byte[sendBuffer.Length + 4];
                 Array.Copy(BitConverter.GetBytes(sendBuffer.Length), buff, 4);
                 Array.Copy(sendBuffer, 0, buff, 4, sendBuffer.Length);
 
-                //查找有没有空闲的发送MySocketEventArgs,有就直接拿来用,没有就创建新的.So easy!
+                // So easy!
                 MySocketEventArgs sendArgs = _listArgs.Find(a => a.IsUsing == false) ?? InitSendArgs();
 
-                lock (sendArgs) //要锁定,不锁定让别的线程抢走了就不妙了.
+                lock (sendArgs)
                 {
                     sendArgs.IsUsing = true;
                     sendArgs.SetBuffer(buff, 0, buff.Length);
