@@ -55,7 +55,7 @@ namespace Telepathy
             _bufferManager = new BufferManager(BuffSize * 2, BuffSize);
             _buffer = new List<byte>();
 
-            var connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
+            SocketAsyncEventArgs connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
             connectArgs.Completed += OnConnect;
 
             _clientSocket.ConnectAsync(connectArgs);
