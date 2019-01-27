@@ -69,11 +69,12 @@ namespace Telepathy
             }
         }
 
-        public bool Start(IPEndPoint localEndPoint)
+        public bool Start(int port)
         {
             try
             {
                 ClientList.Clear();
+                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
                 _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 _listenSocket.Bind(localEndPoint);
 
