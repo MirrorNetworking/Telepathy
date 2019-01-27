@@ -184,7 +184,7 @@ namespace Telepathy
                 // Get the socket for the accepted client connection and put it into the
                 //ReadEventArg object user token
                 SocketAsyncEventArgs readEventArgs = _pool.Pop();
-                var userToken = (AsyncUserToken)readEventArgs.UserToken;
+                AsyncUserToken userToken = (AsyncUserToken)readEventArgs.UserToken;
                 userToken.Socket = e.AcceptSocket;
                 userToken.ConnectTime = DateTime.Now;
                 userToken.Remote = e.AcceptSocket.RemoteEndPoint;
