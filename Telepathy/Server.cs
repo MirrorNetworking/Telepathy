@@ -243,7 +243,7 @@ namespace Telepathy
             try
             {
                 // check if the remote host closed the connection
-                var token = (AsyncUserToken)e.UserToken;
+                AsyncUserToken token = (AsyncUserToken)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
                     byte[] data = new byte[e.BytesTransferred];
@@ -269,7 +269,7 @@ namespace Telepathy
                             token.Buffer.RemoveRange(0, packageLen + 4);
                         }
 
-                        var e1 = new EventArgs<AsyncUserToken, byte[]>(token, rev);
+                        EventArgs<AsyncUserToken, byte[]> e1 = new EventArgs<AsyncUserToken, byte[]>(token, rev);
                         OnReceiveClientData(e1);
 
                     } while (token.Buffer.Count > 4);
