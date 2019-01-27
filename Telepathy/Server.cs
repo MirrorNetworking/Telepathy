@@ -353,9 +353,10 @@ namespace Telepathy
                         token.Socket.SendAsync(sendArg);
                         return true;
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         // log
+                        Logger.LogError("Server.Send failed: " + e);
                     }
                 }
             }
