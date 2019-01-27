@@ -153,8 +153,8 @@ namespace Telepathy
                         _buffer.AddRange(data);
                         do
                         {
-                            byte[] lenBytes = _buffer.GetRange(0, 4).ToArray();
-                            int packageLen = BitConverter.ToInt32(lenBytes, 0);
+                            byte[] header = _buffer.GetRange(0, 4).ToArray();
+                            int packageLen = Utils.BytesToIntBigEndian(header);
                             if (packageLen <= _buffer.Count - 4)
                             {
                                 byte[] rev = _buffer.GetRange(4, packageLen).ToArray();
@@ -240,7 +240,8 @@ namespace Telepathy
             if (_connected)
             {
                 byte[] buff = new byte[sendBuffer.Length + 4];
-                Array.Copy(BitConverter.GetBytes(sendBuffer.Length), buff, 4);
+                byte[] header = Utils.IntToBytesBigEndian(sendBuffer.Length);
+                Array.Copy(header, buff, 4);
                 Array.Copy(sendBuffer, 0, buff, 4, sendBuffer.Length);
 
                 // So easy!

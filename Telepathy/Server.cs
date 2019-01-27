@@ -241,8 +241,8 @@ namespace Telepathy
 
                     do
                     {
-                        byte[] lenBytes = token.Buffer.GetRange(0, 4).ToArray();
-                        int packageLen = BitConverter.ToInt32(lenBytes, 0);
+                        byte[] header = token.Buffer.GetRange(0, 4).ToArray();
+                        int packageLen = Utils.BytesToIntBigEndian(header);
                         if (packageLen > token.Buffer.Count - 4)
                         {
                             break;
@@ -342,8 +342,8 @@ namespace Telepathy
                     try
                     {
                         byte[] buff = new byte[message.Length + 4];
-                        byte[] len = BitConverter.GetBytes(message.Length);
-                        Array.Copy(len, buff, 4);
+                        byte[] header = Utils.IntToBytesBigEndian(message.Length);
+                        Array.Copy(header, buff, 4);
                         Array.Copy(message, 0, buff, 4, message.Length);
 
                         //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
