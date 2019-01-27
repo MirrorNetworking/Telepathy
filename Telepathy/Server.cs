@@ -272,7 +272,8 @@ namespace Telepathy
                         EventArgs<AsyncUserToken, byte[]> e1 = new EventArgs<AsyncUserToken, byte[]>(token, rev);
                         OnReceiveClientData(e1);
 
-                    } while (token.Buffer.Count > 4);
+                    }
+                    while (token.Buffer.Count > 4);
 
                     if (!token.Socket.ReceiveAsync(e))
                         ProcessReceive(e);
