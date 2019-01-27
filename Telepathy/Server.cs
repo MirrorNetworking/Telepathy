@@ -322,7 +322,7 @@ namespace Telepathy
 
         void CloseClientSocket(SocketAsyncEventArgs e)
         {
-            AsyncUserToken token = e.UserToken as AsyncUserToken;
+            AsyncUserToken token = (AsyncUserToken)e.UserToken;
 
             clients.TryRemove(token.connectionId, out AsyncUserToken temp);
 
