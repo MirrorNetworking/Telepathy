@@ -53,7 +53,7 @@ namespace Telepathy
         }
 
         // Disconnect from the host.
-        internal void Disconnect()
+        public void Disconnect()
         {
             _clientSocket.Disconnect(false);
         }
