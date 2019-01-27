@@ -272,7 +272,7 @@ namespace Telepathy
 
         protected virtual void OnReceiveClientData(EventArgs<AsyncUserToken, byte[]> arg)
         {
-            incomingQueue.Enqueue(new Message(TODO, EventType.Data, arg.Value2));
+            incomingQueue.Enqueue(new Message(arg.Value.connectionId, EventType.Data, arg.Value2));
         }
 
         // This method is invoked when an asynchronous send operation completes.
