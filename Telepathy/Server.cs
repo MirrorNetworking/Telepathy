@@ -20,7 +20,7 @@ namespace Telepathy
 
         //public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
 
-        public List<AsyncUserToken> ClientList { get; set; }
+        public List<AsyncUserToken> ClientList = new List<AsyncUserToken>();
 
         // incoming message queue
         SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
@@ -52,7 +52,6 @@ namespace Telepathy
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
             _bufferManager.InitBuffer();
-            ClientList = new List<AsyncUserToken>();
 
             // preallocate pool of SocketAsyncEventArgs objects
             for (int i = 0; i < _maxConnectNum; i++)
