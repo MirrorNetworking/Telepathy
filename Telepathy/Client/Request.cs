@@ -11,9 +11,9 @@ namespace Telepathy.Client
         public EventHandler<EventArgs<object>> OnReceiveData;
         public EventHandler OnServerClosed;
 
-        private static Timer _heartTimer;
+        static Timer _heartTimer;
 
-        private static ApiResponse _heartRes;
+        static ApiResponse _heartRes;
 
         public static bool Connected => Manager != null && Manager.Connected;
 
@@ -50,7 +50,7 @@ namespace Telepathy.Client
             catch (Exception) { }
         }
 
-        private static bool Send(byte[] buff)
+        static bool Send(byte[] buff)
         {
             if (!Connected) return false;
 
@@ -58,7 +58,7 @@ namespace Telepathy.Client
             return true;
         }
 
-        private void OnReceivedServerData(object sender, EventArgs<byte[]> e)
+        void OnReceivedServerData(object sender, EventArgs<byte[]> e)
         {
             var str = Encoding.UTF8.GetString(e.Value);
             Console.WriteLine($"receive data {str}");
@@ -66,12 +66,12 @@ namespace Telepathy.Client
             OnReceiveData?.Invoke(null, OnReceiveData.CreateArgs(e.Value));
         }
 
-        private void OnServerStopEvent(object sender, EventArgs e)
+        void OnServerStopEvent(object sender, EventArgs e)
         {
             OnServerClosed?.Invoke(sender, e);
         }
 
-        private void StartHeartbeat()
+        void StartHeartbeat()
         {
             if (_heartTimer == null)
             {
@@ -92,7 +92,7 @@ namespace Telepathy.Client
             _heartRes.Data.Add("beat", UserInfo.Nickname + ":"+UserInfo.UserId+" " + DateTime.Now.ToString("HH:mm:ss"));
         }
 
-        private void TimeElapsed(object source, ElapsedEventArgs e)
+        void TimeElapsed(object source, ElapsedEventArgs e)
         {
             _heartRes.Data.Clear();
             _heartRes.Data.Add("beat", UserInfo.Nickname + ":" + UserInfo.UserId+" " + DateTime.Now.ToString("HH:mm:ss"));
