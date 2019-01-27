@@ -20,8 +20,6 @@ namespace Telepathy
 
         public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
 
-        public EventHandler<EventArgs<AsyncUserToken, byte[]>> ReceiveClientData;
-
         public List<AsyncUserToken> ClientList { get; set; }
 
         // incoming message queue
@@ -252,7 +250,7 @@ namespace Telepathy
                             token.Buffer.RemoveRange(0, packageLen + 4);
                         }
 
-                        var e1 = ReceiveClientData.CreateArgs(token, rev);
+                        var e1 = new EventArgs<AsyncUserToken, byte[]>(token, rev);
                         OnReceiveClientData(e1);
 
                     } while (token.Buffer.Count > 4);
@@ -273,7 +271,7 @@ namespace Telepathy
 
         protected virtual void OnReceiveClientData(EventArgs<AsyncUserToken, byte[]> arg)
         {
-            ReceiveClientData?.Invoke(this, arg);
+            incomingQueue.Enqueue(new Message(TODO, EventType.Data, arg.Value2));
         }
 
         // This method is invoked when an asynchronous send operation completes.
