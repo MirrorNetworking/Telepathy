@@ -137,7 +137,7 @@ namespace Telepathy
         //
         // <param name="acceptEventArg">The context object to use when issuing
         // the accept operation on the server's listening socket</param>
-        public void StartAccept(SocketAsyncEventArgs acceptEventArg)
+        void StartAccept(SocketAsyncEventArgs acceptEventArg)
         {
             if (acceptEventArg == null)
             {
