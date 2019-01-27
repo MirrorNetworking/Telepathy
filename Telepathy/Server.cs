@@ -376,6 +376,7 @@ namespace Telepathy
                     Array.Copy(message, 0, buff, 4, message.Length);
 
                     SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
+                    sendArg.Completed += IO_Completed;
                     sendArg.SetBuffer(buff, 0, buff.Length);
                     token.Socket.SendAsync(sendArg);
                     return true;
