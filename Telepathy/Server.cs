@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace Telepathy
@@ -10,7 +10,6 @@ namespace Telepathy
     public class Server
     {
         readonly int _maxConnectNum;
-        readonly int _revBufferSize;
         readonly BufferManager _bufferManager;
         const int OpsToAlloc = 2;
         Socket _listenSocket;
@@ -39,7 +38,6 @@ namespace Telepathy
         {
             _clientCount = 0;
             _maxConnectNum = numConnections;
-            _revBufferSize = receiveBufferSize;
 
             // allocate buffers such that the maximum number of sockets can have one outstanding read and
             //write posted to the socket simultaneously
