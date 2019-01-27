@@ -24,6 +24,20 @@ namespace Telepathy
 
         public List<AsyncUserToken> ClientList { get; set; }
 
+        // incoming message queue
+        SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
+
+        // removes and returns the oldest message from the message queue.
+        // (might want to call this until it doesn't return anything anymore)
+        // -> Connected, Data, Disconnected events are all added here
+        // -> bool return makes while (GetMessage(out Message)) easier!
+        // -> no 'is client connected' check because we still want to read the
+        //    Disconnected message after a disconnect
+        public bool GetNextMessage(out Message message)
+        {
+            return incomingQueue.TryDequeue(out message);
+        }
+
         public Server(int numConnections, int receiveBufferSize)
         {
             _clientCount = 0;
