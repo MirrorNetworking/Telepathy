@@ -28,8 +28,11 @@ namespace Telepathy
 
         MemoryStream buffer = new MemoryStream();
 
-        readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
-        readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
+        // cache finished SocketAsyncEventArgs so we can reuse them without
+        // reallocating in each Send
+        readonly ConcurrentQueue<SocketAsyncEventArgs> sendEventArgsCache = new ConcurrentQueue<SocketAsyncEventArgs>();
+
+        readonly SocketAsyncEventArgs _receiveEventArgs = new SocketAsyncEventArgs();
 
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
@@ -92,7 +95,6 @@ namespace Telepathy
         {
             _bufferManager.InitBuffer();
 
-            InitSendArgs();
             _receiveEventArgs.Completed += IO_Completed;
             _receiveEventArgs.UserToken = e.UserToken;
             _bufferManager.SetBuffer(_receiveEventArgs);
@@ -101,25 +103,8 @@ namespace Telepathy
                 ProcessReceive(_receiveEventArgs);
         }
 
-        MySocketEventArgs InitSendArgs()
-        {
-            MySocketEventArgs sendArg = new MySocketEventArgs();
-            sendArg.Completed += IO_Completed;
-            sendArg.UserToken = _clientSocket;
-            sendArg.RemoteEndPoint = _hostEndPoint;
-            sendArg.IsUsing = false;
-            lock (_listArgs)
-            {
-                _listArgs.Add(sendArg);
-            }
-
-            return sendArg;
-        }
-
         void IO_Completed(object sender, SocketAsyncEventArgs e)
         {
-            MySocketEventArgs mys = (MySocketEventArgs)e;
-
             // determine which type of operation just completed and call the associated handler
             switch (e.LastOperation)
             {
@@ -128,7 +113,6 @@ namespace Telepathy
                     break;
 
                 case SocketAsyncOperation.Send:
-                    mys.IsUsing = false;
                     ProcessSend(e);
                     break;
 
@@ -223,6 +207,9 @@ namespace Telepathy
             {
                 ProcessError(e);
             }
+
+            // retire send args in any case, so we can reuse them without 'new'
+            RetireSendArgs(e);
         }
 
         // Close socket in case of failure and throws
@@ -251,13 +238,33 @@ namespace Telepathy
                 }
             }
 
-            foreach (MySocketEventArgs arg in _listArgs)
-                arg.Completed -= IO_Completed;
-
             _receiveEventArgs.Completed -= IO_Completed;
 
             // disconnected event
             incomingQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+        }
+
+        // return a previously used SocketAsyncEventArgs or create a new one
+        SocketAsyncEventArgs MakeSendArgs()
+        {
+            SocketAsyncEventArgs args;
+            if (!sendEventArgsCache.TryDequeue(out args))
+            {
+                args = new SocketAsyncEventArgs();
+            }
+
+            args.Completed += IO_Completed;
+            args.UserToken = _clientSocket;
+            args.RemoteEndPoint = _hostEndPoint;
+            return args;
+        }
+
+        void RetireSendArgs(SocketAsyncEventArgs args)
+        {
+            // retire SocketAsyncEventArgs to cache so we can reuse them without
+            // allocating again
+            args.Completed -= IO_Completed; // don't want to call it twice next time. TODO is this even necessary or will it only add one function anyway?
+            sendEventArgsCache.Enqueue(args);
         }
 
         // Exchange a message with the host.
@@ -270,14 +277,9 @@ namespace Telepathy
                 Array.Copy(header, buff, 4);
                 Array.Copy(sendBuffer, 0, buff, 4, sendBuffer.Length);
 
-                // So easy!
-                MySocketEventArgs sendArgs = _listArgs.Find(a => a.IsUsing == false) ?? InitSendArgs();
-
-                lock (sendArgs)
-                {
-                    sendArgs.IsUsing = true;
-                    sendArgs.SetBuffer(buff, 0, buff.Length);
-                }
+                // create send args
+                SocketAsyncEventArgs sendArgs = MakeSendArgs();
+                sendArgs.SetBuffer(buff, 0, buff.Length);
 
                 _clientSocket.SendAsync(sendArgs);
                 return true;
