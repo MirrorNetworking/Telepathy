@@ -30,7 +30,6 @@ namespace Telepathy
 
         readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
         readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
-        int _tagCount;
 
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
@@ -96,7 +95,6 @@ namespace Telepathy
             InitSendArgs();
             _receiveEventArgs.Completed += IO_Completed;
             _receiveEventArgs.UserToken = e.UserToken;
-            _receiveEventArgs.ArgsTag = 0;
             _bufferManager.SetBuffer(_receiveEventArgs);
 
             if (!e.ConnectSocket.ReceiveAsync(_receiveEventArgs))
@@ -110,8 +108,6 @@ namespace Telepathy
             sendArg.UserToken = _clientSocket;
             sendArg.RemoteEndPoint = _hostEndPoint;
             sendArg.IsUsing = false;
-            Interlocked.Increment(ref _tagCount);
-            sendArg.ArgsTag = _tagCount;
             lock (_listArgs)
             {
                 _listArgs.Add(sendArg);
