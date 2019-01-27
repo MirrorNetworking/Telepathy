@@ -11,20 +11,20 @@ namespace Telepathy
         const int BuffSize = 1024;
 
         // The socket used to send/receive messages.
-        readonly Socket _clientSocket;
+        Socket _clientSocket;
 
         // Flag for connected socket.
         bool _connected;
 
         // Listener endpoint.
-        readonly IPEndPoint _hostEndPoint;
+        IPEndPoint _hostEndPoint;
 
         // Signals a connection.
         static readonly AutoResetEvent AutoConnectEvent = new AutoResetEvent(false);
 
-        readonly BufferManager _bufferManager;
+        BufferManager _bufferManager;
 
-        readonly List<byte> _buffer;
+        List<byte> _buffer;
 
         readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
         readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
@@ -36,20 +36,14 @@ namespace Telepathy
 
         public EventHandler ServerStopEvent;
 
-        // Create an uninitialized client instance.
-        // To start the send/receive processing call the
-        // Connect method followed by SendReceive method.
-        internal Client(string ip, int port)
+        public SocketError Connect(string ip, int port)
         {
-            // Instantiates the endpoint and socket.
+            // Instantiate the endpoint and socket.
             _hostEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             _clientSocket = new Socket(_hostEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _bufferManager = new BufferManager(BuffSize * 2, BuffSize);
             _buffer = new List<byte>();
-        }
 
-        internal SocketError Connect()
-        {
             var connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
             connectArgs.Completed += OnConnect;
 
