@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -16,9 +17,6 @@ namespace Telepathy
 
         // Dict<connId, token>
         ConcurrentDictionary<int, AsyncUserToken> clients = new ConcurrentDictionary<int, AsyncUserToken>();
-
-        // incoming message queue
-        ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -47,15 +45,30 @@ namespace Telepathy
             return id;
         }
 
-        // removes and returns the oldest message from the message queue.
-        // (might want to call this until it doesn't return anything anymore)
+        // grab all new messages for all connections
         // -> Connected, Data, Disconnected events are all added here
-        // -> bool return makes while (GetMessage(out Message)) easier!
         // -> no 'is client connected' check because we still want to read the
         //    Disconnected message after a disconnect
-        public bool GetNextMessage(out Message message)
+        // -> a Queue is passed as parameter so we don't have to allocate a new
+        //    one each time. Queue.Dequeue is O(1)
+        // -> Queue also guarantees that caller removes first time when using it
+        //    unlike List, where they might forget to .Clear it!
+        public void GetNextMessages(Queue<Message> messages)
         {
-            return incomingQueue.TryDequeue(out message);
+            foreach (KeyValuePair<int, AsyncUserToken> kvp in clients)
+            {
+                AsyncUserToken token = kvp.Value;
+
+                // copy .Count here so we don't end up in a deadlock if messages
+                // are coming in faster than we can dequeue them
+                int count = token.incomingQueue.Count;
+                for (int i = 0; i < count; ++i)
+                {
+                    Message message;
+                    if (token.incomingQueue.TryDequeue(out message))
+                        messages.Enqueue(message);
+                }
+            }
         }
 
         public Server(int numConnections, int receiveBufferSize)
@@ -164,12 +177,12 @@ namespace Telepathy
 
         void OnClientConnected(AsyncUserToken token)
         {
-            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Connected, null));
+            token.incomingQueue.Enqueue(new Message(token.connectionId, EventType.Connected, null));
         }
 
         void OnClientDisconnected(AsyncUserToken token)
         {
-            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Disconnected, null));
+            token.incomingQueue.Enqueue(new Message(token.connectionId, EventType.Disconnected, null));
         }
 
         void ProcessAccept(SocketAsyncEventArgs e)
@@ -314,7 +327,7 @@ namespace Telepathy
 
         void OnReceiveClientData(AsyncUserToken token, byte[] data)
         {
-            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Data, data));
+            token.incomingQueue.Enqueue(new Message(token.connectionId, EventType.Data, data));
         }
 
         // This method is invoked when an asynchronous send operation completes.

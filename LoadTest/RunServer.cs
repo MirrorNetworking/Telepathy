@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Telepathy;
@@ -19,12 +20,14 @@ namespace Telepathy.LoadTest
             long dataReceived = 0;
             Stopwatch stopwatch = Stopwatch.StartNew();
 
+            Queue<Message> messages = new Queue<Message>();
             while (true)
             {
                 // reply to each incoming message
-                Message msg;
-                while (server.GetNextMessage(out msg))
+                server.GetNextMessages(messages);
+                while (messages.Count > 0)
                 {
+                    Message msg = messages.Dequeue();
                     if (msg.eventType == EventType.Data)
                     {
                         server.Send(msg.connectionId, msg.data);
@@ -33,6 +36,7 @@ namespace Telepathy.LoadTest
                         dataReceived += msg.data.Length;
                     }
                 }
+
 
                 // sleep
                 Thread.Sleep(1000 / serverFrequency);
