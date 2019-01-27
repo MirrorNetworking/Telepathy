@@ -328,28 +328,40 @@ namespace Telepathy
             OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
         }
 
-        public void SendMessage(AsyncUserToken token, byte[] message)
+        public bool Send(int connectionId, byte[] message)
         {
-            if (token?.Socket == null || !token.Socket.Connected)
-                return;
-
-            try
+            // find it
+            lock (clients)
             {
-                var buff = new byte[message.Length + 4];
-                byte[] len = BitConverter.GetBytes(message.Length);
-                Array.Copy(len, buff, 4);
-                Array.Copy(message, 0, buff, 4, message.Length);
+                AsyncUserToken token;
+                if (clients.TryGetValue(connectionId, out token))
+                {
+                    if (token?.Socket == null || !token.Socket.Connected)
+                        return false;
 
-                //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
+                    try
+                    {
+                        byte[] buff = new byte[message.Length + 4];
+                        byte[] len = BitConverter.GetBytes(message.Length);
+                        Array.Copy(len, buff, 4);
+                        Array.Copy(message, 0, buff, 4, message.Length);
 
-                var sendArg = new SocketAsyncEventArgs { UserToken = token };
-                sendArg.SetBuffer(buff, 0, buff.Length);
-                token.Socket.SendAsync(sendArg);
+                        //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
+
+                        SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
+                        sendArg.SetBuffer(buff, 0, buff.Length);
+                        token.Socket.SendAsync(sendArg);
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        // log
+                    }
+                }
             }
-            catch (Exception)
-            {
-                // log
-            }
+
+            return false;
+
         }
     }
 }
