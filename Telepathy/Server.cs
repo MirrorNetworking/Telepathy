@@ -83,8 +83,9 @@ namespace Telepathy
                 StartAccept(null);
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.LogError("Server.Start failed: " + e);
                 return false;
             }
         }
