@@ -226,7 +226,7 @@ namespace Telepathy
         }
 
         // Exchange a message with the host.
-        internal void Send(byte[] sendBuffer)
+        public void Send(byte[] sendBuffer)
         {
             if (_connected)
             {
