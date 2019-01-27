@@ -7,39 +7,11 @@ namespace Telepathy
 {
     public class AsyncUserToken
     {
-        /// <summary>
-        /// 客户端IP地址
-        /// </summary>
-        public IPAddress IpAddress { get; set; }
-
-        /// <summary>
-        /// 远程地址
-        /// </summary>
-        public EndPoint Remote { get; set; }
-
-        /// <summary>
-        /// 通信Socket
-        /// </summary>
-        public Socket Socket { get; set; }
-
-        /// <summary>
-        /// 连接时间
-        /// </summary>
-        public DateTime ConnectTime { get; set; }
-
-        /// <summary>
-        /// 所属用户信息
-        /// </summary>
-        public string UserInfo { get; set; }
-
-        /// <summary>
-        /// 数据缓存区
-        /// </summary>
-        public List<byte> Buffer { get; set; }
-
-        public AsyncUserToken()
-        {
-            Buffer = new List<byte>();
-        }
+        public IPAddress IpAddress;
+        public EndPoint Remote;
+        public Socket Socket;
+        public DateTime ConnectTime;
+        public string UserInfo;
+        public List<byte> Buffer = new List<byte>();
     }
 }
