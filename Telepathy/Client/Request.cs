@@ -11,7 +11,7 @@ namespace Telepathy.Client
         public EventHandler<EventArgs<object>> OnReceiveData;
         public EventHandler OnServerClosed;
 
-        static Timer _heartTimer;
+        //static Timer _heartTimer;
 
         static ApiResponse _heartRes;
 
@@ -35,7 +35,7 @@ namespace Telepathy.Client
             {
                 Manager.ServerDataHandler += OnReceivedServerData;
                 Manager.ServerStopEvent += OnServerStopEvent;
-                StartHeartbeat();
+                //StartHeartbeat();
             }
 
             return error;
@@ -71,7 +71,7 @@ namespace Telepathy.Client
             OnServerClosed?.Invoke(sender, e);
         }
 
-        void StartHeartbeat()
+        /*void StartHeartbeat()
         {
             if (_heartTimer == null)
             {
@@ -98,6 +98,6 @@ namespace Telepathy.Client
             _heartRes.Data.Add("beat", UserInfo.Nickname + ":" + UserInfo.UserId+" " + DateTime.Now.ToString("HH:mm:ss"));
 
             Send(_heartRes);
-        }
+        }*/
     }
 }
