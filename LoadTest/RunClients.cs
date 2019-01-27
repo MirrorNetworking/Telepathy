@@ -31,7 +31,7 @@ namespace Telepathy.LoadTest
             // make sure that all clients connected successfully. otherwise
             // the sleep might be too small, or other reasons. no point in
             // load testing if the connect failed already.
-            if (clients.All(cl => cl.Connected))
+            if (!clients.All(cl => cl.Connected))
             {
                 Logger.Log("not all clients were connected successfully. aborting.");
                 return;
