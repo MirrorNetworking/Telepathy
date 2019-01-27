@@ -314,6 +314,7 @@ namespace Telepathy
             }
             else
             {
+                Logger.LogError("Server.ProcessSend failed: " + e.SocketError);
                 CloseClientSocket(e);
             }
         }
