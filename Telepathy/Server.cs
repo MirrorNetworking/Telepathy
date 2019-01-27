@@ -390,8 +390,6 @@ namespace Telepathy
                     Array.Copy(header, buff, 4);
                     Array.Copy(message, 0, buff, 4, message.Length);
 
-                    //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
-
                     SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
                     sendArg.SetBuffer(buff, 0, buff.Length);
                     token.Socket.SendAsync(sendArg);
