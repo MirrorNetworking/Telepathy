@@ -17,7 +17,7 @@ namespace Telepathy
         readonly Semaphore _maxNumberAcceptedClients;
 
         // Dict<connId, token>
-        public Dictionary<int, AsyncUserToken> clients = new Dictionary<int, AsyncUserToken>();
+        Dictionary<int, AsyncUserToken> clients = new Dictionary<int, AsyncUserToken>();
 
         // incoming message queue
         ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
