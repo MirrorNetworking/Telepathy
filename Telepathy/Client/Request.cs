@@ -1,4 +1,4 @@
-using System;
+/*using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
@@ -19,7 +19,7 @@ namespace Telepathy.Client
 
         public UserInfoModel UserInfo;
 
-        internal static SocketManager Manager;
+        internal static Client Manager;
 
         public SocketError Connect()
         {
@@ -29,7 +29,7 @@ namespace Telepathy.Client
             int port = 13909;
             if (string.IsNullOrWhiteSpace(ip) || port <= 1000) return SocketError.Fault;
 
-            Manager = new SocketManager(ip, port);
+            Manager = new Client(ip, port);
             SocketError error = Manager.Connect();
             if (error == SocketError.Success)
             {
@@ -71,7 +71,7 @@ namespace Telepathy.Client
             OnServerClosed?.Invoke(sender, e);
         }
 
-        /*void StartHeartbeat()
+        void StartHeartbeat()
         {
             if (_heartTimer == null)
             {
@@ -98,6 +98,6 @@ namespace Telepathy.Client
             _heartRes.Data.Add("beat", UserInfo.Nickname + ":" + UserInfo.UserId+" " + DateTime.Now.ToString("HH:mm:ss"));
 
             Send(_heartRes);
-        }*/
+        }
     }
-}
+}/*
