@@ -10,9 +10,4 @@
     <Description>TCP based transport for use in Unity</Description>
     <Version>1.0.0</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Folder Include="Client" />
-    <Folder Include="Server" />
-  </ItemGroup>
 </Project>
