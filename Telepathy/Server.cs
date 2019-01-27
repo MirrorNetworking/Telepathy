@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Telepathy
 {
-    public class Server
+    public class Server : Common
     {
         readonly int _maxConnectNum;
         readonly BufferManager _bufferManager;
@@ -337,6 +337,10 @@ namespace Telepathy
                 Logger.LogError("Server.ProcessSend failed: " + e.SocketError);
                 CloseClientSocket(e);
             }
+
+            // retire send args in any case, so we can reuse them without 'new'
+            e.Completed -= IO_Completed; // don't want to call it twice next time. TODO is this even necessary or will it only add one function anyway?
+            RetireSendArgs(e);
         }
 
         void CloseClientSocket(SocketAsyncEventArgs e)
@@ -375,8 +379,9 @@ namespace Telepathy
                     Array.Copy(header, buff, 4);
                     Array.Copy(message, 0, buff, 4, message.Length);
 
-                    SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs { UserToken = token };
+                    SocketAsyncEventArgs sendArg = MakeSendArgs();
                     sendArg.Completed += IO_Completed;
+                    sendArg.UserToken = token;
                     sendArg.SetBuffer(buff, 0, buff.Length);
                     token.Socket.SendAsync(sendArg);
                     return true;
