@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Telepathy.Client
 {
-    internal class SocketManager : IDisposable
+    internal class Client : IDisposable
     {
         private const int BuffSize = 1024;
 
@@ -39,7 +39,7 @@ namespace Telepathy.Client
         // Create an uninitialized client instance.
         // To start the send/receive processing call the
         // Connect method followed by SendReceive method.
-        internal SocketManager(string ip, int port)
+        internal Client(string ip, int port)
         {
             // Instantiates the endpoint and socket.
             _hostEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
