@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Telepathy.Server
 {
-    class SocketManager
+    class Server
     {
         private readonly int _maxConnectNum;
         private readonly int _revBufferSize;
@@ -24,7 +24,7 @@ namespace Telepathy.Server
 
         public List<AsyncUserToken> ClientList { get; set; }
 
-        public SocketManager(int numConnections, int receiveBufferSize)
+        public Server(int numConnections, int receiveBufferSize)
         {
             _clientCount = 0;
             _maxConnectNum = numConnections;
