@@ -32,9 +32,9 @@ namespace Telepathy
 
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
-        public EventHandler<EventArgs<byte[]>> ServerDataHandler;
-
-        public EventHandler ServerStopEvent;
+        // events
+        EventHandler<EventArgs<byte[]>> ServerDataHandler;
+        EventHandler ServerStopEvent;
 
         public SocketError Connect(string ip, int port)
         {
