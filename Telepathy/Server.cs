@@ -330,24 +330,9 @@ namespace Telepathy
         }
 
         // This method is invoked when an asynchronous send operation completes.
-        // The method issues another receive on the socket to read any additional
-        // data sent from the client
-        //
-        // <param name="e"></param>
         void ProcessSend(SocketAsyncEventArgs e)
         {
-            if (e.SocketError == SocketError.Success)
-            {
-                // done echoing data back to the client
-                AsyncUserToken token = (AsyncUserToken)e.UserToken;
-                // read the next block of data send from the client
-                bool willRaiseEvent = token.Socket.ReceiveAsync(e);
-                if (!willRaiseEvent)
-                {
-                    ProcessReceive(e);
-                }
-            }
-            else
+            if (e.SocketError != SocketError.Success)
             {
                 Logger.LogError("Server.ProcessSend failed: " + e.SocketError);
                 CloseClientSocket(e);
