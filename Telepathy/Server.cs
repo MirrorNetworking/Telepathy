@@ -147,12 +147,12 @@ namespace Telepathy
             ProcessAccept(e);
         }
 
-        protected virtual void OnClientConnected(EventArgs<AsyncUserToken> e)
+        void OnClientConnected(EventArgs<AsyncUserToken> e)
         {
             incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Connected, null));
         }
 
-        protected virtual void OnClientDisconnected(EventArgs<AsyncUserToken> e)
+        void OnClientDisconnected(EventArgs<AsyncUserToken> e)
         {
             incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Disconnected, null));
         }
