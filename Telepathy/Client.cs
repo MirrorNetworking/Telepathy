@@ -230,7 +230,7 @@ namespace Telepathy
         {
             if (_connected)
             {
-                var buff = new byte[sendBuffer.Length + 4];
+                byte[] buff = new byte[sendBuffer.Length + 4];
                 Array.Copy(BitConverter.GetBytes(sendBuffer.Length), buff, 4);
                 Array.Copy(sendBuffer, 0, buff, 4, sendBuffer.Length);
 
