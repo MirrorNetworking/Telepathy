@@ -231,7 +231,7 @@ namespace Telepathy
 
         // Close socket in case of failure and throws
         // a SocketException according to the SocketError.
-        private void ProcessError(SocketAsyncEventArgs e)
+        void ProcessError(SocketAsyncEventArgs e)
         {
             Socket s = (Socket)e.UserToken;
             if (s.Connected)
