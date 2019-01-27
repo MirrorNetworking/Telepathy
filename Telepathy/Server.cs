@@ -48,10 +48,7 @@ namespace Telepathy
 
             _pool = new SocketEventPool(numConnections);
             _maxNumberAcceptedClients = new Semaphore(numConnections, numConnections);
-        }
 
-        public void Init()
-        {
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
             _bufferManager.InitBuffer();
