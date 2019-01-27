@@ -13,7 +13,6 @@ namespace Telepathy
         readonly BufferManager _bufferManager;
         const int OpsToAlloc = 2;
         Socket _listenSocket;
-        readonly SocketEventPool _pool;
         int _clientCount;
         readonly Semaphore _maxNumberAcceptedClients;
 
@@ -43,26 +42,11 @@ namespace Telepathy
             //write posted to the socket simultaneously
             _bufferManager = new BufferManager(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
 
-            _pool = new SocketEventPool(numConnections);
             _maxNumberAcceptedClients = new Semaphore(numConnections, numConnections);
 
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
             _bufferManager.InitBuffer();
-
-            // preallocate pool of SocketAsyncEventArgs objects
-            for (int i = 0; i < _maxConnectNum; i++)
-            {
-                SocketAsyncEventArgs readWriteEventArg = new SocketAsyncEventArgs();
-                readWriteEventArg.Completed += IO_Completed;
-                readWriteEventArg.UserToken = new AsyncUserToken();
-
-                // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                _bufferManager.SetBuffer(readWriteEventArg);
-
-                // add SocketAsyncEventArg to the pool
-                _pool.Push(readWriteEventArg);
-            }
         }
 
         public bool Start(int port)
@@ -179,9 +163,16 @@ namespace Telepathy
             {
                 Interlocked.Increment(ref _clientCount);
 
+                // create SocketAsyncEventArgs for this client
+                SocketAsyncEventArgs readEventArgs = new SocketAsyncEventArgs();
+                readEventArgs.Completed += IO_Completed;
+                readEventArgs.UserToken = new AsyncUserToken();
+
+                // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
+                _bufferManager.SetBuffer(readEventArgs);
+
                 // Get the socket for the accepted client connection and put it into the
                 //ReadEventArg object user token
-                SocketAsyncEventArgs readEventArgs = _pool.Pop();
                 AsyncUserToken userToken = (AsyncUserToken)readEventArgs.UserToken;
                 userToken.Socket = e.AcceptSocket;
                 userToken.ConnectTime = DateTime.Now;
@@ -336,7 +327,6 @@ namespace Telepathy
 
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
-            _pool.Push(e);
 
             OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
         }
