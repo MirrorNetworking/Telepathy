@@ -32,9 +32,6 @@ namespace Telepathy
 
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
-        // events
-        EventHandler ServerStopEvent;
-
         // incoming message queue
         SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
 
@@ -223,7 +220,9 @@ namespace Telepathy
                 arg.Completed -= IO_Completed;
 
             _receiveEventArgs.Completed -= IO_Completed;
-            ServerStopEvent?.Invoke(this, null);
+
+            // disconnected event
+            incomingQueue.Enqueue(new Message(0, EventType.Disconnected, null));
         }
 
         // Exchange a message with the host.
