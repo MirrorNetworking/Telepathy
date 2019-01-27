@@ -24,23 +24,16 @@ namespace Telepathy.Client
 
         private readonly BufferManager _bufferManager;
 
-        //定义接收数据的对象
         private readonly List<byte> _buffer;
 
-        //发送与接收的MySocketEventArgs变量定义.
         private readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
         private readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
         private int _tagCount;
 
-        /// <summary>
-        /// 当前连接状态
-        /// </summary>
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
-        //服务器主动发出数据事件
         public EventHandler<EventArgs<byte[]>> ServerDataHandler;
 
-        //服务器主动关闭连接委托及事件
         public EventHandler ServerStopEvent;
 
         // Create an uninitialized client instance.
@@ -55,17 +48,13 @@ namespace Telepathy.Client
             _buffer = new List<byte>();
         }
 
-        /// <summary>
-        /// 连接到主机
-        /// </summary>
-        /// <returns>0.连接成功, 其他值失败,参考SocketError的值列表</returns>
         internal SocketError Connect()
         {
             var connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
             connectArgs.Completed += OnConnect;
 
             _clientSocket.ConnectAsync(connectArgs);
-            AutoConnectEvent.WaitOne(); //阻塞. 让程序在这里等待,直到连接响应后再返回连接结果
+            AutoConnectEvent.WaitOne();
             return connectArgs.SocketError;
         }
 
@@ -79,40 +68,28 @@ namespace Telepathy.Client
         private void OnConnect(object sender, SocketAsyncEventArgs e)
         {
             // Signals the end of connection.
-            AutoConnectEvent.Set(); //释放阻塞.
+            AutoConnectEvent.Set();
 
             // Set the flag for socket connected.
             _connected = (e.SocketError == SocketError.Success);
-            //如果连接成功,则初始化socketAsyncEventArgs
             if (_connected)
                 InitArgs(e);
         }
 
-        /// <summary>
-        /// 初始化收发参数
-        /// </summary>
-        /// <param name="e"></param>
         private void InitArgs(SocketAsyncEventArgs e)
         {
             _bufferManager.InitBuffer();
 
-            //发送参数
             InitSendArgs();
-            //接收参数
             _receiveEventArgs.Completed += IO_Completed;
             _receiveEventArgs.UserToken = e.UserToken;
             _receiveEventArgs.ArgsTag = 0;
             _bufferManager.SetBuffer(_receiveEventArgs);
 
-            //启动接收,不管有没有,一定得启动.否则有数据来了也不知道.
             if (!e.ConnectSocket.ReceiveAsync(_receiveEventArgs))
                 ProcessReceive(_receiveEventArgs);
         }
 
-        /// <summary>
-        /// 初始化发送参数MySocketEventArgs
-        /// </summary>
-        /// <returns></returns>
         MySocketEventArgs InitSendArgs()
         {
             var sendArg = new MySocketEventArgs();
@@ -142,7 +119,7 @@ namespace Telepathy.Client
                     break;
 
                 case SocketAsyncOperation.Send:
-                    mys.IsUsing = false; //数据发送已完成.状态设为False
+                    mys.IsUsing = false;
                     ProcessSend(e);
                     break;
 
@@ -163,7 +140,6 @@ namespace Telepathy.Client
                 var token = (Socket)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
-                    //读取数据
                     byte[] data = new byte[e.BytesTransferred];
                     Array.Copy(e.Buffer, e.Offset, data, 0, e.BytesTransferred);
                     lock (_buffer)
@@ -171,38 +147,25 @@ namespace Telepathy.Client
                         _buffer.AddRange(data);
                         do
                         {
-                            //注意: 这里是需要和服务器有协议的,我做了个简单的协议,就是一个完整的包是包长(4字节)+包数据,便于处理,当然你可以定义自己需要的;
-                            //判断包的长度,前面4个字节.
                             byte[] lenBytes = _buffer.GetRange(0, 4).ToArray();
                             int packageLen = BitConverter.ToInt32(lenBytes, 0);
                             if (packageLen <= _buffer.Count - 4)
                             {
-                                //包够长时,则提取出来,交给后面的程序去处理
                                 byte[] rev = _buffer.GetRange(4, packageLen).ToArray();
 
-                                //从数据池中移除这组数据,为什么要lock,你懂的
                                 lock (_buffer)
                                 {
                                     _buffer.RemoveRange(0, packageLen + 4);
                                 }
-                                //将数据包交给前台去处理
                                 DoReceiveEvent(rev);
                             }
                             else
                             {
-                                //长度不够,还得继续接收,需要跳出循环
                                 break;
                             }
                         } while (_buffer.Count > 4);
                     }
 
-                    //注意:你一定会问,这里为什么要用do-while循环?
-                    //如果当服务端发送大数据流的时候,e.BytesTransferred的大小就会比服务端发送过来的完整包要小,
-                    //需要分多次接收.所以收到包的时候,先判断包头的大小.够一个完整的包再处理.
-                    //如果服务器短时间内发送多个小数据包时, 这里可能会一次性把他们全收了.
-                    //这样如果没有一个循环来控制,那么只会处理第一个包,
-                    //剩下的包全部留在m_buffer中了,只有等下一个数据包过来后,才会放出一个来.
-                    //继续接收
                     if (!token.ReceiveAsync(e))
                         ProcessReceive(e);
                 }
