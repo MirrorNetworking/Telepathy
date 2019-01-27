@@ -18,9 +18,8 @@ namespace Telepathy
         int _clientCount;
         readonly Semaphore _maxNumberAcceptedClients;
 
-        //public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
-
-        public List<AsyncUserToken> ClientList = new List<AsyncUserToken>();
+        // Dict<connId, token>
+        public Dictionary<int, AsyncUserToken> clients = new Dictionary<int, AsyncUserToken>();
 
         // incoming message queue
         SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
@@ -72,7 +71,7 @@ namespace Telepathy
         {
             try
             {
-                ClientList.Clear();
+                lock (clients) { clients.Clear(); }
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
                 _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 _listenSocket.Bind(localEndPoint);
@@ -92,14 +91,18 @@ namespace Telepathy
 
         public void Stop()
         {
-            foreach (AsyncUserToken token in ClientList)
+            lock (clients)
             {
-                try
+                foreach (KeyValuePair<int, AsyncUserToken> kvp in clients)
                 {
-                    token.Socket.Shutdown(SocketShutdown.Both);
-                    OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
+                    AsyncUserToken token = kvp.Value;
+                    try
+                    {
+                        token.Socket.Shutdown(SocketShutdown.Both);
+                        OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
+                    }
+                    catch (Exception) { }
                 }
-                catch (Exception) { }
             }
 
             try
@@ -109,8 +112,8 @@ namespace Telepathy
             catch (Exception) { }
 
             _listenSocket.Close();
-            int cCount = ClientList.Count;
-            lock (ClientList) { ClientList.Clear(); }
+
+            lock (clients) { clients.Clear(); }
         }
 
         public void CloseClient(AsyncUserToken token)
@@ -180,7 +183,7 @@ namespace Telepathy
                 userToken.IpAddress = ((IPEndPoint)(e.AcceptSocket.RemoteEndPoint)).Address;
                 userToken.connectionId = _clientCount;
 
-                lock (ClientList) { ClientList.Add(userToken); }
+                lock (clients) { clients[_clientCount] = userToken; }
 
                 OnClientConnected(new EventArgs<AsyncUserToken>(userToken));
 
@@ -304,7 +307,7 @@ namespace Telepathy
         {
             var token = e.UserToken as AsyncUserToken;
 
-            lock (ClientList) { ClientList.Remove(token); }
+            lock (clients) { clients.Remove(token.connectionId); }
 
             // close the socket associated with the client
             try
