@@ -100,4 +100,4 @@ namespace Telepathy.Client
             Send(_heartRes);
         }
     }
-}/*
+}*/
