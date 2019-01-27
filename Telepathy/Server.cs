@@ -57,7 +57,7 @@ namespace Telepathy
             // preallocate pool of SocketAsyncEventArgs objects
             for (int i = 0; i < _maxConnectNum; i++)
             {
-                var readWriteEventArg = new SocketAsyncEventArgs();
+                SocketAsyncEventArgs readWriteEventArg = new SocketAsyncEventArgs();
                 readWriteEventArg.Completed += IO_Completed;
                 readWriteEventArg.UserToken = new AsyncUserToken();
 
