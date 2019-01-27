@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -13,6 +14,8 @@ namespace Telepathy
         public DateTime ConnectTime;
         public string UserInfo;
         public int connectionId;
-        public List<byte> Buffer = new List<byte>();
+
+        //public byte[] header = new byte[4]; // buffered so we don't allocate it all the time
+        public MemoryStream buffer = new MemoryStream();
     }
 }

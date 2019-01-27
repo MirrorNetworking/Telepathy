@@ -249,33 +249,54 @@ namespace Telepathy
                 AsyncUserToken token = (AsyncUserToken)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
-                    byte[] data = new byte[e.BytesTransferred];
-                    Array.Copy(e.Buffer, e.Offset, data, 0, e.BytesTransferred);
-                    lock (token.Buffer)
+                    // write it all into our memory stream first
+                    token.buffer.Write(e.Buffer, e.Offset, e.BytesTransferred);
+
+                    // keep trying headers (we might need to process >1 message)
+                    while (token.buffer.Position >= 4)
                     {
-                        token.Buffer.AddRange(data);
+                        // we can read a header. so read it.
+                        long bufferSize = token.buffer.Position;
+                        token.buffer.Position = 0;
+                        byte[] header = new byte[4]; // TODO cache
+                        token.buffer.Read(header, 0, header.Length);
+                        int contentSize = Utils.BytesToIntBigEndian(header);
+
+                        // avoid -1 attacks from hackers
+                        if (contentSize > 0)
+                        {
+                            // enough content to finish the message?
+                            if (bufferSize - token.buffer.Position >= contentSize)
+                            {
+                                // read content
+                                byte[] content = new byte[contentSize];
+                                token.buffer.Read(content, 0, content.Length);
+
+                                // process message
+                                OnReceiveClientData(token, content);
+
+                                // read what's left in the buffer. this is valid
+                                // data that we received at some point. can't lose
+                                // it.
+                                byte[] remainder = new byte[bufferSize - token.buffer.Position];
+                                token.buffer.Read(remainder, 0, remainder.Length);
+
+                                // write it to the beginning of the buffer. this
+                                // sets position to the new true end automatically.
+                                token.buffer.Position = 0;
+                                token.buffer.Write(remainder, 0, remainder.Length);
+                            }
+                            // otherwise we just need to receive more.
+                            else break;
+                        }
+                        else
+                        {
+                            CloseClientSocket(e);
+                            Logger.LogWarning("Server.ProcessReceive: received negative contentSize: " + contentSize + ". Maybe an attacker tries to exploit the server?");
+                        }
                     }
 
-                    do
-                    {
-                        byte[] header = token.Buffer.GetRange(0, 4).ToArray();
-                        int packageLen = Utils.BytesToIntBigEndian(header);
-                        if (packageLen > token.Buffer.Count - 4)
-                        {
-                            break;
-                        }
-
-                        byte[] rev = token.Buffer.GetRange(4, packageLen).ToArray();
-
-                        lock (token.Buffer)
-                        {
-                            token.Buffer.RemoveRange(0, packageLen + 4);
-                        }
-
-                        OnReceiveClientData(token, rev);
-                    }
-                    while (token.Buffer.Count > 4);
-
+                    // continue receiving
                     if (!token.Socket.ReceiveAsync(e))
                         ProcessReceive(e);
                 }
