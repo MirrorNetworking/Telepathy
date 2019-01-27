@@ -254,7 +254,7 @@ namespace Telepathy
         /// 使用新进程通知事件回调
         /// </summary>
         /// <param name="buff"></param>
-        private void DoReceiveEvent(byte[] buff)
+        void DoReceiveEvent(byte[] buff)
         {
             if (ServerDataHandler == null) return;
 
