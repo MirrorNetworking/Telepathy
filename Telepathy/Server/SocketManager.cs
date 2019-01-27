@@ -9,35 +9,21 @@ namespace Telepathy.Server
 {
     class SocketManager
     {
-        private readonly int _maxConnectNum;    //最大连接数
-        private readonly int _revBufferSize;    //最大接收字节数
+        private readonly int _maxConnectNum;
+        private readonly int _revBufferSize;
         private readonly BufferManager _bufferManager;
         private const int OpsToAlloc = 2;
-        private Socket _listenSocket;            //监听Socket
+        private Socket _listenSocket;
         private readonly SocketEventPool _pool;
-        private int _clientCount;              //连接的客户端数量
+        private int _clientCount;
         private readonly Semaphore _maxNumberAcceptedClients;
 
-        /// <summary>
-        /// 客户端连接数量变化事件
-        /// </summary>
         public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
 
-        /// <summary>
-        /// 接收到客户端的数据事件
-        /// </summary>
         public EventHandler<EventArgs<AsyncUserToken, byte[]>> ReceiveClientData;
 
-        /// <summary>
-        /// 获取客户端列表
-        /// </summary>
         public List<AsyncUserToken> ClientList { get; set; }
 
-        /// <summary>
-        /// 构造函数
-        /// </summary>
-        /// <param name="numConnections">最大连接数</param>
-        /// <param name="receiveBufferSize">缓存区大小</param>
         public SocketManager(int numConnections, int receiveBufferSize)
         {
             _clientCount = 0;
@@ -52,9 +38,6 @@ namespace Telepathy.Server
             _maxNumberAcceptedClients = new Semaphore(numConnections, numConnections);
         }
 
-        /// <summary>
-        /// 初始化
-        /// </summary>
         public void Init()
         {
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
@@ -77,10 +60,6 @@ namespace Telepathy.Server
             }
         }
 
-        /// <summary>
-        /// 启动服务
-        /// </summary>
-        /// <param name="localEndPoint"></param>
         public bool Start(IPEndPoint localEndPoint)
         {
             try
@@ -102,9 +81,6 @@ namespace Telepathy.Server
             }
         }
 
-        /// <summary>
-        /// 停止服务
-        /// </summary>
         public void Stop()
         {
             foreach (AsyncUserToken token in ClientList)
@@ -239,7 +215,6 @@ namespace Telepathy.Server
                 var token = (AsyncUserToken)e.UserToken;
                 if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
                 {
-                    //读取数据
                     byte[] data = new byte[e.BytesTransferred];
                     Array.Copy(e.Buffer, e.Offset, data, 0, e.BytesTransferred);
                     lock (token.Buffer)
@@ -247,41 +222,27 @@ namespace Telepathy.Server
                         token.Buffer.AddRange(data);
                     }
 
-                    //注意:你一定会问,这里为什么要用do-while循环?
-                    //如果当客户发送大数据流的时候,e.BytesTransferred的大小就会比客户端发送过来的要小,
-                    //需要分多次接收.所以收到包的时候,先判断包头的大小.够一个完整的包再处理.
-                    //如果客户短时间内发送多个小数据包时, 服务器可能会一次性把他们全收了.
-                    //这样如果没有一个循环来控制,那么只会处理第一个包,
-                    //剩下的包全部留在token.Buffer中了,只有等下一个数据包过来后,才会放出一个来.
                     do
                     {
-                        //判断包的长度
                         byte[] lenBytes = token.Buffer.GetRange(0, 4).ToArray();
                         int packageLen = BitConverter.ToInt32(lenBytes, 0);
                         if (packageLen > token.Buffer.Count - 4)
                         {
-                            //长度不够时,退出循环,让程序继续接收
                             break;
                         }
 
-                        //包够长时,则提取出来,交给后面的程序去处理
                         byte[] rev = token.Buffer.GetRange(4, packageLen).ToArray();
 
-                        //从数据池中移除这组数据
                         lock (token.Buffer)
                         {
                             token.Buffer.RemoveRange(0, packageLen + 4);
                         }
 
-                        //将数据包交给后台处理,这里你也可以新开个线程来处理.加快速度.
                         var e1 = ReceiveClientData.CreateArgs(token, rev);
                         OnReceiveClientData(e1);
 
-                        //这里API处理完后,并没有返回结果,当然结果是要返回的,却不是在这里, 这里的代码只管接收.
-                        //若要返回结果,可在API处理中调用此类对象的SendMessage方法,统一打包发送.不要被微软的示例给迷惑了.
                     } while (token.Buffer.Count > 4);
 
-                    //继续接收. 为什么要这么写,请看Socket.ReceiveAsync方法的说明
                     if (!token.Socket.ReceiveAsync(e))
                         ProcessReceive(e);
                 }
@@ -348,16 +309,9 @@ namespace Telepathy.Server
             e.UserToken = new AsyncUserToken();
             _pool.Push(e);
 
-            //如果有事件,则调用事件,发送客户端数量变化通知
             OnClientNumChanged(ClientNumberChange.CreateArgs(token, 1));
         }
 
-        /// <summary>
-        /// 对数据进行打包,然后再发送
-        /// </summary>
-        /// <param name="token"></param>
-        /// <param name="message"></param>
-        /// <returns></returns>
         public void SendMessage(AsyncUserToken token, byte[] message)
         {
             if (token?.Socket == null || !token.Socket.Connected)
@@ -365,7 +319,6 @@ namespace Telepathy.Server
 
             try
             {
-                //对要发送的消息,制定简单协议,头4字节指定包的大小,方便客户端接收(协议可以自己定)
                 var buff = new byte[message.Length + 4];
                 byte[] len = BitConverter.GetBytes(message.Length);
                 Array.Copy(len, buff, 4);
@@ -373,9 +326,8 @@ namespace Telepathy.Server
 
                 //token.Socket.Send(buff);  //这句也可以发送, 可根据自己的需要来选择
 
-                //新建异步发送对象, 发送消息
                 var sendArg = new SocketAsyncEventArgs { UserToken = token };
-                sendArg.SetBuffer(buff, 0, buff.Length);  //将数据放置进去.
+                sendArg.SetBuffer(buff, 0, buff.Length);
                 token.Socket.SendAsync(sendArg);
             }
             catch (Exception)
