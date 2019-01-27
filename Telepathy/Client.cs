@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Telepathy
 {
-    internal class Client : IDisposable
+    public class Client : IDisposable
     {
         const int BuffSize = 1024;
 
