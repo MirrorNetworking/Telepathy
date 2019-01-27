@@ -187,9 +187,9 @@ namespace Telepathy
                     ProcessError(e);
                 }
             }
-            catch (Exception xe)
+            catch (Exception exception)
             {
-                Console.WriteLine(xe.Message);
+                Logger.Log("Client.ProcessReceive failed: " + exception);
             }
         }
 
