@@ -117,13 +117,20 @@ namespace Telepathy
             lock (clients) { clients.Clear(); }
         }
 
-        public void CloseClient(AsyncUserToken token)
+        public void Disconnect(int connectionId)
         {
-            try
+            lock (clients)
             {
-                token.Socket.Shutdown(SocketShutdown.Both);
+                AsyncUserToken token;
+                if (clients.TryGetValue(connectionId, out token))
+                {
+                    try
+                    {
+                        token.Socket.Shutdown(SocketShutdown.Both);
+                    }
+                    catch (Exception) { }
+                }
             }
-            catch (Exception) { }
         }
 
         // Begins an operation to accept a connection request from the client
