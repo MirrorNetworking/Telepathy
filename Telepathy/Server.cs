@@ -13,13 +13,39 @@ namespace Telepathy
         readonly BufferManager _bufferManager;
         const int OpsToAlloc = 2;
         Socket _listenSocket;
-        int _clientCount;
 
         // Dict<connId, token>
         ConcurrentDictionary<int, AsyncUserToken> clients = new ConcurrentDictionary<int, AsyncUserToken>();
 
         // incoming message queue
         ConcurrentQueue<Message> incomingQueue = new ConcurrentQueue<Message>();
+
+        // connectionId counter
+        // (right now we only use it from one listener thread, but we might have
+        //  multiple threads later in case of WebSockets etc.)
+        // -> static so that another server instance doesn't start at 0 again.
+        static int counter = 0;
+
+        // public next id function in case someone needs to reserve an id
+        // (e.g. if hostMode should always have 0 connection and external
+        //  connections should start at 1, etc.)
+        public static int NextConnectionId()
+        {
+            int id = Interlocked.Increment(ref counter);
+
+            // it's very unlikely that we reach the uint limit of 2 billion.
+            // even with 1 new connection per second, this would take 68 years.
+            // -> but if it happens, then we should throw an exception because
+            //    the caller probably should stop accepting clients.
+            // -> it's hardly worth using 'bool Next(out id)' for that case
+            //    because it's just so unlikely.
+            if (id == int.MaxValue)
+            {
+                throw new Exception("connection id limit reached: " + id);
+            }
+
+            return id;
+        }
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
@@ -34,7 +60,6 @@ namespace Telepathy
 
         public Server(int numConnections, int receiveBufferSize)
         {
-            _clientCount = 0;
             _maxConnectNum = numConnections;
 
             // allocate buffers such that the maximum number of sockets can have one outstanding read and
@@ -151,8 +176,6 @@ namespace Telepathy
         {
             try
             {
-                Interlocked.Increment(ref _clientCount);
-
                 // create SocketAsyncEventArgs for this client
                 SocketAsyncEventArgs readEventArgs = new SocketAsyncEventArgs();
                 readEventArgs.Completed += IO_Completed;
@@ -168,9 +191,9 @@ namespace Telepathy
                 userToken.ConnectTime = DateTime.Now;
                 userToken.Remote = e.AcceptSocket.RemoteEndPoint;
                 userToken.IpAddress = ((IPEndPoint)(e.AcceptSocket.RemoteEndPoint)).Address;
-                userToken.connectionId = _clientCount;
+                userToken.connectionId = NextConnectionId();
 
-                clients[_clientCount] = userToken;
+                clients[userToken.connectionId] = userToken;
 
                 OnClientConnected(userToken);
 
@@ -310,9 +333,6 @@ namespace Telepathy
             }
             catch (Exception) { }
             token?.Socket.Close();
-
-            // decrement the counter keeping track of the total number of clients connected to the server
-            Interlocked.Decrement(ref _clientCount);
 
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
