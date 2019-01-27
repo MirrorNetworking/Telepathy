@@ -252,10 +252,6 @@ namespace Telepathy
             {
                 args = new SocketAsyncEventArgs();
             }
-
-            args.Completed += IO_Completed;
-            args.UserToken = _clientSocket;
-            args.RemoteEndPoint = _hostEndPoint;
             return args;
         }
 
@@ -279,6 +275,9 @@ namespace Telepathy
 
                 // create send args
                 SocketAsyncEventArgs sendArgs = MakeSendArgs();
+                sendArgs.Completed += IO_Completed;
+                sendArgs.UserToken = _clientSocket;
+                sendArgs.RemoteEndPoint = _hostEndPoint;
                 sendArgs.SetBuffer(buff, 0, buff.Length);
 
                 _clientSocket.SendAsync(sendArgs);
