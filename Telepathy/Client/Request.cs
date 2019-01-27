@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Timers;
-using Newtonsoft.Json;
 
 namespace Telepathy.Client
 {
@@ -71,33 +70,6 @@ namespace Telepathy.Client
                 Manager.Disconnect();
             }
             catch (Exception) { }
-        }
-
-        /// <summary>
-        /// 发送请求
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        public static bool Send(ApiResponse request)
-        {
-            return Send(JsonConvert.SerializeObject(request));
-        }
-
-        /// <summary>
-        /// 发送消息
-        /// </summary>
-        /// <param name="message">消息实体</param>
-        /// <returns>True.已发送; False.未发送</returns>
-        public static bool Send(string message)
-        {
-            if (!Connected) return false;
-
-            byte[] buff = Encoding.UTF8.GetBytes(message);
-
-            //加密,根据自己的需要可以考虑把消息加密
-            //buff = AESEncrypt.Encrypt(buff, m_aesKey);
-            Manager.Send(buff);
-            return true;
         }
 
         /// <summary>
