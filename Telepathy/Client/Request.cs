@@ -30,9 +30,9 @@ namespace Telepathy.Client
         /// <summary>
         /// 已登录的用户信息
         /// </summary>
-        public UserInfoModel UserInfo { get; set; }
+        public UserInfoModel UserInfo;
 
-        internal static SocketManager Manager { get; set; }
+        internal static SocketManager Manager;
 
         /// <summary>
         /// 连接到服务器
