@@ -271,7 +271,7 @@ namespace Telepathy
             }
         }
 
-        protected virtual void OnReceiveClientData(EventArgs<AsyncUserToken, byte[]> arg)
+        void OnReceiveClientData(EventArgs<AsyncUserToken, byte[]> arg)
         {
             incomingQueue.Enqueue(new Message(arg.Value.connectionId, EventType.Data, arg.Value2));
         }
