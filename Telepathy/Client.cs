@@ -33,8 +33,10 @@ namespace Telepathy
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
         // events
-        EventHandler<EventArgs<byte[]>> ServerDataHandler;
         EventHandler ServerStopEvent;
+
+        // incoming message queue
+        SafeQueue<Message> incomingQueue = new SafeQueue<Message>();
 
         public SocketError Connect(string ip, int port)
         {
@@ -250,22 +252,9 @@ namespace Telepathy
             }
         }
 
-        /// <summary>
-        /// 使用新进程通知事件回调
-        /// </summary>
-        /// <param name="buff"></param>
         void DoReceiveEvent(byte[] buff)
         {
-            if (ServerDataHandler == null) return;
-
-            //ServerDataHandler(buff); //可直接调用.
-            //但我更喜欢用新的线程,这样不拖延接收新数据.
-            var thread = new Thread((obj) => { ServerDataHandler(this, ServerDataHandler.CreateArgs((byte[])obj)); })
-            {
-                IsBackground = true
-            };
-
-            thread.Start(buff);
+            incomingQueue.Enqueue(new Message(0, EventType.Data, buff));
         }
 
         #endregion
