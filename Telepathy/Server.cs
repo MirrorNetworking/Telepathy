@@ -80,7 +80,7 @@ namespace Telepathy
                 try
                 {
                     token.Socket.Shutdown(SocketShutdown.Both);
-                    OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
+                    OnClientDisconnected(token);
                 }
                 catch (Exception) { }
             }
@@ -141,14 +141,14 @@ namespace Telepathy
             ProcessAccept(e);
         }
 
-        void OnClientConnected(EventArgs<AsyncUserToken> e)
+        void OnClientConnected(AsyncUserToken token)
         {
-            incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Connected, null));
+            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Connected, null));
         }
 
-        void OnClientDisconnected(EventArgs<AsyncUserToken> e)
+        void OnClientDisconnected(AsyncUserToken token)
         {
-            incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Disconnected, null));
+            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Disconnected, null));
         }
 
         void ProcessAccept(SocketAsyncEventArgs e)
@@ -176,7 +176,7 @@ namespace Telepathy
 
                 clients[_clientCount] = userToken;
 
-                OnClientConnected(new EventArgs<AsyncUserToken>(userToken));
+                OnClientConnected(userToken);
 
                 if (!e.AcceptSocket.ReceiveAsync(readEventArgs))
                 {
@@ -253,8 +253,7 @@ namespace Telepathy
                             token.Buffer.RemoveRange(0, packageLen + 4);
                         }
 
-                        EventArgs<AsyncUserToken, byte[]> e1 = new EventArgs<AsyncUserToken, byte[]>(token, rev);
-                        OnReceiveClientData(e1);
+                        OnReceiveClientData(token, rev);
                     }
                     while (token.Buffer.Count > 4);
 
@@ -272,9 +271,9 @@ namespace Telepathy
             }
         }
 
-        void OnReceiveClientData(EventArgs<AsyncUserToken, byte[]> arg)
+        void OnReceiveClientData(AsyncUserToken token, byte[] data)
         {
-            incomingQueue.Enqueue(new Message(arg.Value.connectionId, EventType.Data, arg.Value2));
+            incomingQueue.Enqueue(new Message(token.connectionId, EventType.Data, data));
         }
 
         // This method is invoked when an asynchronous send operation completes.
@@ -323,7 +322,7 @@ namespace Telepathy
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
 
-            OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
+            OnClientDisconnected(token);
         }
 
         public bool Send(int connectionId, byte[] message)
