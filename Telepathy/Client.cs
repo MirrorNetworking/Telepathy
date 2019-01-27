@@ -63,6 +63,8 @@ namespace Telepathy
         // Callback for connect operation
         void OnConnect(object sender, SocketAsyncEventArgs e)
         {
+            incomingQueue.Enqueue(new Message(0, EventType.Connected, null));
+
             // Signals the end of connection.
             AutoConnectEvent.Set();
 
