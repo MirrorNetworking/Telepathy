@@ -18,7 +18,7 @@ namespace Telepathy
         int _clientCount;
         readonly Semaphore _maxNumberAcceptedClients;
 
-        public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
+        //public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
 
         public List<AsyncUserToken> ClientList { get; set; }
 
@@ -100,9 +100,11 @@ namespace Telepathy
                 try
                 {
                     token.Socket.Shutdown(SocketShutdown.Both);
+                    OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
                 }
                 catch (Exception) { }
             }
+
             try
             {
                 _listenSocket.Shutdown(SocketShutdown.Both);
@@ -112,9 +114,6 @@ namespace Telepathy
             _listenSocket.Close();
             int cCount = ClientList.Count;
             lock (ClientList) { ClientList.Clear(); }
-
-            ClientNumberChange?.Invoke(-cCount, null);
-            OnClientNumChanged(ClientNumberChange.CreateArgs(null, -cCount));
         }
 
         public void CloseClient(AsyncUserToken token)
@@ -158,9 +157,14 @@ namespace Telepathy
             ProcessAccept(e);
         }
 
-        protected virtual void OnClientNumChanged(EventArgs<AsyncUserToken, int> e)
+        protected virtual void OnClientConnected(EventArgs<AsyncUserToken> e)
         {
-            ClientNumberChange?.Invoke(this, e);
+            incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Connected, null));
+        }
+
+        protected virtual void OnClientDisconnected(EventArgs<AsyncUserToken> e)
+        {
+            incomingQueue.Enqueue(new Message(e.Value.connectionId, EventType.Disconnected, null));
         }
 
         void ProcessAccept(SocketAsyncEventArgs e)
@@ -181,7 +185,7 @@ namespace Telepathy
 
                 lock (ClientList) { ClientList.Add(userToken); }
 
-                OnClientNumChanged(ClientNumberChange.CreateArgs(userToken, 1));
+                OnClientConnected(new EventArgs<AsyncUserToken>(userToken));
 
                 if (!e.AcceptSocket.ReceiveAsync(readEventArgs))
                 {
@@ -321,7 +325,7 @@ namespace Telepathy
             e.UserToken = new AsyncUserToken();
             _pool.Push(e);
 
-            OnClientNumChanged(ClientNumberChange.CreateArgs(token, 1));
+            OnClientDisconnected(new EventArgs<AsyncUserToken>(token));
         }
 
         public void SendMessage(AsyncUserToken token, byte[] message)
