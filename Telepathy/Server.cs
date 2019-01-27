@@ -14,7 +14,6 @@ namespace Telepathy
         const int OpsToAlloc = 2;
         Socket _listenSocket;
         int _clientCount;
-        readonly Semaphore _maxNumberAcceptedClients;
 
         // Dict<connId, token>
         ConcurrentDictionary<int, AsyncUserToken> clients = new ConcurrentDictionary<int, AsyncUserToken>();
@@ -41,8 +40,6 @@ namespace Telepathy
             // allocate buffers such that the maximum number of sockets can have one outstanding read and
             //write posted to the socket simultaneously
             _bufferManager = new BufferManager(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
-
-            _maxNumberAcceptedClients = new Semaphore(numConnections, numConnections);
 
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
@@ -126,7 +123,6 @@ namespace Telepathy
                 acceptEventArg.AcceptSocket = null;
             }
 
-            _maxNumberAcceptedClients.WaitOne();
             if (!_listenSocket.AcceptAsync(acceptEventArg))
             {
                 ProcessAccept(acceptEventArg);
@@ -317,7 +313,6 @@ namespace Telepathy
 
             // decrement the counter keeping track of the total number of clients connected to the server
             Interlocked.Decrement(ref _clientCount);
-            _maxNumberAcceptedClients.Release();
 
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
