@@ -393,7 +393,6 @@ namespace Telepathy
             }
 
             return false;
-
         }
     }
 }
