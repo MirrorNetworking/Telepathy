@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Telepathy
 {
-    public class Client : IDisposable
+    public class Client : Common, IDisposable
     {
         const int BuffSize = 1024;
 
@@ -27,10 +27,6 @@ namespace Telepathy
         BufferManager _bufferManager;
 
         MemoryStream buffer = new MemoryStream();
-
-        // cache finished SocketAsyncEventArgs so we can reuse them without
-        // reallocating in each Send
-        readonly ConcurrentQueue<SocketAsyncEventArgs> sendEventArgsCache = new ConcurrentQueue<SocketAsyncEventArgs>();
 
         readonly SocketAsyncEventArgs _receiveEventArgs = new SocketAsyncEventArgs();
 
@@ -209,6 +205,7 @@ namespace Telepathy
             }
 
             // retire send args in any case, so we can reuse them without 'new'
+            e.Completed -= IO_Completed; // don't want to call it twice next time. TODO is this even necessary or will it only add one function anyway?
             RetireSendArgs(e);
         }
 
@@ -242,25 +239,6 @@ namespace Telepathy
 
             // disconnected event
             incomingQueue.Enqueue(new Message(0, EventType.Disconnected, null));
-        }
-
-        // return a previously used SocketAsyncEventArgs or create a new one
-        SocketAsyncEventArgs MakeSendArgs()
-        {
-            SocketAsyncEventArgs args;
-            if (!sendEventArgsCache.TryDequeue(out args))
-            {
-                args = new SocketAsyncEventArgs();
-            }
-            return args;
-        }
-
-        void RetireSendArgs(SocketAsyncEventArgs args)
-        {
-            // retire SocketAsyncEventArgs to cache so we can reuse them without
-            // allocating again
-            args.Completed -= IO_Completed; // don't want to call it twice next time. TODO is this even necessary or will it only add one function anyway?
-            sendEventArgsCache.Enqueue(args);
         }
 
         // Exchange a message with the host.
