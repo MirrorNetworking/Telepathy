@@ -8,27 +8,27 @@ namespace Telepathy
 {
     internal class Client : IDisposable
     {
-        private const int BuffSize = 1024;
+        const int BuffSize = 1024;
 
         // The socket used to send/receive messages.
-        private readonly Socket _clientSocket;
+        readonly Socket _clientSocket;
 
         // Flag for connected socket.
-        private bool _connected;
+        bool _connected;
 
         // Listener endpoint.
-        private readonly IPEndPoint _hostEndPoint;
+        readonly IPEndPoint _hostEndPoint;
 
         // Signals a connection.
-        private static readonly AutoResetEvent AutoConnectEvent = new AutoResetEvent(false);
+        static readonly AutoResetEvent AutoConnectEvent = new AutoResetEvent(false);
 
-        private readonly BufferManager _bufferManager;
+        readonly BufferManager _bufferManager;
 
-        private readonly List<byte> _buffer;
+        readonly List<byte> _buffer;
 
-        private readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
-        private readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
-        private int _tagCount;
+        readonly List<MySocketEventArgs> _listArgs = new List<MySocketEventArgs>();
+        readonly MySocketEventArgs _receiveEventArgs = new MySocketEventArgs();
+        int _tagCount;
 
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
@@ -65,7 +65,7 @@ namespace Telepathy
         }
 
         // Callback for connect operation
-        private void OnConnect(object sender, SocketAsyncEventArgs e)
+        void OnConnect(object sender, SocketAsyncEventArgs e)
         {
             // Signals the end of connection.
             AutoConnectEvent.Set();
@@ -76,7 +76,7 @@ namespace Telepathy
                 InitArgs(e);
         }
 
-        private void InitArgs(SocketAsyncEventArgs e)
+        void InitArgs(SocketAsyncEventArgs e)
         {
             _bufferManager.InitBuffer();
 
@@ -132,7 +132,7 @@ namespace Telepathy
         // If the remote host closed the connection, then the socket is closed.
         // If data was received then the data is echoed back to the client.
         //
-        private void ProcessReceive(SocketAsyncEventArgs e)
+        void ProcessReceive(SocketAsyncEventArgs e)
         {
             try
             {
@@ -185,7 +185,7 @@ namespace Telepathy
         // data sent from the client
         //
         // <param name="e"></param>
-        private void ProcessSend(SocketAsyncEventArgs e)
+        void ProcessSend(SocketAsyncEventArgs e)
         {
             if (e.SocketError != SocketError.Success)
             {
