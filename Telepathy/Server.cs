@@ -240,7 +240,7 @@ namespace Telepathy
                     break;
 
                 case SocketAsyncOperation.Send:
-                    ProcessSend(e);
+                    Logger.LogError("Client.IO_Completed: Send should never happen.");
                     break;
 
                 default:
@@ -329,20 +329,6 @@ namespace Telepathy
             token.incomingQueue.Enqueue(new Message(token.connectionId, EventType.Data, data));
         }
 
-        // This method is invoked when an asynchronous send operation completes.
-        void ProcessSend(SocketAsyncEventArgs e)
-        {
-            if (e.SocketError != SocketError.Success)
-            {
-                Logger.LogError("Server.ProcessSend failed: " + e.SocketError);
-                CloseClientSocket(e);
-            }
-
-            // retire send args in any case, so we can reuse them without 'new'
-            e.Completed -= IO_Completed; // don't want to call it twice next time. TODO is this even necessary or will it only add one function anyway?
-            RetireSendArgs(e);
-        }
-
         void CloseClientSocket(SocketAsyncEventArgs e)
         {
             AsyncUserToken token = (AsyncUserToken)e.UserToken;
@@ -379,8 +365,8 @@ namespace Telepathy
                     Array.Copy(header, buff, 4);
                     Array.Copy(message, 0, buff, 4, message.Length);
 
-                    SocketAsyncEventArgs sendArg = MakeSendArgs();
-                    sendArg.Completed += IO_Completed;
+                    SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs();
+                    //sendArg.Completed += IO_Completed; <- no callback = 2x throughput. we don't need to know.
                     sendArg.UserToken = token;
                     sendArg.SetBuffer(buff, 0, buff.Length);
                     token.Socket.SendAsync(sendArg);
