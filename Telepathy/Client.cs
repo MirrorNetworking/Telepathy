@@ -58,7 +58,7 @@ namespace Telepathy
             return connectArgs.SocketError;
         }
 
-        /// Disconnect from the host.
+        // Disconnect from the host.
         internal void Disconnect()
         {
             _clientSocket.Disconnect(false);
