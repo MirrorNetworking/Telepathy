@@ -9,14 +9,14 @@ namespace Telepathy
 {
     class Server
     {
-        private readonly int _maxConnectNum;
-        private readonly int _revBufferSize;
-        private readonly BufferManager _bufferManager;
-        private const int OpsToAlloc = 2;
-        private Socket _listenSocket;
-        private readonly SocketEventPool _pool;
-        private int _clientCount;
-        private readonly Semaphore _maxNumberAcceptedClients;
+        readonly int _maxConnectNum;
+        readonly int _revBufferSize;
+        readonly BufferManager _bufferManager;
+        const int OpsToAlloc = 2;
+        Socket _listenSocket;
+        readonly SocketEventPool _pool;
+        int _clientCount;
+        readonly Semaphore _maxNumberAcceptedClients;
 
         public EventHandler<EventArgs<AsyncUserToken, int>> ClientNumberChange;
 
@@ -151,7 +151,7 @@ namespace Telepathy
             ClientNumberChange?.Invoke(this, e);
         }
 
-        private void ProcessAccept(SocketAsyncEventArgs e)
+        void ProcessAccept(SocketAsyncEventArgs e)
         {
             try
             {
@@ -207,7 +207,7 @@ namespace Telepathy
         // If the remote host closed the connection, then the socket is closed.
         // If data was received then the data is echoed back to the client.
         //
-        private void ProcessReceive(SocketAsyncEventArgs e)
+        void ProcessReceive(SocketAsyncEventArgs e)
         {
             try
             {
@@ -267,7 +267,7 @@ namespace Telepathy
         // data sent from the client
         //
         // <param name="e"></param>
-        private void ProcessSend(SocketAsyncEventArgs e)
+        void ProcessSend(SocketAsyncEventArgs e)
         {
             if (e.SocketError == SocketError.Success)
             {
@@ -286,8 +286,7 @@ namespace Telepathy
             }
         }
 
-        //关闭客户端
-        private void CloseClientSocket(SocketAsyncEventArgs e)
+        void CloseClientSocket(SocketAsyncEventArgs e)
         {
             var token = e.UserToken as AsyncUserToken;
 
