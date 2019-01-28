@@ -8,9 +8,10 @@ namespace Telepathy
         // nagle: disabled by default
         public bool NoDelay = true;
 
-        // receive buffers
-        protected BigBuffer ReceiveBigBuffers;
-        protected const int OpsToAlloc = 2;
+        // the big buffer. static for maximum performance, so we can use one big
+        // buffer even if we run 1k clients in one process.
+        // (having it static also fixes our loadtest memory leak)
+        protected static BigBuffer bigBuffer = new BigBuffer();
 
         protected abstract void ProcessReceive(SocketAsyncEventArgs e);
 

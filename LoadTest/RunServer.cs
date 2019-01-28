@@ -11,7 +11,7 @@ namespace Telepathy.LoadTest
         public static void StartServer(int port)
         {
             // start server
-            Server server = new Server(10000, 1024);
+            Server server = new Server();
             server.Start(port);
             int serverFrequency = 60;
             Logger.Log("started server");

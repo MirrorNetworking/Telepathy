@@ -9,7 +9,6 @@ namespace Telepathy
 {
     public class Server : Common
     {
-        readonly int _maxConnectNum;
         Socket _listenSocket;
 
         // Dict<connId, token>
@@ -68,19 +67,6 @@ namespace Telepathy
             }
         }
 
-        public Server(int numConnections, int receiveBufferSize)
-        {
-            _maxConnectNum = numConnections;
-
-            // allocate buffers such that the maximum number of sockets can have one outstanding read and
-            //write posted to the socket simultaneously
-            ReceiveBigBuffers = new BigBuffer(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
-
-            // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
-            // against memory fragmentation
-            ReceiveBigBuffers.InitBuffer();
-        }
-
         public bool Start(int port)
         {
             try
@@ -93,7 +79,7 @@ namespace Telepathy
                 _listenSocket.Bind(localEndPoint);
 
                 // start the server with a listen backlog of 100 connections
-                _listenSocket.Listen(_maxConnectNum);
+                _listenSocket.Listen(100);
 
                 // post accepts on the listening socket
                 StartAccept(null);
@@ -189,16 +175,16 @@ namespace Telepathy
             try
             {
                 // create SocketAsyncEventArgs for this client
-                SocketAsyncEventArgs readEventArgs = new SocketAsyncEventArgs();
-                readEventArgs.Completed += IO_Completed;
-                readEventArgs.UserToken = new AsyncUserToken();
+                SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                args.Completed += IO_Completed;
+                args.UserToken = new AsyncUserToken();
 
-                // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                if (ReceiveBigBuffers.SetBuffer(readEventArgs))
+                // assign chunk of big buffer for max performance (see BigBuffer.cs comments)
+                if (bigBuffer.Assign(args))
                 {
                     // Get the socket for the accepted client connection and put it into the
                     //ReadEventArg object user token
-                    AsyncUserToken userToken = (AsyncUserToken) readEventArgs.UserToken;
+                    AsyncUserToken userToken = (AsyncUserToken) args.UserToken;
                     userToken.Socket = e.AcceptSocket;
                     userToken.ConnectTime = DateTime.Now;
                     userToken.Remote = e.AcceptSocket.RemoteEndPoint;
@@ -209,9 +195,9 @@ namespace Telepathy
 
                     OnClientConnected(userToken);
 
-                    if (!e.AcceptSocket.ReceiveAsync(readEventArgs))
+                    if (!e.AcceptSocket.ReceiveAsync(args))
                     {
-                        ProcessReceive(readEventArgs);
+                        ProcessReceive(args);
                     }
                 }
                 else Logger.LogError("Server.ProcessAccept: failed to assign buffer.");
@@ -328,12 +314,8 @@ namespace Telepathy
             // call disconnected event
             OnClientDisconnected(token);
 
-            // Free the SocketAsyncEventArg so they can be reused by another client
-            e.UserToken = new AsyncUserToken();
-
-            // free args buffer
-            ReceiveBigBuffers.FreeBuffer(e);
-
+            // free buffer chunk
+            bigBuffer.Free(e);
         }
 
         public bool Send(int connectionId, byte[] message)

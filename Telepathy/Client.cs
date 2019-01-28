@@ -10,8 +10,6 @@ namespace Telepathy
 {
     public class Client : Common, IDisposable
     {
-        const int BuffSize = 1024;
-
         // The socket used to send/receive messages.
         Socket _clientSocket;
 
@@ -49,7 +47,6 @@ namespace Telepathy
             _clientSocket = new Socket(_hostEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             //_clientSocket.DualMode = true; // IPv6 support. throws System.NotSupportedException: This protocol version is not supported.
             _clientSocket.NoDelay = NoDelay;
-            ReceiveBigBuffers = new BigBuffer(BuffSize * 2, BuffSize);
 
             SocketAsyncEventArgs connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};
             connectArgs.Completed += OnConnect;
@@ -83,13 +80,13 @@ namespace Telepathy
             _connected = (e.SocketError == SocketError.Success);
             if (_connected)
             {
-                ReceiveBigBuffers.InitBuffer();
-
                 // create SocketAsyncEventArgs for receive
                 SocketAsyncEventArgs args = new SocketAsyncEventArgs();
                 args.Completed += IO_Completed;
                 args.UserToken = e.UserToken;
-                if (ReceiveBigBuffers.SetBuffer(args))
+
+                // assign chunk of big buffer for max performance (see BigBuffer.cs comments)
+                if (bigBuffer.Assign(args))
                 {
                     if (!e.ConnectSocket.ReceiveAsync(args))
                         ProcessReceive(args);
@@ -200,8 +197,8 @@ namespace Telepathy
 
             e.Completed -= IO_Completed;
 
-            // free args buffer
-            ReceiveBigBuffers.FreeBuffer(e);
+            // free buffer chunk
+            bigBuffer.Free(e);
 
             // disconnected event
             incomingQueue.Enqueue(new Message(0, EventType.Disconnected, null));
