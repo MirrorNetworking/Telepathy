@@ -8,6 +8,10 @@ namespace Telepathy
         // nagle: disabled by default
         public bool NoDelay = true;
 
+        // receive buffers
+        protected BufferManager receiveBuffers;
+        protected const int OpsToAlloc = 2;
+
         protected abstract void ProcessReceive(SocketAsyncEventArgs e);
 
         protected void IO_Completed(object sender, SocketAsyncEventArgs e)

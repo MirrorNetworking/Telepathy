@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace Telepathy
 {
-    internal class BufferManager
+    public class BufferManager
     {
         readonly int _numBytes; // the total number of bytes controlled by the buffer pool
         byte[] _buffer; // the underlying byte array maintained by the Buffer Manager

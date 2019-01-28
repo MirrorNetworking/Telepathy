@@ -10,8 +10,6 @@ namespace Telepathy
     public class Server : Common
     {
         readonly int _maxConnectNum;
-        readonly BufferManager _bufferManager;
-        const int OpsToAlloc = 2;
         Socket _listenSocket;
 
         // Dict<connId, token>
@@ -76,11 +74,11 @@ namespace Telepathy
 
             // allocate buffers such that the maximum number of sockets can have one outstanding read and
             //write posted to the socket simultaneously
-            _bufferManager = new BufferManager(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
+            receiveBuffers = new BufferManager(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
 
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
-            _bufferManager.InitBuffer();
+            receiveBuffers.InitBuffer();
         }
 
         public bool Start(int port)
@@ -196,7 +194,7 @@ namespace Telepathy
                 readEventArgs.UserToken = new AsyncUserToken();
 
                 // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                if (_bufferManager.SetBuffer(readEventArgs))
+                if (receiveBuffers.SetBuffer(readEventArgs))
                 {
                     // Get the socket for the accepted client connection and put it into the
                     //ReadEventArg object user token
@@ -334,7 +332,7 @@ namespace Telepathy
             e.UserToken = new AsyncUserToken();
 
             // free args buffer
-            _bufferManager.FreeBuffer(e);
+            receiveBuffers.FreeBuffer(e);
 
         }
 
