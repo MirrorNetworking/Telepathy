@@ -321,7 +321,7 @@ namespace Telepathy
             // close the socket associated with the client
             try
             {
-                token?.Socket.Shutdown(SocketShutdown.Send);
+                token?.Socket.Shutdown(SocketShutdown.Both);
             }
             catch (Exception) { }
             token?.Socket.Close();
