@@ -90,7 +90,7 @@ namespace Telepathy
                 clients.Clear();
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
                 _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                _listenSocket.DualMode = true; // IPv6 support
+                //_listenSocket.DualMode = true; // IPv6 support. throws System.NotSupportedException: This protocol version is not supported.
                 _listenSocket.NoDelay = NoDelay;
                 _listenSocket.Bind(localEndPoint);
 
