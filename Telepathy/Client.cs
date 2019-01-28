@@ -205,6 +205,9 @@ namespace Telepathy
 
             _receiveEventArgs.Completed -= IO_Completed;
 
+            // free args buffer
+            _bufferManager.FreeBuffer(e);
+
             // disconnected event
             incomingQueue.Enqueue(new Message(0, EventType.Disconnected, null));
         }
