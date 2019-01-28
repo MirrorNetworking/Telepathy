@@ -28,8 +28,6 @@ namespace Telepathy
 
         MemoryStream buffer = new MemoryStream();
 
-        readonly SocketAsyncEventArgs _receiveEventArgs = new SocketAsyncEventArgs();
-
         public bool Connected => _clientSocket != null && _clientSocket.Connected;
 
         // incoming message queue
@@ -86,21 +84,20 @@ namespace Telepathy
             // Set the flag for socket connected.
             _connected = (e.SocketError == SocketError.Success);
             if (_connected)
-                InitArgs(e);
-        }
-
-        void InitArgs(SocketAsyncEventArgs e)
-        {
-            _bufferManager.InitBuffer();
-
-            _receiveEventArgs.Completed += IO_Completed;
-            _receiveEventArgs.UserToken = e.UserToken;
-            if (_bufferManager.SetBuffer(_receiveEventArgs))
             {
-                if (!e.ConnectSocket.ReceiveAsync(_receiveEventArgs))
-                    ProcessReceive(_receiveEventArgs);
+                _bufferManager.InitBuffer();
+
+                // create SocketAsyncEventArgs for receive
+                SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                args.Completed += IO_Completed;
+                args.UserToken = e.UserToken;
+                if (_bufferManager.SetBuffer(args))
+                {
+                    if (!e.ConnectSocket.ReceiveAsync(args))
+                        ProcessReceive(args);
+                }
+                else Logger.LogError("Client.InitArgs: failed to assign buffer");
             }
-            else Logger.LogError("Client.InitArgs: failed to assign buffer");
         }
 
         // This method is invoked when an asynchronous receive operation completes.
@@ -203,7 +200,7 @@ namespace Telepathy
                 }
             }
 
-            _receiveEventArgs.Completed -= IO_Completed;
+            e.Completed -= IO_Completed;
 
             // free args buffer
             _bufferManager.FreeBuffer(e);
