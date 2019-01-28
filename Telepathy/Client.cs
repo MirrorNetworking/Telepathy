@@ -93,10 +93,12 @@ namespace Telepathy
 
             _receiveEventArgs.Completed += IO_Completed;
             _receiveEventArgs.UserToken = e.UserToken;
-            _bufferManager.SetBuffer(_receiveEventArgs);
-
-            if (!e.ConnectSocket.ReceiveAsync(_receiveEventArgs))
-                ProcessReceive(_receiveEventArgs);
+            if (_bufferManager.SetBuffer(_receiveEventArgs))
+            {
+                if (!e.ConnectSocket.ReceiveAsync(_receiveEventArgs))
+                    ProcessReceive(_receiveEventArgs);
+            }
+            else Logger.LogError("Client.InitArgs: failed to assign buffer");
         }
 
         // This method is invoked when an asynchronous receive operation completes.

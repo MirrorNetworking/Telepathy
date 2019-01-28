@@ -194,25 +194,27 @@ namespace Telepathy
                 readEventArgs.UserToken = new AsyncUserToken();
 
                 // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                _bufferManager.SetBuffer(readEventArgs);
-
-                // Get the socket for the accepted client connection and put it into the
-                //ReadEventArg object user token
-                AsyncUserToken userToken = (AsyncUserToken)readEventArgs.UserToken;
-                userToken.Socket = e.AcceptSocket;
-                userToken.ConnectTime = DateTime.Now;
-                userToken.Remote = e.AcceptSocket.RemoteEndPoint;
-                userToken.IpAddress = ((IPEndPoint)(e.AcceptSocket.RemoteEndPoint)).Address;
-                userToken.connectionId = NextConnectionId();
-
-                clients[userToken.connectionId] = userToken;
-
-                OnClientConnected(userToken);
-
-                if (!e.AcceptSocket.ReceiveAsync(readEventArgs))
+                if (_bufferManager.SetBuffer(readEventArgs))
                 {
-                    ProcessReceive(readEventArgs);
+                    // Get the socket for the accepted client connection and put it into the
+                    //ReadEventArg object user token
+                    AsyncUserToken userToken = (AsyncUserToken) readEventArgs.UserToken;
+                    userToken.Socket = e.AcceptSocket;
+                    userToken.ConnectTime = DateTime.Now;
+                    userToken.Remote = e.AcceptSocket.RemoteEndPoint;
+                    userToken.IpAddress = ((IPEndPoint) (e.AcceptSocket.RemoteEndPoint)).Address;
+                    userToken.connectionId = NextConnectionId();
+
+                    clients[userToken.connectionId] = userToken;
+
+                    OnClientConnected(userToken);
+
+                    if (!e.AcceptSocket.ReceiveAsync(readEventArgs))
+                    {
+                        ProcessReceive(readEventArgs);
+                    }
                 }
+                else Logger.LogError("Server.ProcessAccept: failed to assign buffer.");
             }
             catch (Exception exception)
             {
