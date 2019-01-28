@@ -27,7 +27,7 @@ namespace Telepathy
         // average it's 1 send + 1 recv chunk for 10k connections = 20k chunks.
         // -> no Unity game will run with >10k connections anyway.
         // -> chunk size seems to affect performance. 10k*2k works well.
-        const int ChunkAmount = 10000;
+        const int ChunkAmount = 100000;
         byte[] buffer = new byte[ChunkSize * ChunkAmount];
 
         // free chunks - by offset. threadsafe.
@@ -96,6 +96,10 @@ namespace Telepathy
 
             // clear it, just to be 100% sure
             args.SetBuffer(null, 0, 0);
+
+            // helper
+            if (freeOffsets.Count % 1000 == 0)
+                Logger.Log("BigBuffer free indices: " + freeOffsets.Count);
         }
     }
 }
