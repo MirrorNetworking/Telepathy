@@ -5,6 +5,9 @@ namespace Telepathy
 {
     public abstract class Common
     {
+        // nagle: disabled by default
+        public bool NoDelay = true;
+
         protected abstract void ProcessReceive(SocketAsyncEventArgs e);
 
         protected void IO_Completed(object sender, SocketAsyncEventArgs e)
