@@ -330,6 +330,9 @@ namespace Telepathy
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
 
+            // free args buffer
+            _bufferManager.FreeBuffer(e);
+
             OnClientDisconnected(token);
         }
 
