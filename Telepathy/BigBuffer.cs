@@ -5,6 +5,8 @@
 // -> significant difference in load test:
 //    - without BigBuffer: 225KB/s in
 //    - with BigBuffer: 300-600KB/s in
+
+using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net.Sockets;
@@ -43,6 +45,42 @@ namespace Telepathy
                 // assign to args
                 args.SetBuffer(buffer, offset, ChunkSize);
                 return true;
+            }
+
+            // no more indices left. should have allocated a bigger buffer.
+            Logger.LogError("BigBuffer.Assign: out of free indices. Should've allocated more than " + ChunkAmount + ".");
+            return false;
+        }
+
+        // assign a SocketAsyncEventArg's buffer without copying it to a return
+        // value etc.
+        //  -> can pass a byte[] to copy into the buffer for Send.
+        public bool Assign(SocketAsyncEventArgs args, byte[] header, byte[] content)
+        {
+            // get free index from the queue
+            int offset;
+            if (freeOffsets.TryDequeue(out offset))
+            {
+                // does it fit into a chunk?
+                int totalLength = header.Length + content.Length;
+                if (totalLength <= ChunkSize)
+                {
+                    // copy it in
+                    Array.Copy(header, 0, buffer, offset, header.Length);
+                    Array.Copy(content, 0, buffer, offset + header.Length, content.Length);
+
+                    // assign to args with length of copyIntoBuffer so we don't
+                    // send more
+                    args.SetBuffer(buffer, offset, totalLength);
+                    return true;
+                }
+                else
+                {
+                    // log error and full message so we know which message
+                    // was too big (should see the offset)
+                    Logger.LogError("BigBuffer.Assign: can't copy " + totalLength + " bytes into chunk of max size " + ChunkSize + " for header=" + BitConverter.ToString(header) + " content=" + BitConverter.ToString(content));
+                    return false;
+                }
             }
 
             // no more indices left. should have allocated a bigger buffer.

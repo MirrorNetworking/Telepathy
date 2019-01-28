@@ -292,6 +292,20 @@ namespace Telepathy
             }
         }
 
+        // This method is invoked when an asynchronous send operation completes.
+        protected override void ProcessSend(SocketAsyncEventArgs e)
+        {
+            if (e.SocketError != SocketError.Success)
+            {
+                Logger.LogError("Server.ProcessSend failed: " + e.SocketError);
+                CloseClientSocket(e);
+            }
+
+            // free buffer chunk
+            //Logger.Log("Server.Process send: freeing!");
+            bigBuffer.Free(e);
+        }
+
         void OnReceiveClientData(AsyncUserToken token, byte[] data)
         {
             token.incomingQueue.Enqueue(new Message(token.connectionId, EventType.Data, data));
@@ -329,21 +343,23 @@ namespace Telepathy
 
                 try
                 {
-                    byte[] buff = new byte[message.Length + 4];
-                    byte[] header = Utils.IntToBytesBigEndian(message.Length);
-                    Array.Copy(header, buff, 4);
-                    Array.Copy(message, 0, buff, 4, message.Length);
-
                     SocketAsyncEventArgs sendArg = new SocketAsyncEventArgs();
-                    //sendArg.Completed += IO_Completed; <- no callback = 2x throughput. we don't need to know.
+                    sendArg.Completed += IO_Completed; // callback needed to free buffer
                     sendArg.UserToken = token;
-                    sendArg.SetBuffer(buff, 0, buff.Length);
-                    token.Socket.SendAsync(sendArg);
-                    return true;
+
+                    // assign buffer from BigBuffer for max performance and
+                    // initialize with our message
+                    byte[] header = Utils.IntToBytesBigEndian(message.Length);
+                    if (bigBuffer.Assign(sendArg, header, message))
+                    {
+                        token.Socket.SendAsync(sendArg);
+                        return true;
+                    }
+                    Logger.Log("Server.Send failed: not enough free chunks! Closing connection because it would be out of sync when sending again.");
+                    CloseClientSocket(sendArg);
                 }
                 catch (Exception e)
                 {
-                    // log
                     Logger.LogError("Server.Send failed: " + e);
                 }
             }

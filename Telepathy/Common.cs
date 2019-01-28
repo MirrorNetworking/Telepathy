@@ -14,6 +14,7 @@ namespace Telepathy
         protected static BigBuffer bigBuffer = new BigBuffer();
 
         protected abstract void ProcessReceive(SocketAsyncEventArgs e);
+        protected abstract void ProcessSend(SocketAsyncEventArgs e);
 
         protected void IO_Completed(object sender, SocketAsyncEventArgs e)
         {
@@ -25,7 +26,7 @@ namespace Telepathy
                     break;
 
                 case SocketAsyncOperation.Send:
-                    Logger.LogError("Client.IO_Completed: Send should never happen.");
+                    ProcessSend(e);
                     break;
 
                 default:
