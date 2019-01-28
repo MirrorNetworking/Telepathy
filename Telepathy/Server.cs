@@ -303,6 +303,7 @@ namespace Telepathy
             }
             catch (Exception exception)
             {
+                CloseClientSocket(e);
                 Logger.LogError("Server.ProcessReceive failed: " + exception);
             }
         }
