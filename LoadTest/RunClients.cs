@@ -50,6 +50,10 @@ namespace Telepathy.LoadTest
 
             // THIS HAPPENS IN DIFFERENT THREADS.
             // so make sure that GetNextMessage is thread safe!
+            //
+            // IMPORTANT: elapsed is called more frequently than sends are finished
+            // then this might cause memory leaks. shouldn't matter in a single
+            // threaded use case like Unity.
             timer.Elapsed += (object sender, ElapsedEventArgs e) =>
             {
 
