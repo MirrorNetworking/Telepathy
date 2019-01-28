@@ -51,6 +51,7 @@ namespace Telepathy
             // Instantiate the endpoint and socket.
             _hostEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
             _clientSocket = new Socket(_hostEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            _clientSocket.DualMode = true; // IPv6 support
             _bufferManager = new BufferManager(BuffSize * 2, BuffSize);
 
             SocketAsyncEventArgs connectArgs = new SocketAsyncEventArgs {UserToken = _clientSocket, RemoteEndPoint = _hostEndPoint};

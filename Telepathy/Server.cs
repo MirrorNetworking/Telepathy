@@ -90,6 +90,7 @@ namespace Telepathy
                 clients.Clear();
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
                 _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                _listenSocket.DualMode = true; // IPv6 support
                 _listenSocket.Bind(localEndPoint);
 
                 // start the server with a listen backlog of 100 connections
