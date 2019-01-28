@@ -1,9 +1,16 @@
+// SocketAsyncEventArgs work best if all the receive args use a piece of one
+// giant buffer.
+// TODO find the source for that again.
+//
+// -> significant difference in load test:
+//    - without BigBuffer: 225KB/s in
+//    - with BigBuffer: 300-600KB/s in
 using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace Telepathy
 {
-    public class BufferManager
+    public class BigBuffer
     {
         readonly int _numBytes; // the total number of bytes controlled by the buffer pool
         byte[] _buffer; // the underlying byte array maintained by the Buffer Manager
@@ -11,7 +18,7 @@ namespace Telepathy
         int _currentIndex;
         readonly int _bufferSize;
 
-        public BufferManager(int totalBytes, int bufferSize)
+        public BigBuffer(int totalBytes, int bufferSize)
         {
             _numBytes = totalBytes;
             _currentIndex = 0;

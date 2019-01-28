@@ -9,7 +9,7 @@ namespace Telepathy
         public bool NoDelay = true;
 
         // receive buffers
-        protected BufferManager receiveBuffers;
+        protected BigBuffer ReceiveBigBuffers;
         protected const int OpsToAlloc = 2;
 
         protected abstract void ProcessReceive(SocketAsyncEventArgs e);

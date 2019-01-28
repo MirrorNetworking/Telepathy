@@ -74,11 +74,11 @@ namespace Telepathy
 
             // allocate buffers such that the maximum number of sockets can have one outstanding read and
             //write posted to the socket simultaneously
-            receiveBuffers = new BufferManager(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
+            ReceiveBigBuffers = new BigBuffer(receiveBufferSize * numConnections * OpsToAlloc, receiveBufferSize);
 
             // Allocates one large byte buffer which all I/O operations use a piece of.  This guards
             // against memory fragmentation
-            receiveBuffers.InitBuffer();
+            ReceiveBigBuffers.InitBuffer();
         }
 
         public bool Start(int port)
@@ -194,7 +194,7 @@ namespace Telepathy
                 readEventArgs.UserToken = new AsyncUserToken();
 
                 // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                if (receiveBuffers.SetBuffer(readEventArgs))
+                if (ReceiveBigBuffers.SetBuffer(readEventArgs))
                 {
                     // Get the socket for the accepted client connection and put it into the
                     //ReadEventArg object user token
@@ -332,7 +332,7 @@ namespace Telepathy
             e.UserToken = new AsyncUserToken();
 
             // free args buffer
-            receiveBuffers.FreeBuffer(e);
+            ReceiveBigBuffers.FreeBuffer(e);
 
         }
 
