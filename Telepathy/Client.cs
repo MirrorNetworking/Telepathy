@@ -173,6 +173,7 @@ namespace Telepathy
             }
             catch (Exception exception)
             {
+                ProcessError(e);
                 Logger.Log("Client.ProcessReceive failed: " + exception);
             }
         }
