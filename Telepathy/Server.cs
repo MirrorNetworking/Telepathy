@@ -327,13 +327,15 @@ namespace Telepathy
             catch (Exception) { }
             token?.Socket.Close();
 
+            // call disconnected event
+            OnClientDisconnected(token);
+
             // Free the SocketAsyncEventArg so they can be reused by another client
             e.UserToken = new AsyncUserToken();
 
             // free args buffer
             _bufferManager.FreeBuffer(e);
 
-            OnClientDisconnected(token);
         }
 
         public bool Send(int connectionId, byte[] message)
