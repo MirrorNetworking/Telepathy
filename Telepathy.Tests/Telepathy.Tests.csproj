@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45</TargetFrameworks>
+    <TargetFrameworks>net471</TargetFrameworks>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -9,8 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.11.0" />
-    <PackageReference Include="OpenCover" Version="4.7.906-rc" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.12.0" />
+    <PackageReference Include="OpenCover" Version="4.7.906-rc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Telepathy\Telepathy.csproj" />

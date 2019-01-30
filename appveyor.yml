@@ -32,7 +32,7 @@ cache:
 image: Visual Studio 2017
 
 test_script:
-  - '%USERPROFILE%\.nuget\packages\opencover\4.6.519\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:Telepathy.Tests\bin\%CONFIGURATION%\net35\Telepathy.Tests.dll -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "'
+  - '%USERPROFILE%\.nuget\packages\opencover\4.7.906-rc\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:Telepathy.Tests\bin\%CONFIGURATION%\net471\Telepathy.Tests.dll -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "'
 
 after_test:
   - ps: |
