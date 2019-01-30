@@ -73,8 +73,7 @@ namespace Telepathy
 
             // try interrupting send thread after receive thread
             // ends, just to be sure
-            if (sendThread != null)
-                sendThread.Interrupt();
+            sendThread?.Interrupt();
 
             // Connect might have failed. thread might have been closed.
             // let's reset connecting state no matter what.
@@ -128,8 +127,7 @@ namespace Telepathy
 
                 // wait until thread finished. this is the only way to guarantee
                 // that we can call Connect() again immediately after Disconnect
-                if (receiveThread != null)
-                    receiveThread.Join();;
+                receiveThread?.Join();
 
                 // clear send queues. no need to hold on to them.
                 // (unlike receiveQueue, which is still needed to process the
