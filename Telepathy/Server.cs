@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -13,7 +14,7 @@ namespace Telepathy
         Thread listenerThread;
 
         // clients with <connectionId, TcpClient>
-        SafeDictionary<int, TcpClient> clients = new SafeDictionary<int, TcpClient>();
+        ConcurrentDictionary<int, TcpClient> clients = new ConcurrentDictionary<int, TcpClient>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -85,13 +86,13 @@ namespace Telepathy
                         {
                             // create send queue immediately
                             SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                            sendQueues.Add(connectionId, sendQueue);
+                            sendQueues[connectionId] = sendQueue;
 
                             // run the send loop
                             SendLoop(connectionId, client, sendQueue);
 
                             // remove queue from queues afterwards
-                            sendQueues.Remove(connectionId);
+                            sendQueues.TryRemove(connectionId, out SafeQueue<byte[]> _);
                         }
                         catch (ThreadAbortException)
                         {
@@ -116,13 +117,13 @@ namespace Telepathy
                         try
                         {
                             // add to dict immediately
-                            clients.Add(connectionId, client);
+                            clients[connectionId] = client;
 
                             // run the receive loop
                             ReceiveLoop(connectionId, client, receiveQueue);
 
                             // remove client from clients dict afterwards
-                            clients.Remove(connectionId);
+                            clients.TryRemove(connectionId, out TcpClient _);
                         }
                         catch (Exception exception)
                         {
@@ -198,9 +199,9 @@ namespace Telepathy
             listenerThread = null;
 
             // close all client connections
-            List<TcpClient> connections = clients.GetValues();
-            foreach (TcpClient client in connections)
+            foreach (KeyValuePair<int, TcpClient> kvp in clients)
             {
+                TcpClient client = kvp.Value;
                 // close the stream if not closed yet. it may have been closed
                 // by a disconnect already, so use try/catch
                 try { client.GetStream().Close(); } catch {}

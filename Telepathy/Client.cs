@@ -51,7 +51,7 @@ namespace Telepathy
 
                 // create send queue for this client
                 SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                sendQueues.Add(0, sendQueue);
+                sendQueues[0] = sendQueue;
 
                 // start send thread only after connected
                 sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });

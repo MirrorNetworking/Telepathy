@@ -1,5 +1,6 @@
 ﻿// common code used by server and client
 using System;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -14,7 +15,7 @@ namespace Telepathy
 
         // outgoing message queue of <connectionId, sendQueue>
         // (not a HashSet because one connection can have multiple new messages)
-        protected SafeDictionary<int, SafeQueue<byte[]>> sendQueues = new SafeDictionary<int, SafeQueue<byte[]>>();
+        protected ConcurrentDictionary<int, SafeQueue<byte[]>> sendQueues = new ConcurrentDictionary<int, SafeQueue<byte[]>>();
 
         // queue count, useful for debugging / benchmarks
         public int ReceiveQueueCount { get { return receiveQueue.Count; } }
