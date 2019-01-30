@@ -6,7 +6,7 @@ public static class NetworkStreamExtensions
     // .Read returns '0' if remote closed the connection but throws an
     // IOException if we voluntarily closed our own connection.
     //
-    // lets's add a ReadSafely method that returns '0' in both cases so we don't
+    // let's add a ReadSafely method that returns '0' in both cases so we don't
     // have to worry about exceptions, since a disconnect is a disconnect...
     public static int ReadSafely(this NetworkStream stream, byte[] buffer, int offset, int size)
     {
