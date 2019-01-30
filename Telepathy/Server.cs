@@ -109,7 +109,7 @@ namespace Telepathy
 
         // ideally call this once per frame in main loop.
         // -> pass queue so we don't need to create a new one each time!
-        void GetNextMessages(Queue<Message> messages)
+        public void GetNextMessages(Queue<Message> messages)
         {
             // lock so this never gets called simultaneously from multiple
             // threads, otherwise available->recv would get interfered.
