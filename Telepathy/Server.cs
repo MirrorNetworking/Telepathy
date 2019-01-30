@@ -185,14 +185,12 @@ namespace Telepathy
             // close the client connections
             // (might be null if we call Stop so quickly after Start that the
             //  thread was interrupted before even creating the listener)
-            if (listener != null)
-                listener.Stop();
+            listener?.Stop();
 
             // kill listener thread at all costs. only way to guarantee that
             // .Active is immediately false after Stop.
             // -> calling .Join would sometimes wait forever
-            if (listenerThread != null)
-                listenerThread.Interrupt();
+            listenerThread?.Interrupt();
             listenerThread = null;
 
             // close all client connections
