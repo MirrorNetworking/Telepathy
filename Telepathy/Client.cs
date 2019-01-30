@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -34,7 +35,7 @@ namespace Telepathy
         public bool Connecting => _Connecting;
 
         // send queue
-        SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+        ConcurrentQueue<byte[]> sendQueue = new ConcurrentQueue<byte[]>();
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
         // -> call Set() if everything was sent
@@ -152,7 +153,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            sendQueue.Clear();
+            sendQueue = new ConcurrentQueue<byte[]>();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
@@ -180,7 +181,7 @@ namespace Telepathy
                 // clear send queues. no need to hold on to them.
                 // (unlike receiveQueue, which is still needed to process the
                 //  latest Disconnected message, etc.)
-                sendQueue.Clear();
+                sendQueue = new ConcurrentQueue<byte[]>();
 
                 // let go of this one completely. the thread ended, no one uses
                 // it anymore and this way Connected is false again immediately.

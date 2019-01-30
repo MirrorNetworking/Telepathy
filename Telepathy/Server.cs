@@ -20,7 +20,7 @@ namespace Telepathy
             public TcpClient client;
             public bool connectProcessed;
             public int contentSize = 0; // set after reading header
-            public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+            public ConcurrentQueue<byte[]> sendQueue = new ConcurrentQueue<byte[]>();
 
             // ManualResetEvent to wake up the send thread. better than Thread.Sleep
             // -> call Set() if everything was sent

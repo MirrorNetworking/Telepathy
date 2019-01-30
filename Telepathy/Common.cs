@@ -129,7 +129,7 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
+        protected static void SendLoop(int connectionId, TcpClient client, ConcurrentQueue<byte[]> sendQueue, ManualResetEvent sendPending)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -146,14 +146,20 @@ namespace Telepathy
                     //    the next Send call.
                     sendPending.Reset(); // WaitOne() blocks until .Set() again
 
-                    // dequeue all
-                    byte[][] messages;
-                    if (sendQueue.TryDequeueAll(out messages))
+                    // dequeue and batch all. send them all at once.
+                    byte[][] messages = new byte[sendQueue.Count][];
+                    for (int i = 0; i < messages.Length; ++i)
                     {
-                        // send message (blocking) or stop if stream is closed
-                        if (!SendMessagesBlocking(stream, messages))
+                        if (!sendQueue.TryDequeue(out messages[i]))
+                        {
+                            Logger.LogError("SendLoop: failed to dequeue message " + i + ". This should never happen. Aborting.");
                             return;
+                        }
                     }
+
+                    // send messages (blocking) or stop if stream is closed
+                    if (!SendMessagesBlocking(stream, messages))
+                        return;
 
                     // don't choke up the CPU: wait until queue not empty anymore
                     sendPending.WaitOne();
