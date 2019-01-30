@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -103,7 +104,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue.Clear();
+            receiveQueue = new ConcurrentQueue<Message>();
             sendQueues.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread

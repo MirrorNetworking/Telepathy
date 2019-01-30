@@ -161,7 +161,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue.Clear();
+            receiveQueue = new ConcurrentQueue<Message>();
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
