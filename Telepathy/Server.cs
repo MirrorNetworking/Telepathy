@@ -182,13 +182,6 @@ namespace Telepathy
             // exceptions are silent
             try
             {
-                // start listener
-                listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
-                listener.Server.NoDelay = NoDelay;
-                listener.Server.SendTimeout = SendTimeout;
-                listener.Start();
-                Logger.Log("Server: listening port=" + port);
-
                 // keep accepting new clients
                 while (true)
                 {
@@ -250,6 +243,39 @@ namespace Telepathy
             }
         }
 
+        bool TryListen(int port)
+        {
+            bool successful = false;
+            try
+            {
+                // start listener
+                listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
+                listener.Server.NoDelay = NoDelay;
+                listener.Server.SendTimeout = SendTimeout;
+                listener.Start();
+                Logger.Log("Server: listening port=" + port);
+                successful = true;
+            }
+            catch (ThreadAbortException exception)
+            {
+                // UnityEditor causes AbortException if thread is still
+                // running when we press Play again next time. that's okay.
+                Logger.Log("Server thread aborted. That's okay. " + exception);
+            }
+            catch (SocketException exception)
+            {
+                // calling StopServer will interrupt this thread with a
+                // 'SocketException: interrupted'. that's okay.
+                Logger.Log("Server Thread stopped. That's okay. " + exception);
+            }
+            catch (Exception exception)
+            {
+                // something went wrong. probably important.
+                Logger.LogError("Server Exception: " + exception);
+            }
+            return successful;
+        }
+
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
         public bool Start(int port)
@@ -260,9 +286,14 @@ namespace Telepathy
             // clear queue so we don't process anything old
             queue.Clear();
 
-            // start the listener thread
+            // attemtpt to start the listener thread
             // (on low priority. if main thread is too busy then there is not
             //  much value in accepting even more clients)
+            if(!TryListen(port))
+            {
+                Logger.Log("Server: Could not start on port=" + port);
+                return false;
+            }
             Logger.Log("Server: Start port=" + port);
             listenerThread = new Thread(() => { Listen(port); });
             listenerThread.IsBackground = true;
