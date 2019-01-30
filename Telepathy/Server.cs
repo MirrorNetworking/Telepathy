@@ -13,8 +13,21 @@ namespace Telepathy
         public TcpListener listener;
         Thread listenerThread;
 
-        // clients with <connectionId, TcpClient>
-        ConcurrentDictionary<int, TcpClient> clients = new ConcurrentDictionary<int, TcpClient>();
+        // class with all the client's data. let's call it Token for consistency
+        // with the async socket methods.
+        class ClientToken
+        {
+            public TcpClient client;
+            public bool connectProcessed;
+            public int contentSize = 0; // set after reading header
+
+            public ClientToken(TcpClient client)
+            {
+                this.client = client;
+            }
+        }
+        // clients with <connectionId, ClientData>
+        ConcurrentDictionary<int, ClientToken> clients = new ConcurrentDictionary<int, ClientToken>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -46,6 +59,113 @@ namespace Telepathy
         // check if the server is running
         public bool Active => listenerThread != null && listenerThread.IsAlive;
 
+        // get next message
+        // -> GetNextMessage would be too slow because GetValues is called each
+        //    time and if one client sends too much, no one else would get updated
+        // -> Connected, Data, Disconnected events are all added here
+        // -> bool return makes while (GetMessage(out Message)) easier!
+        // -> no 'is client connected' check because we still want to read the
+        //    Disconnected message after a disconnect
+        Queue<Message> queue = new Queue<Message>();
+        public bool GetNextMessage(out Message message)
+        {
+            // lock so this never gets called simultaneously from multiple
+            // threads, otherwise available->recv would get interfered.
+            lock (this)
+            {
+                // okay so..
+                // -> returning ALL new messages is not ideal because we then lose
+                //    the convenience of GetNextMessage. useful for tests etc. to
+                //    only return the next one.
+                // -> looping through ALL connections until one read happens would
+                //    be crazy if we call GetNextMessage until there are no more
+                // => so let's cache them
+
+                // queue empty? then grab all new messages and save in queue
+                if (queue.Count == 0)
+                {
+                    GetNextMessages(queue);
+                }
+
+                // do we have some messages now?
+                if (queue.Count > 0)
+                {
+                    // return the first one, remove it from queue
+                    message = queue.Dequeue();
+                    return true;
+                }
+
+                message = null;
+                return false;
+            }
+        }
+
+        // ideally call this once per frame in main loop.
+        // -> pass queue so we don't need to create a new one each time!
+        void GetNextMessages(Queue<Message> messages)
+        {
+            // lock so this never gets called simultaneously from multiple
+            // threads, otherwise available->recv would get interfered.
+            lock (this)
+            {
+                List<int> removeIds = new List<int>();
+                foreach (KeyValuePair<int, ClientToken> kvp in clients)
+                {
+                    TcpClient client = kvp.Value.client;
+
+                    // first of all: did the client just connect?
+                    if (!kvp.Value.connectProcessed)
+                    {
+                        messages.Enqueue(new Message(kvp.Key, EventType.Connected, null));
+                        kvp.Value.connectProcessed = true;
+                    }
+                    // detected a disconnect?
+                    else if (WasDisconnected(client))
+                    {
+                        // clean up no matter what
+                        client.GetStream().Close();
+                        client.Close();
+
+                        // add 'Disconnected' message after disconnecting properly.
+                        // -> always AFTER closing the streams to avoid a race condition
+                        //    where Disconnected -> Reconnect wouldn't work because
+                        //    Connected is still true for a short moment before the stream
+                        //    would be closed.
+                        messages.Enqueue(new Message(kvp.Key, EventType.Disconnected, null));
+
+                        // remove it when done
+                        removeIds.Add(kvp.Key);
+                    }
+                    // still connected? then read a message
+                    else
+                    {
+                        // header not read yet, but can read it now?
+                        if (kvp.Value.contentSize == 0)
+                        {
+                            kvp.Value.contentSize = ReadHeaderIfAvailable(client);
+                        }
+
+                        // try to read content
+                        if (kvp.Value.contentSize > 0)
+                        {
+                            byte[] content = ReadContentIfAvailable(client, kvp.Value.contentSize);
+                            if (content != null)
+                            {
+                                messages.Enqueue(new Message(kvp.Key, EventType.Data, content));
+                                kvp.Value.contentSize = 0; // reset for next time
+                            }
+                        }
+                    }
+                }
+
+                // remove all disconnected clients
+                foreach (int connId in removeIds)
+                {
+                    clients.TryRemove(connId, out ClientToken _);
+                }
+            }
+        }
+
         // the listener thread's listen function
         // note: no maxConnections parameter. high level API should handle that.
         //       (Transport can't send a 'too full' message anyway)
@@ -73,6 +193,9 @@ namespace Telepathy
 
                     // generate the next connection id (thread safely)
                     int connectionId = NextConnectionId();
+
+                    // add to dict immediately
+                    clients[connectionId] = new ClientToken(client);
 
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
@@ -105,30 +228,6 @@ namespace Telepathy
                     });
                     sendThread.IsBackground = true;
                     sendThread.Start();
-
-                    // spawn a receive thread for each client
-                    Thread receiveThread = new Thread(() =>
-                    {
-                        // wrap in try-catch, otherwise Thread exceptions
-                        // are silent
-                        try
-                        {
-                            // add to dict immediately
-                            clients[connectionId] = client;
-
-                            // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue);
-
-                            // remove client from clients dict afterwards
-                            clients.TryRemove(connectionId, out TcpClient _);
-                        }
-                        catch (Exception exception)
-                        {
-                            Logger.LogError("Server client thread exception: " + exception);
-                        }
-                    });
-                    receiveThread.IsBackground = true;
-                    receiveThread.Start();
                 }
             }
             catch (ThreadAbortException exception)
@@ -157,11 +256,8 @@ namespace Telepathy
             // not if already started
             if (Active) return false;
 
-            // clear old messages in queue, just to be sure that the caller
-            // doesn't receive data from last time and gets out of sync.
-            // -> calling this in Stop isn't smart because the caller may
-            //    still want to process all the latest messages afterwards
-            receiveQueue = new ConcurrentQueue<Message>();
+            // clear queue so we don't process anything old
+            queue.Clear();
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
@@ -194,13 +290,12 @@ namespace Telepathy
             listenerThread = null;
 
             // close all client connections
-            foreach (KeyValuePair<int, TcpClient> kvp in clients)
+            foreach (KeyValuePair<int, ClientToken> kvp in clients)
             {
-                TcpClient client = kvp.Value;
                 // close the stream if not closed yet. it may have been closed
                 // by a disconnect already, so use try/catch
-                try { client.GetStream().Close(); } catch {}
-                client.Close();
+                try { kvp.Value.client.GetStream().Close(); } catch {}
+                kvp.Value.client.Close();
             }
 
             // clear clients list
@@ -229,10 +324,10 @@ namespace Telepathy
         public bool GetConnectionInfo(int connectionId, out string address)
         {
             // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
-                address = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                address = ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
                 return true;
             }
             address = null;
@@ -243,11 +338,11 @@ namespace Telepathy
         public bool Disconnect(int connectionId)
         {
             // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
                 // just close it. client thread will take care of the rest.
-                client.Close();
+                token.client.Close();
                 Logger.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }

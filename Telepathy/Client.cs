@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -8,15 +7,16 @@ namespace Telepathy
     public class Client : Common
     {
         public TcpClient client;
-        Thread receiveThread;
+        Thread connectThread;
         Thread sendThread;
 
-        // TcpClient.Connected doesn't check if socket != null, which
-        // results in NullReferenceExceptions if connection was closed.
-        // -> let's check it manually instead
-        public bool Connected => client != null &&
-                                 client.Client != null &&
-                                 client.Client.Connected;
+        // can't check Client.Connected because it's only true after receiving
+        // the first data. need to do it manually.
+        // => bools are atomic according to
+        //    https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables
+        //    made volatile so the compiler does not reorder access to it
+        volatile bool _Connected;
+        public bool Connected => _Connected;
 
         // TcpClient has no 'connecting' state to check. We need to keep track
         // of it manually.
@@ -33,8 +33,62 @@ namespace Telepathy
         volatile bool _Connecting;
         public bool Connecting => _Connecting;
 
+        // try to read without blocking.
+        bool lastConnected;
+        int contentSize = 0; // set after reading header
+        public bool GetNextMessage(out Message message)
+        {
+            // lock so this never gets called simultaneously from multiple
+            // threads, otherwise available->recv would get interfered.
+            lock (this)
+            {
+                message = null;
+
+                // first of all: not connected before, but now?
+                if (Connected && !lastConnected)
+                {
+                    message = new Message(0, EventType.Connected, null);
+                    lastConnected = true;
+                    return true;
+                }
+                // connected and detected a disconnect?
+                else if (Connected && WasDisconnected(client))
+                {
+                    message = new Message(0, EventType.Disconnected, null);
+                    _Connected = false; // we detected it, we set it false
+                    lastConnected = false;
+                    client.Close(); // clean up
+                    return true;
+                }
+                // still connected? then read a message
+                else if (Connected)
+                {
+                    // header not read yet? then read if available
+                    if (contentSize == 0)
+                    {
+                        contentSize = ReadHeaderIfAvailable(client);
+                    }
+
+                    // try to read content
+                    if (contentSize > 0)
+                    {
+                        byte[] content = ReadContentIfAvailable(client, contentSize);
+                        if (content != null)
+                        {
+                            message = new Message(0, EventType.Data, content);
+                            contentSize = 0; // reset for next time
+                            return true;
+                        }
+                    }
+                }
+
+                // nothing this time
+                return false;
+            }
+        }
+
         // the thread function
-        void ReceiveThreadFunction(string ip, int port)
+        void ConnectThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
@@ -42,7 +96,7 @@ namespace Telepathy
             {
                 // connect (blocking)
                 client.Connect(ip, port);
-                _Connecting = false;
+                _Connected = true;
 
                 // create send queue for this client
                 SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
@@ -52,38 +106,24 @@ namespace Telepathy
                 sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
-
-                // run the receive loop
-                ReceiveLoop(0, client, receiveQueue);
             }
             catch (SocketException exception)
             {
                 // this happens if (for example) the ip address is correct
                 // but there is no server running on that ip/port
-                Logger.Log("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
-
-                // add 'Disconnected' event to message queue so that the caller
-                // knows that the Connect failed. otherwise they will never know
-                receiveQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+                Logger.Log("Client Connect: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
             }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
-                Logger.LogError("Client Recv Exception: " + exception);
+                Logger.LogError("Client Connect Exception: " + exception);
             }
-
-            // try interrupting send thread after receive thread
-            // ends, just to be sure
-            sendThread?.Interrupt();
-
-            // Connect might have failed. thread might have been closed.
-            // let's reset connecting state no matter what.
-            _Connecting = false;
-
-            // if we got here then we are done. ReceiveLoop cleans up already,
-            // but we may never get there if connect fails. so let's clean up
-            // here too.
-            client.Close();
+            finally
+            {
+                // we definitely aren't connecting anymore. either it worked or
+                // it failed.
+                _Connecting = false;
+            }
         }
 
         public void Connect(string ip, int port)
@@ -100,11 +140,13 @@ namespace Telepathy
             client.NoDelay = NoDelay;
             client.SendTimeout = SendTimeout;
 
+            // reset state
+            lastConnected = false;
+
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue = new ConcurrentQueue<Message>();
             sendQueues.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
@@ -113,9 +155,9 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            receiveThread = new Thread(() => { ReceiveThreadFunction(ip, port); });
-            receiveThread.IsBackground = true;
-            receiveThread.Start();
+            connectThread = new Thread(() => { ConnectThreadFunction(ip, port); });
+            connectThread.IsBackground = true;
+            connectThread.Start();
         }
 
         public void Disconnect()
@@ -128,7 +170,7 @@ namespace Telepathy
 
                 // wait until thread finished. this is the only way to guarantee
                 // that we can call Connect() again immediately after Disconnect
-                receiveThread?.Join();
+                connectThread?.Join();
 
                 // clear send queues. no need to hold on to them.
                 // (unlike receiveQueue, which is still needed to process the
@@ -137,6 +179,7 @@ namespace Telepathy
 
                 // let go of this one completely. the thread ended, no one uses
                 // it anymore and this way Connected is false again immediately.
+                _Connected = false;
                 client = null;
             }
         }
