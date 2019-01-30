@@ -18,7 +18,7 @@ namespace Telepathy
         protected ConcurrentDictionary<int, SafeQueue<byte[]>> sendQueues = new ConcurrentDictionary<int, SafeQueue<byte[]>>();
 
         // queue count, useful for debugging / benchmarks
-        public int ReceiveQueueCount { get { return receiveQueue.Count; } }
+        public int ReceiveQueueCount => receiveQueue.Count;
 
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
