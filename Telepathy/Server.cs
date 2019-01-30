@@ -245,7 +245,6 @@ namespace Telepathy
 
         bool TryListen(int port)
         {
-            bool successful = false;
             try
             {
                 // start listener
@@ -254,7 +253,7 @@ namespace Telepathy
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
                 Logger.Log("Server: listening port=" + port);
-                successful = true;
+                return true;
             }
             catch (ThreadAbortException exception)
             {
@@ -273,7 +272,7 @@ namespace Telepathy
                 // something went wrong. probably important.
                 Logger.LogError("Server Exception: " + exception);
             }
-            return successful;
+            return false;
         }
 
         // start listening for new connections in a background thread and spawn
