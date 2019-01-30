@@ -105,10 +105,7 @@ namespace Telepathy
 
             // read exactly 'size' bytes for content (blocking)
             content = new byte[size];
-            if (!stream.ReadExactly(content, size))
-                return false;
-
-            return true;
+            return stream.ReadExactly(content, size);
         }
 
         // thread receive function is the same for client and server's clients
