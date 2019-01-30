@@ -10,18 +10,12 @@ namespace Telepathy
         Thread receiveThread;
         Thread sendThread;
 
-        public bool Connected
-        {
-            get
-            {
-                // TcpClient.Connected doesn't check if socket != null, which
-                // results in NullReferenceExceptions if connection was closed.
-                // -> let's check it manually instead
-                return client != null &&
-                       client.Client != null &&
-                       client.Client.Connected;
-            }
-        }
+        // TcpClient.Connected doesn't check if socket != null, which
+        // results in NullReferenceExceptions if connection was closed.
+        // -> let's check it manually instead
+        public bool Connected => client != null &&
+                                 client.Client != null &&
+                                 client.Client.Connected;
 
         // TcpClient has no 'connecting' state to check. We need to keep track
         // of it manually.
@@ -36,7 +30,7 @@ namespace Telepathy
         //    https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables
         //    made volatile so the compiler does not reorder access to it
         volatile bool _Connecting;
-        public bool Connecting { get { return _Connecting; } }
+        public bool Connecting => _Connecting;
 
         // the thread function
         void ReceiveThreadFunction(string ip, int port)
