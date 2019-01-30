@@ -29,7 +29,6 @@ namespace Telepathy
                 (bytes[1] << 16) |
                 (bytes[2] << 8) |
                 bytes[3];
-
         }
     }
 }
