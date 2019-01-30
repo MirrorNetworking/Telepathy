@@ -44,10 +44,7 @@ namespace Telepathy
         }
 
         // check if the server is running
-        public bool Active
-        {
-            get { return listenerThread != null && listenerThread.IsAlive; }
-        }
+        public bool Active => listenerThread != null && listenerThread.IsAlive;
 
         // the listener thread's listen function
         // note: no maxConnections parameter. high level API should handle that.
