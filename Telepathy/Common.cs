@@ -24,8 +24,17 @@ namespace Telepathy
         // available, then it must have been a disconnect
         protected static bool WasDisconnected(TcpClient client)
         {
-            return client.Client.Poll(0, SelectMode.SelectRead) &&
-                   client.Available == 0;
+            try
+            {
+                return client.Client.Poll(0, SelectMode.SelectRead) &&
+                       client.Available == 0;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Poll will sometimes throw ObjectDisposedException if someone
+                // disconnected
+                return true;
+            }
         }
 
         // reading /////////////////////////////////////////////////////////////
