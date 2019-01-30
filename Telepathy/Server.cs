@@ -20,6 +20,7 @@ namespace Telepathy
             public TcpClient client;
             public bool connectProcessed;
             public int contentSize = 0; // set after reading header
+            public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
             public ClientToken(TcpClient client)
             {
@@ -195,7 +196,8 @@ namespace Telepathy
                     int connectionId = NextConnectionId();
 
                     // add to dict immediately
-                    clients[connectionId] = new ClientToken(client);
+                    ClientToken token = new ClientToken(client);
+                    clients[connectionId] = token;
 
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
@@ -204,15 +206,8 @@ namespace Telepathy
                         // are silent
                         try
                         {
-                            // create send queue immediately
-                            SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                            sendQueues[connectionId] = sendQueue;
-
                             // run the send loop
-                            SendLoop(connectionId, client, sendQueue);
-
-                            // remove queue from queues afterwards
-                            sendQueues.TryRemove(connectionId, out SafeQueue<byte[]> _);
+                            SendLoop(connectionId, client, token.sendQueue);
                         }
                         catch (ThreadAbortException)
                         {
@@ -305,14 +300,14 @@ namespace Telepathy
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
-            // was the sendqueue created yet?
-            SafeQueue<byte[]> sendQueue;
-            if (sendQueues.TryGetValue(connectionId, out sendQueue))
+            // find the connection
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
                 // add to send queue and return immediately.
                 // calling Send here would be blocking (sometimes for long times
                 // if other side lags or wire was disconnected)
-                sendQueue.Enqueue(data);
+                token.sendQueue.Enqueue(data);
                 return true;
             }
             Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);

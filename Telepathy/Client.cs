@@ -33,6 +33,9 @@ namespace Telepathy
         volatile bool _Connecting;
         public bool Connecting => _Connecting;
 
+        // send queue
+        SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+
         // try to read without blocking.
         bool lastConnected;
         int contentSize = 0; // set after reading header
@@ -98,10 +101,6 @@ namespace Telepathy
                 client.Connect(ip, port);
                 _Connected = true;
 
-                // create send queue for this client
-                SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                sendQueues[0] = sendQueue;
-
                 // start send thread only after connected
                 sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });
                 sendThread.IsBackground = true;
@@ -147,7 +146,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            sendQueues.Clear();
+            sendQueue.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
@@ -175,7 +174,7 @@ namespace Telepathy
                 // clear send queues. no need to hold on to them.
                 // (unlike receiveQueue, which is still needed to process the
                 //  latest Disconnected message, etc.)
-                sendQueues.Clear();
+                sendQueue.Clear();
 
                 // let go of this one completely. the thread ended, no one uses
                 // it anymore and this way Connected is false again immediately.
@@ -188,16 +187,11 @@ namespace Telepathy
         {
             if (Connected)
             {
-                // was the sendqueue created yet?
-                SafeQueue<byte[]> sendQueue;
-                if (sendQueues.TryGetValue(0, out sendQueue))
-                {
-                    // add to send queue and return immediately.
-                    // calling Send here would be blocking (sometimes for long times
-                    // if other side lags or wire was disconnected)
-                    sendQueue.Enqueue(data);
-                    return true;
-                }
+                // add to send queue and return immediately.
+                // calling Send here would be blocking (sometimes for long times
+                // if other side lags or wire was disconnected)
+                sendQueue.Enqueue(data);
+                return true;
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;

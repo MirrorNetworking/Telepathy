@@ -9,11 +9,6 @@ namespace Telepathy
     public abstract class Common
     {
         // common code /////////////////////////////////////////////////////////
-
-        // outgoing message queue of <connectionId, sendQueue>
-        // (not a HashSet because one connection can have multiple new messages)
-        protected ConcurrentDictionary<int, SafeQueue<byte[]>> sendQueues = new ConcurrentDictionary<int, SafeQueue<byte[]>>();
-
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
         // increases bandwidth
         public bool NoDelay = true;
