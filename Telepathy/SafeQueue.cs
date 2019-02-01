@@ -8,12 +8,6 @@ namespace Telepathy
     {
         Queue<T> queue = new Queue<T>();
 
-        // ManualResetEvent in case we want to wait until new items are added
-        // (which is better than Thread.Sleep and checking every few ms)
-        // -> this is Set() if empty and Reset() if something was added again
-        // -> only call WaitOne() from the outside!
-        public ManualResetEvent notEmpty = new ManualResetEvent(false);
-
         // for statistics. don't call Count and assume that it's the same after the
         // call.
         public int Count
@@ -32,7 +26,6 @@ namespace Telepathy
             lock(queue)
             {
                 queue.Enqueue(item);
-                notEmpty.Set(); // interrupt WaitOne()
             }
         }
 
@@ -46,12 +39,6 @@ namespace Telepathy
                 if (queue.Count > 0)
                 {
                     result = queue.Dequeue();
-
-                    if (queue.Count == 0)
-                    {
-                        notEmpty.Reset(); // empty. WaitOne() blocks again
-                    }
-
                     return true;
                 }
                 return false;
@@ -66,7 +53,6 @@ namespace Telepathy
             {
                 result = queue.ToArray();
                 queue.Clear();
-                notEmpty.Reset(); // empty. WaitOne() blocks again
                 return result.Length > 0;
             }
         }
@@ -76,7 +62,6 @@ namespace Telepathy
             lock(queue)
             {
                 queue.Clear();
-                notEmpty.Reset(); // empty. WaitOne() blocks again
             }
         }
     }

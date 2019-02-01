@@ -36,6 +36,12 @@ namespace Telepathy
         // send queue
         SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
+        // ManualResetEvent to wake up the send thread. better than Thread.Sleep
+        // -> call Set() if everything was sent
+        // -> call Reset() if there is something to send again
+        // -> call WaitOne() to block until Reset was called
+        ManualResetEvent sendPending = new ManualResetEvent(false);
+
         // the thread function
         void ReceiveThreadFunction(string ip, int port)
         {
@@ -48,7 +54,7 @@ namespace Telepathy
                 _Connecting = false;
 
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendQueue); });
+                sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendPending); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 
@@ -152,6 +158,7 @@ namespace Telepathy
                 // calling Send here would be blocking (sometimes for long times
                 // if other side lags or wire was disconnected)
                 sendQueue.Enqueue(data);
+                sendPending.Set(); // interrupt SendThread WaitOne()
                 return true;
             }
             Logger.LogWarning("Client.Send: not connected!");

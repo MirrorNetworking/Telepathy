@@ -20,6 +20,12 @@ namespace Telepathy
             public TcpClient client;
             public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
+            // ManualResetEvent to wake up the send thread. better than Thread.Sleep
+            // -> call Set() if everything was sent
+            // -> call Reset() if there is something to send again
+            // -> call WaitOne() to block until Reset was called
+            public ManualResetEvent sendPending = new ManualResetEvent(false);
+
             public ClientToken(TcpClient client)
             {
                 this.client = client;
@@ -98,7 +104,7 @@ namespace Telepathy
                         try
                         {
                             // run the send loop
-                            SendLoop(connectionId, client, token.sendQueue);
+                            SendLoop(connectionId, client, token.sendQueue, token.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
@@ -232,6 +238,7 @@ namespace Telepathy
                 // calling Send here would be blocking (sometimes for long times
                 // if other side lags or wire was disconnected)
                 token.sendQueue.Enqueue(data);
+                token.sendPending.Set(); // interrupt SendThread WaitOne()
                 return true;
             }
             Logger.Log("Server.Send: invalid connectionId: " + connectionId);
