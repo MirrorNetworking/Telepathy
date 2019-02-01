@@ -72,8 +72,12 @@ namespace Telepathy
                 Logger.LogError("Client Recv Exception: " + exception);
             }
 
-            // try interrupting send thread after receive thread
-            // ends, just to be sure
+            // sendthread might be waiting on ManualResetEvent,
+            // so let's make sure to end it if the connection
+            // closed.
+            // otherwise the send thread would only end if it's
+            // actually sending data while the connection is
+            // closed.
             sendThread?.Interrupt();
 
             // Connect might have failed. thread might have been closed.

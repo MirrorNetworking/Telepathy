@@ -121,6 +121,14 @@ namespace Telepathy
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out TcpClient _);
+
+                            // sendthread might be waiting on ManualResetEvent,
+                            // so let's make sure to end it if the connection
+                            // closed.
+                            // otherwise the send thread would only end if it's
+                            // actually sending data while the connection is
+                            // closed.
+                            sendThread.Interrupt();
                         }
                         catch (Exception exception)
                         {
