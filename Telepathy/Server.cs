@@ -228,7 +228,7 @@ namespace Telepathy
                 sendQueue.Enqueue(data);
                 return true;
             }
-            Logger.LogWarning("Server.Send: invalid connectionId: " + connectionId);
+            Logger.Log("Server.Send: invalid connectionId: " + connectionId);
             return false;
         }
 
