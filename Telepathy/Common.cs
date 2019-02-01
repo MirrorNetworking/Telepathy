@@ -13,10 +13,6 @@ namespace Telepathy
         // (not a HashSet because one connection can have multiple new messages)
         protected ConcurrentQueue<Message> receiveQueue = new ConcurrentQueue<Message>();
 
-        // outgoing message queue of <connectionId, sendQueue>
-        // (not a HashSet because one connection can have multiple new messages)
-        protected ConcurrentDictionary<int, SafeQueue<byte[]>> sendQueues = new ConcurrentDictionary<int, SafeQueue<byte[]>>();
-
         // queue count, useful for debugging / benchmarks
         public int ReceiveQueueCount => receiveQueue.Count;
 

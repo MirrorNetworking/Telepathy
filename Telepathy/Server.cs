@@ -13,8 +13,20 @@ namespace Telepathy
         public TcpListener listener;
         Thread listenerThread;
 
-        // clients with <connectionId, TcpClient>
-        ConcurrentDictionary<int, TcpClient> clients = new ConcurrentDictionary<int, TcpClient>();
+        // class with all the client's data. let's call it Token for consistency
+        // with the async socket methods.
+        class ClientToken
+        {
+            public TcpClient client;
+            public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+
+            public ClientToken(TcpClient client)
+            {
+                this.client = client;
+            }
+        }
+        // clients with <connectionId, ClientData>
+        ConcurrentDictionary<int, ClientToken> clients = new ConcurrentDictionary<int, ClientToken>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
@@ -74,6 +86,10 @@ namespace Telepathy
                     // generate the next connection id (thread safely)
                     int connectionId = NextConnectionId();
 
+                    // add to dict immediately
+                    ClientToken token = new ClientToken(client);
+                    clients[connectionId] = token;
+
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
                     {
@@ -81,15 +97,8 @@ namespace Telepathy
                         // are silent
                         try
                         {
-                            // create send queue immediately
-                            SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
-                            sendQueues[connectionId] = sendQueue;
-
                             // run the send loop
-                            SendLoop(connectionId, client, sendQueue);
-
-                            // remove queue from queues afterwards
-                            sendQueues.TryRemove(connectionId, out SafeQueue<byte[]> _);
+                            SendLoop(connectionId, client, token.sendQueue);
                         }
                         catch (ThreadAbortException)
                         {
@@ -113,14 +122,11 @@ namespace Telepathy
                         // are silent
                         try
                         {
-                            // add to dict immediately
-                            clients[connectionId] = client;
-
                             // run the receive loop
                             ReceiveLoop(connectionId, client, receiveQueue);
 
                             // remove client from clients dict afterwards
-                            clients.TryRemove(connectionId, out TcpClient _);
+                            clients.TryRemove(connectionId, out ClientToken _);
 
                             // sendthread might be waiting on ManualResetEvent,
                             // so let's make sure to end it if the connection
@@ -202,9 +208,9 @@ namespace Telepathy
             listenerThread = null;
 
             // close all client connections
-            foreach (KeyValuePair<int, TcpClient> kvp in clients)
+            foreach (KeyValuePair<int, ClientToken> kvp in clients)
             {
-                TcpClient client = kvp.Value;
+                TcpClient client = kvp.Value.client;
                 // close the stream if not closed yet. it may have been closed
                 // by a disconnect already, so use try/catch
                 try { client.GetStream().Close(); } catch {}
@@ -218,14 +224,14 @@ namespace Telepathy
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
-            // was the sendqueue created yet?
-            SafeQueue<byte[]> sendQueue;
-            if (sendQueues.TryGetValue(connectionId, out sendQueue))
+            // find the connection
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
                 // add to send queue and return immediately.
                 // calling Send here would be blocking (sometimes for long times
                 // if other side lags or wire was disconnected)
-                sendQueue.Enqueue(data);
+                token.sendQueue.Enqueue(data);
                 return true;
             }
             Logger.Log("Server.Send: invalid connectionId: " + connectionId);
@@ -237,10 +243,10 @@ namespace Telepathy
         public bool GetConnectionInfo(int connectionId, out string address)
         {
             // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
-                address = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                address = ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
                 return true;
             }
             address = null;
@@ -251,11 +257,11 @@ namespace Telepathy
         public bool Disconnect(int connectionId)
         {
             // find the connection
-            TcpClient client;
-            if (clients.TryGetValue(connectionId, out client))
+            ClientToken token;
+            if (clients.TryGetValue(connectionId, out token))
             {
                 // just close it. client thread will take care of the rest.
-                client.Close();
+                token.client.Close();
                 Logger.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
