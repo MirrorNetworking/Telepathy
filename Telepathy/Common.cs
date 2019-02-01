@@ -218,6 +218,10 @@ namespace Telepathy
             {
                 // happens on stop. don't log anything.
             }
+            catch (ThreadInterruptedException)
+            {
+                // happens if receive thread interrupts send thread.
+            }
             catch (Exception exception)
             {
                 // something went wrong. the thread was interrupted or the
