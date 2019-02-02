@@ -206,6 +206,8 @@ namespace Telepathy
                     sendPending.Reset(); // WaitOne() blocks until .Set() again
 
                     // dequeue all
+                    // SafeQueue.TryDequeueAll is twice as fast as
+                    // ConcurrentQueue, see SafeQueue.cs!
                     byte[][] messages;
                     if (sendQueue.TryDequeueAll(out messages))
                     {

@@ -1,6 +1,13 @@
-﻿// replaces ConcurrentQueue which is not available in .NET 3.5 yet.
+﻿// Net 4.X has ConcurrentQueue, but ConcurrentQueue has no TryDequeueAll method,
+// which makes SafeQueue twice as fast for the send thread.
+//
+// uMMORPG 450 CCU
+//   SafeQueue:       900-1440ms latency
+//   ConcurrentQueue:     2000ms latency
+//
+// It's also noticeable in the LoadTest project, which hardly handles 300 CCU
+// with ConcurrentQueue!
 using System.Collections.Generic;
-using System.Threading;
 
 namespace Telepathy
 {

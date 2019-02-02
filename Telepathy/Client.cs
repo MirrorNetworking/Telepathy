@@ -34,6 +34,7 @@ namespace Telepathy
         public bool Connecting => _Connecting;
 
         // send queue
+        // => SafeQueue is twice as fast as ConcurrentQueue, see SafeQueue.cs!
         SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
