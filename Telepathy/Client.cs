@@ -20,7 +20,7 @@ namespace Telepathy
 
         // TcpClient has no 'connecting' state to check. We need to keep track
         // of it manually.
-        // -> checking 'thread.IsAlive && !Connected' is not enough because. the
+        // -> checking 'thread.IsAlive && !Connected' is not enough because the
         //    thread is alive and connected is false for a short moment after
         //    disconnecting, so this would cause race conditions.
         // -> we use a threadsafe bool wrapper so that ThreadFunction can remain
