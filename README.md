@@ -210,7 +210,7 @@ We [recently tested](https://docs.google.com/document/d/e/2PACX-1vQqf_iqOLlBRTUq
 We had to stop the test because we didn't have more players to spawn clients.<br/>
 
 **Connections Test**<br/>
-We also test only the raw Telepathy library by spawing 1 server and 1000 clients, each client sending 100 bytes 14 times per second and the server echoing the same message back to each client. This test should be a decent example for an MMORPG scenario and allows us to test if the raw Telepathy library can handle it.
+We also test only the raw Telepathy library by spawning 1 server and 1000 clients, each client sending 100 bytes 14 times per second and the server echoing the same message back to each client. This test should be a decent example for an MMORPG scenario and allows us to test if the raw Telepathy library can handle it.
 
 Test Computer: 2015 Macbook Pro with a 2,2 GHz Intel Core i7 processor.<br/>
 Test Results:<br/>
