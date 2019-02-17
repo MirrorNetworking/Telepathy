@@ -248,19 +248,16 @@ namespace Telepathy
             return false;
         }
 
-        // get connection info in case it's needed (IP etc.)
-        // (we should never pass the TcpClient to the outside)
-        public bool GetConnectionInfo(int connectionId, out string address)
+        // client's ip is sometimes needed by the server, e.g. for bans
+        public string GetClientAddress(int connectionId)
         {
             // find the connection
             ClientToken token;
             if (clients.TryGetValue(connectionId, out token))
             {
-                address = ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
-                return true;
+                return ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
             }
-            address = null;
-            return false;
+            return "";
         }
 
         // disconnect (kick) a client
