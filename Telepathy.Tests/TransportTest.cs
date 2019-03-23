@@ -230,15 +230,43 @@ namespace Telepathy.Tests
             Client client = new Client();
             client.Connect("127.0.0.1", port);
 
-            // we  should first receive a connected message
+            // we should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
             int id = serverConnectMsg.connectionId;
 
-            // Send a large message,  bigger thank 64K
-            client.Send(new byte[100000]);
+            // Send largest allowed message
+            bool sent = client.Send(new byte[server.MaxMessageSize]);
+            Assert.That(sent, Is.EqualTo(true));
             Message dataMsg = NextMessage(server);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
-            Assert.That(dataMsg.data.Length, Is.EqualTo(100000));
+            Assert.That(dataMsg.data.Length, Is.EqualTo(server.MaxMessageSize));
+
+            // finally if the server stops,  the clients should get a disconnect error
+            server.Stop();
+            client.Disconnect();
+        }
+
+        [Test]
+        public void AllocationAttackTest()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // we should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // allow client to send large message
+            int attackSize = server.MaxMessageSize * 2;
+            client.MaxMessageSize = attackSize;
+
+            // Send a large message, bigger thank max message size
+            // -> this should disconnect the client
+            bool sent = client.Send(new byte[attackSize]);
+            Assert.That(sent, Is.EqualTo(true));
+            Message dataMsg = NextMessage(server);
+            Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Disconnected));
 
             // finally if the server stops,  the clients should get a disconnect error
             server.Stop();

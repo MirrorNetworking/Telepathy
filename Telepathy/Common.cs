@@ -40,6 +40,14 @@ namespace Telepathy
         // increases bandwidth
         public bool NoDelay = true;
 
+        // Prevent allocation attacks. Each packet is prefixed with a length
+        // header, so an attacker could send a fake packet with length=2GB,
+        // causing the server to allocate 2GB and run out of memory quickly.
+        // -> simply increase max packet size if you want to send around bigger
+        //    files!
+        // -> 16KB per message should be more than enough.
+        public int MaxMessageSize = 16 * 1024;
+
         // Send would stall forever if the network is cut off during a send, so
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
@@ -88,7 +96,7 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
         {
             content = null;
 
@@ -97,16 +105,25 @@ namespace Telepathy
             if (!stream.ReadExactly(header, 4))
                 return false;
 
+            // convert to int
             int size = Utils.BytesToIntBigEndian(header);
 
-            // read exactly 'size' bytes for content (blocking)
-            content = new byte[size];
-            return stream.ReadExactly(content, size);
+            // protect against allocation attacks. an attacker might send
+            // multiple fake '2GB header' packets in a row, causing the server
+            // to allocate multiple 2GB byte arrays and run out of memory.
+            if (size <= MaxMessageSize)
+            {
+                // read exactly 'size' bytes for content (blocking)
+                content = new byte[size];
+                return stream.ReadExactly(content, size);
+            }
+            Logger.LogWarning("ReadMessageBlocking: possible allocation attack with a header of: " + size + " bytes.");
+            return false;
         }
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, ConcurrentQueue<Message> receiveQueue)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -142,7 +159,7 @@ namespace Telepathy
                 {
                     // read the next message (blocking) or stop if stream closed
                     byte[] content;
-                    if (!ReadMessageBlocking(stream, out content))
+                    if (!ReadMessageBlocking(stream, MaxMessageSize, out content))
                         break;
 
                     // queue it

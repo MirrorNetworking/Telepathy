@@ -60,7 +60,7 @@ namespace Telepathy
                 sendThread.Start();
 
                 // run the receive loop
-                ReceiveLoop(0, client, receiveQueue);
+                ReceiveLoop(0, client, receiveQueue, MaxMessageSize);
             }
             catch (SocketException exception)
             {
@@ -155,12 +155,18 @@ namespace Telepathy
         {
             if (Connected)
             {
-                // add to send queue and return immediately.
-                // calling Send here would be blocking (sometimes for long times
-                // if other side lags or wire was disconnected)
-                sendQueue.Enqueue(data);
-                sendPending.Set(); // interrupt SendThread WaitOne()
-                return true;
+                // respect max message size to avoid allocation attacks.
+                if (data.Length <= MaxMessageSize)
+                {
+                    // add to send queue and return immediately.
+                    // calling Send here would be blocking (sometimes for long times
+                    // if other side lags or wire was disconnected)
+                    sendQueue.Enqueue(data);
+                    sendPending.Set(); // interrupt SendThread WaitOne()
+                    return true;
+                }
+                Logger.LogError("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
+                return false;
             }
             Logger.LogWarning("Client.Send: not connected!");
             return false;

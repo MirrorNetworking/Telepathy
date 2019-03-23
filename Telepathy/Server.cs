@@ -132,7 +132,7 @@ namespace Telepathy
                         try
                         {
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue);
+                            ReceiveLoop(connectionId, client, receiveQueue, MaxMessageSize);
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);
@@ -233,18 +233,24 @@ namespace Telepathy
         // send message to client using socket connection.
         public bool Send(int connectionId, byte[] data)
         {
-            // find the connection
-            ClientToken token;
-            if (clients.TryGetValue(connectionId, out token))
+            // respect max message size to avoid allocation attacks.
+            if (data.Length <= MaxMessageSize)
             {
-                // add to send queue and return immediately.
-                // calling Send here would be blocking (sometimes for long times
-                // if other side lags or wire was disconnected)
-                token.sendQueue.Enqueue(data);
-                token.sendPending.Set(); // interrupt SendThread WaitOne()
-                return true;
+                // find the connection
+                ClientToken token;
+                if (clients.TryGetValue(connectionId, out token))
+                {
+                    // add to send queue and return immediately.
+                    // calling Send here would be blocking (sometimes for long times
+                    // if other side lags or wire was disconnected)
+                    token.sendQueue.Enqueue(data);
+                    token.sendPending.Set(); // interrupt SendThread WaitOne()
+                    return true;
+                }
+                Logger.Log("Server.Send: invalid connectionId: " + connectionId);
+                return false;
             }
-            Logger.Log("Server.Send: invalid connectionId: " + connectionId);
+            Logger.LogError("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
             return false;
         }
 
