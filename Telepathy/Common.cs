@@ -95,13 +95,19 @@ namespace Telepathy
             }
         }
 
+        // avoid header[4] allocations but don't use one buffer for all threads
+        [ThreadStatic] static byte[] header;
+
         // read message (via stream) with the <size,content> message structure
         protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
         {
             content = null;
 
+            // create header buffer if not created yet
+            if (header == null)
+                header = new byte[4];
+
             // read exactly 4 bytes for header (blocking)
-            byte[] header = new byte[4];
             if (!stream.ReadExactly(header, 4))
                 return false;
 
