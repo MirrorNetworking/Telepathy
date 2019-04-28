@@ -1,6 +1,6 @@
 ﻿// incoming message queue of <connectionId, message>
 // (not a HashSet because one connection can have multiple new messages)
-// -> a class, so that we don't copy the whole struct each time
+// -> a struct to minimize GC
 namespace Telepathy
 {
     public struct Message
