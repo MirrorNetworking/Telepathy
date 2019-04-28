@@ -5,9 +5,9 @@ namespace Telepathy
 {
     public struct Message
     {
-        public int connectionId;
-        public EventType eventType;
-        public byte[] data;
+        public readonly int connectionId;
+        public readonly EventType eventType;
+        public readonly byte[] data;
         public Message(int connectionId, EventType eventType, byte[] data)
         {
             this.connectionId = connectionId;
