@@ -3,7 +3,7 @@
 // -> a class, so that we don't copy the whole struct each time
 namespace Telepathy
 {
-    public class Message
+    public struct Message
     {
         public int connectionId;
         public EventType eventType;
