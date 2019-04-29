@@ -52,6 +52,9 @@ namespace Telepathy
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
 
+        // avoid header[4] allocations but don't use one buffer for all threads
+        [ThreadStatic] static byte[] header;
+
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
@@ -94,9 +97,6 @@ namespace Telepathy
                 return false;
             }
         }
-
-        // avoid header[4] allocations but don't use one buffer for all threads
-        [ThreadStatic] static byte[] header;
 
         // read message (via stream) with the <size,content> message structure
         protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
