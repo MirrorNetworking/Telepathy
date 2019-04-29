@@ -22,6 +22,16 @@ namespace Telepathy
             };
         }
 
+        // IntToBytes version that doesn't allocate a new byte[4] each time.
+        // -> important for MMO scale networking performance.
+        public static void IntToBytesBigEndianNonAlloc(int value, byte[] bytes)
+        {
+            bytes[0] = (byte)(value >> 24);
+            bytes[1] = (byte)(value >> 16);
+            bytes[2] = (byte)(value >> 8);
+            bytes[3] = (byte)value;
+        }
+
         public static int BytesToIntBigEndian(byte[] bytes)
         {
             return

@@ -76,8 +76,12 @@ namespace Telepathy
                 int position = 0;
                 for (int i = 0; i < messages.Length; ++i)
                 {
+                    // create header buffer if not created yet
+                    if (header == null)
+                        header = new byte[4];
+
                     // construct header (size)
-                    byte[] header = Utils.IntToBytesBigEndian(messages[i].Length);
+                    Utils.IntToBytesBigEndianNonAlloc(messages[i].Length, header);
 
                     // copy header + message into buffer
                     Array.Copy(header, 0, payload, position, header.Length);
