@@ -55,6 +55,10 @@ namespace Telepathy
         // avoid header[4] allocations but don't use one buffer for all threads
         [ThreadStatic] static byte[] header;
 
+        // avoid payload[packetSize] allocations but don't use one buffer for
+        // all threads
+        [ThreadStatic] static byte[] payload;
+
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
@@ -71,8 +75,13 @@ namespace Telepathy
                 for (int i = 0; i < messages.Length; ++i)
                     packetSize += sizeof(int) + messages[i].Length; // header + content
 
+                // create payload buffer if not created yet or previous one is
+                // too small
+                // IMPORTANT: payload.Length might be > packetSize! don't use it!
+                if (payload == null || payload.Length < packetSize)
+                    payload = new byte[packetSize];
+
                 // create the packet
-                byte[] payload = new byte[packetSize];
                 int position = 0;
                 for (int i = 0; i < messages.Length; ++i)
                 {
@@ -90,7 +99,7 @@ namespace Telepathy
                 }
 
                 // write the whole thing
-                stream.Write(payload, 0, payload.Length);
+                stream.Write(payload, 0, packetSize);
 
                 return true;
             }
