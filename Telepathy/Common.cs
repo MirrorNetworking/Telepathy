@@ -249,7 +249,7 @@ namespace Telepathy
                     {
                         // send message (blocking) or stop if stream is closed
                         if (!SendMessagesBlocking(stream, messages))
-                            return;
+                            break;
                     }
 
                     // don't choke up the CPU: wait until queue not empty anymore
