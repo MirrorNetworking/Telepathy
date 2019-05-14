@@ -29,6 +29,9 @@ namespace Telepathy
             // -> call WaitOne() to block until Reset was called
             public ManualResetEvent sendPending = new ManualResetEvent(false);
 
+            public Thread sendThread;
+            public Thread receiveThread;
+
             public ClientToken(TcpClient client)
             {
                 this.client = client;
@@ -80,6 +83,7 @@ namespace Telepathy
                 listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
+                listener.Server.ReceiveTimeout = 2000; // (Yurgis)
                 listener.Start();
                 Logger.Log("Server: listening port=" + port);
 
@@ -100,7 +104,8 @@ namespace Telepathy
                     clients[connectionId] = token;
 
                     // spawn a send thread for each client
-                    Thread sendThread = new Thread(() =>
+                    token.sendThread = // Thread sendThread = 
+                        new Thread(() =>
                     {
                         // wrap in try-catch, otherwise Thread exceptions
                         // are silent
@@ -108,6 +113,12 @@ namespace Telepathy
                         {
                             // run the send loop
                             SendLoop(connectionId, client, token.sendQueue, token.sendPending);
+                            Logger.LogWarning($"Conn #{connectionId}: End send thread");
+
+                            // (Yurgis)
+                            token.receiveThread.Abort(); //.Interrupt();
+                            // (Yurgis) remove client from clients dict afterwards
+                            clients.TryRemove(connectionId, out ClientToken _);
                         }
                         catch (ThreadAbortException)
                         {
@@ -115,17 +126,19 @@ namespace Telepathy
                             // (we catch it in SendLoop too, but it still gets
                             //  through to here when aborting. don't show an
                             //  error.)
+                            Logger.LogWarning($"Conn #{connectionId}: End send thread: ThreadAbortException");
                         }
                         catch (Exception exception)
                         {
-                            Logger.LogError("Server send thread exception: " + exception);
+                            Logger.LogError($"Conn #{connectionId}: End send thread: Exception" + exception);
                         }
                     });
-                    sendThread.IsBackground = true;
-                    sendThread.Start();
+                    token.sendThread.IsBackground = true;
+                    token.sendThread.Start();
 
                     // spawn a receive thread for each client
-                    Thread receiveThread = new Thread(() =>
+                    token.receiveThread = // Thread receiveThread = 
+                        new Thread(() =>
                     {
                         // wrap in try-catch, otherwise Thread exceptions
                         // are silent
@@ -133,6 +146,7 @@ namespace Telepathy
                         {
                             // run the receive loop
                             ReceiveLoop(connectionId, client, receiveQueue, MaxMessageSize);
+                            Logger.LogWarning($"Conn #{connectionId}: End receive thread");
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);
@@ -143,15 +157,15 @@ namespace Telepathy
                             // otherwise the send thread would only end if it's
                             // actually sending data while the connection is
                             // closed.
-                            sendThread.Interrupt();
+                            token.sendThread.Interrupt();
                         }
                         catch (Exception exception)
                         {
-                            Logger.LogError("Server client thread exception: " + exception);
+                            Logger.LogWarning($"Conn #{connectionId}: End receive thread: Exception " + exception);
                         }
                     });
-                    receiveThread.IsBackground = true;
-                    receiveThread.Start();
+                    token.receiveThread.IsBackground = true;
+                    token.receiveThread.Start();
                 }
             }
             catch (ThreadAbortException exception)

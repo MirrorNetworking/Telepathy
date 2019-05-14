@@ -103,6 +103,10 @@ namespace Telepathy
 
                 return true;
             }
+            catch(System.IO.IOException ioe) // (Yurgis)
+            {
+                throw ioe;
+            }
             catch (Exception exception)
             {
                 // log as regular message because servers do shut down sometimes
@@ -137,6 +141,7 @@ namespace Telepathy
                 return stream.ReadExactly(content, size);
             }
             Logger.LogWarning("ReadMessageBlocking: possible allocation attack with a header of: " + size + " bytes.");
+
             return false;
         }
 
@@ -178,8 +183,18 @@ namespace Telepathy
                 {
                     // read the next message (blocking) or stop if stream closed
                     byte[] content;
+
                     if (!ReadMessageBlocking(stream, MaxMessageSize, out content))
-                        break;
+                    {
+                        if (stream.CanRead == false)
+                        {
+                            Logger.LogWarning("ReceiveLoop(): BREAK...");
+                            break;
+                        }
+
+                        if (content == null) // (Yurgis)
+                            continue;
+                    }
 
                     // queue it
                     receiveQueue.Enqueue(new Message(connectionId, EventType.Data, content));
@@ -208,17 +223,21 @@ namespace Telepathy
                 // -> either way we should stop gracefully
                 Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
             }
+            finally // (Yurgis)
+            {
+                Logger.LogWarning($"Conn #{connectionId}: End ReceiveLoop");
 
-            // clean up no matter what
-            stream.Close();
-            client.Close();
+                // clean up no matter what
+                stream.Close();
+                client.Close();
 
-            // add 'Disconnected' message after disconnecting properly.
-            // -> always AFTER closing the streams to avoid a race condition
-            //    where Disconnected -> Reconnect wouldn't work because
-            //    Connected is still true for a short moment before the stream
-            //    would be closed.
-            receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+                // add 'Disconnected' message after disconnecting properly.
+                // -> always AFTER closing the streams to avoid a race condition
+                //    where Disconnected -> Reconnect wouldn't work because
+                //    Connected is still true for a short moment before the stream
+                //    would be closed.
+                receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            }
         }
 
         // thread send function
@@ -231,7 +250,8 @@ namespace Telepathy
 
             try
             {
-                while (client.Connected) // try this. client will get closed eventually.
+                // (Yurgis) while (client.Connected) // try this. client will get closed eventually.
+                while(true)
                 {
                     // reset ManualResetEvent before we do anything else. this
                     // way there is no race condition. if Send() is called again
@@ -249,7 +269,14 @@ namespace Telepathy
                     {
                         // send message (blocking) or stop if stream is closed
                         if (!SendMessagesBlocking(stream, messages))
-                            return;
+                        {
+                            // (Yurgis)
+                            if (stream.CanWrite == false)
+                            {
+                                Logger.LogWarning("SendLoop(): EXIT because....");
+                                return;
+                            }
+                        }
                     }
 
                     // don't choke up the CPU: wait until queue not empty anymore
@@ -259,10 +286,12 @@ namespace Telepathy
             catch (ThreadAbortException)
             {
                 // happens on stop. don't log anything.
+                Logger.LogWarning($"SendLoop() Conn #{connectionId}: ThreadAbortException");
             }
             catch (ThreadInterruptedException)
             {
                 // happens if receive thread interrupts send thread.
+                Logger.LogWarning($"SendLoop() Conn #{connectionId}: ThreadInterruptedException");
             }
             catch (Exception exception)
             {
