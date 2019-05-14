@@ -16,11 +16,11 @@ Telepathy is raw C# and can be used in Unity3D too.<br/>
 Telepathy was originally designed for [uMMORPG](https://www.assetstore.unity3d.com/#!/content/51212) after 3 years in UDP hell.
 
 We needed a library that is:
-* Stable & Bug free: Telepathy uses only 500 lines of code. There is no magic.
-* High performance: Telepathy can handle thousands of connections and packages.
-* Concurrent: Telepathy uses two threads per connection. It can make heavy use of multi core processors.
-* Simple: Telepathy takes care of everything. All you need to do is call Connect/GetNextMessage/Disconnect.
-* Message based: if we send 10 and then 2 bytes, then the other end receives 10 and then 2 bytes, never 12 at once.
+* **Stable & Bug free:** Telepathy uses only 500 lines of code. There is no magic.
+* **High performance:** Telepathy can handle thousands of connections and packages.
+* **Concurrent:** Telepathy uses two threads per connection. It can make heavy use of multi core processors.
+* **Simple:** Telepathy takes care of everything. All you need to do is call Connect/GetNextMessage/Disconnect.
+* **Message based:** if we send 10 and then 2 bytes, then the other end receives 10 and then 2 bytes, never 12 at once.
 
 MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.
 
