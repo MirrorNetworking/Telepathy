@@ -25,8 +25,7 @@ We needed a library that is:
 MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.
 
 # What about...
-* Async Sockets: didn't perform better in our benchmarks.
-* ConcurrentQueue: .NET 3.5 compatibility is important for Unity. Wasn't faster than our SafeQueue anyway.
+* Async Sockets: perform great in regular C# projects, but poorly when used in Unity.
 * UDP vs. TCP: Minecraft and World of Warcraft are two of the biggest multiplayer games of all time and they both use TCP networking. There is a reason for that.
 
 # Using the Telepathy Server
