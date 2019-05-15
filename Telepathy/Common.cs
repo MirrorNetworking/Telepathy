@@ -179,7 +179,7 @@ namespace Telepathy
                     // read the next message (blocking) or stop if stream closed
                     byte[] content;
                     if (!ReadMessageBlocking(stream, MaxMessageSize, out content))
-                        break;
+                        break; // break instead of return so stream close still happens!
 
                     // queue it
                     receiveQueue.Enqueue(new Message(connectionId, EventType.Data, content));
@@ -251,7 +251,7 @@ namespace Telepathy
                     {
                         // send message (blocking) or stop if stream is closed
                         if (!SendMessagesBlocking(stream, messages))
-                            break;
+                            break; // break instead of return so stream close still happens!
                     }
 
                     // don't choke up the CPU: wait until queue not empty anymore
