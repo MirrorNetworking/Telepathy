@@ -208,17 +208,19 @@ namespace Telepathy
                 // -> either way we should stop gracefully
                 Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
             }
+            finally
+            {
+                // clean up no matter what
+                stream.Close();
+                client.Close();
 
-            // clean up no matter what
-            stream.Close();
-            client.Close();
-
-            // add 'Disconnected' message after disconnecting properly.
-            // -> always AFTER closing the streams to avoid a race condition
-            //    where Disconnected -> Reconnect wouldn't work because
-            //    Connected is still true for a short moment before the stream
-            //    would be closed.
-            receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+                // add 'Disconnected' message after disconnecting properly.
+                // -> always AFTER closing the streams to avoid a race condition
+                //    where Disconnected -> Reconnect wouldn't work because
+                //    Connected is still true for a short moment before the stream
+                //    would be closed.
+                receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+            }
         }
 
         // thread send function
@@ -271,15 +273,17 @@ namespace Telepathy
                 // -> either way we should stop gracefully
                 Logger.Log("SendLoop Exception: connectionId=" + connectionId + " reason: " + exception);
             }
-
-            // clean up no matter what
-            // we might get SocketExceptions when sending if the 'host has
-            // failed to respond' - in which case we should close the connection
-            // which causes the ReceiveLoop to end and fire the Disconnected
-            // message. otherwise the connection would stay alive forever even
-            // though we can't send anymore.
-            stream.Close();
-            client.Close();
+            finally
+            {
+                // clean up no matter what
+                // we might get SocketExceptions when sending if the 'host has
+                // failed to respond' - in which case we should close the connection
+                // which causes the ReceiveLoop to end and fire the Disconnected
+                // message. otherwise the connection would stay alive forever even
+                // though we can't send anymore.
+                stream.Close();
+                client.Close();
+            }
         }
     }
 }
