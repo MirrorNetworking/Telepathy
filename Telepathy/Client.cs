@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -106,7 +107,8 @@ namespace Telepathy
 
             // TcpClient can only be used once. need to create a new one each
             // time.
-            client = new TcpClient();
+            // (IPAddress.Parse.AddressFamily to support both IPv4 and IPv6)
+            client = new TcpClient(IPAddress.Parse(ip).AddressFamily);
             client.NoDelay = NoDelay;
             client.SendTimeout = SendTimeout;
 

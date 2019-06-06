@@ -218,7 +218,7 @@ namespace Telepathy.Tests
 
             // get server's connection info for that client
             string address = server.GetClientAddress(serverConnectMsg.connectionId);
-            Assert.That(address == "127.0.0.1");
+            Assert.That(address == "127.0.0.1" || address == "::ffff:127.0.0.1");
 
             client.Disconnect();
         }

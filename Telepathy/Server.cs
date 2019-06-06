@@ -76,8 +76,10 @@ namespace Telepathy
             // exceptions are silent
             try
             {
-                // start listener
-                listener = new TcpListener(new IPEndPoint(IPAddress.Any, port));
+                // start listener on any IPv4 and IPv6 address.
+                // (using IPAddress.IPAny would be IPv4 only)
+                listener = new TcpListener(IPAddress.IPv6Any, port);
+                listener.Server.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); // listen to IPv4 AND IPv6
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
