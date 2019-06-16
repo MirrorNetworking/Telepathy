@@ -105,14 +105,13 @@ namespace Telepathy
             // We are connecting from now until Connect succeeds or fails
             _Connecting = true;
 
-            // IPAddress.Parse() can't parse "localhost"
-            if (ip.ToLower() == "localhost")
-                ip = "127.0.0.1";
-
             // TcpClient can only be used once. need to create a new one each
             // time.
-            // (IPAddress.Parse.AddressFamily to support both IPv4 and IPv6)
-            client = new TcpClient(IPAddress.Parse(ip).AddressFamily);
+            // initialize it with InterNetworkV6 and dual mode to support
+            // both IPv6 and IPv4
+            client = new TcpClient(AddressFamily.InterNetworkV6);
+            // works with IPv6 and IPv4
+            client.Client.DualMode = true;
             client.NoDelay = NoDelay;
             client.SendTimeout = SendTimeout;
 

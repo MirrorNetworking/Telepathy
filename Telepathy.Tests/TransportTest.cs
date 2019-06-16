@@ -32,7 +32,7 @@ namespace Telepathy.Tests
         public void DisconnectImmediateTest()
         {
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // I should be able to disconnect right away
             // if connection was pending,  it should just cancel
@@ -48,7 +48,7 @@ namespace Telepathy.Tests
             Client client = new Client();
             for (int i = 0; i < 1000; i++)
             {
-                client.Connect("127.0.0.1", port);
+                client.Connect("localhost", port);
                 Assert.That(client.Connecting || client.Connected, Is.True);
                 client.Disconnect();
                 Assert.That(client.Connected, Is.False);
@@ -62,7 +62,7 @@ namespace Telepathy.Tests
             // BeginSend can't be called again after previous one finished. try
             // to trigger that case.
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // wait for successful connection
             Message connectMsg = NextMessage(client);
@@ -84,7 +84,7 @@ namespace Telepathy.Tests
         public void ReconnectTest()
         {
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // wait for successful connection
             Message connectMsg = NextMessage(client);
@@ -95,7 +95,7 @@ namespace Telepathy.Tests
             Assert.That(client.Connecting, Is.False);
 
             // connecting should flush message queue  right?
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
             // wait for successful connection
             connectMsg = NextMessage(client);
             Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
@@ -110,7 +110,7 @@ namespace Telepathy.Tests
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client();
 
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // we should first receive a connected message
             Message connectMsg = NextMessage(server);
@@ -135,7 +135,7 @@ namespace Telepathy.Tests
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client();
 
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // we  should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
@@ -165,7 +165,7 @@ namespace Telepathy.Tests
         {
             Client client = new Client();
 
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // we  should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
@@ -180,7 +180,7 @@ namespace Telepathy.Tests
         {
             Client client = new Client();
 
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // read connected message on client
             Message clientConnectedMsg = NextMessage(client);
@@ -210,7 +210,7 @@ namespace Telepathy.Tests
         {
             // connect a client
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // get server's connect message
             Message serverConnectMsg = NextMessage(server);
@@ -218,7 +218,7 @@ namespace Telepathy.Tests
 
             // get server's connection info for that client
             string address = server.GetClientAddress(serverConnectMsg.connectionId);
-            Assert.That(address == "127.0.0.1" || address == "::ffff:127.0.0.1");
+            Assert.That(address == "localhost" || address == "::ffff:127.0.0.1" || address == "::1");
 
             client.Disconnect();
         }
@@ -243,7 +243,7 @@ namespace Telepathy.Tests
         {
             // connect a client
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // we should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
@@ -266,7 +266,7 @@ namespace Telepathy.Tests
         {
             // connect a client
             Client client = new Client();
-            client.Connect("127.0.0.1", port);
+            client.Connect("localhost", port);
 
             // we should first receive a connected message
             Message serverConnectMsg = NextMessage(server);
