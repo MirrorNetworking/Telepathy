@@ -223,6 +223,21 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        // all implementations should be able to handle 'localhost' as IP too
+        [Test]
+        public void ParseLocalHostTest()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("localhost", port);
+
+            // get server's connect message
+            Message serverConnectMsg = NextMessage(server);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            client.Disconnect();
+        }
+
         [Test]
         public void LargeMessageTest()
         {

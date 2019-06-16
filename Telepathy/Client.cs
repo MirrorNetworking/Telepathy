@@ -105,6 +105,10 @@ namespace Telepathy
             // We are connecting from now until Connect succeeds or fails
             _Connecting = true;
 
+            // IPAddress.Parse() can't parse "localhost"
+            if (ip.ToLower() == "localhost")
+                ip = "127.0.0.1";
+
             // TcpClient can only be used once. need to create a new one each
             // time.
             // (IPAddress.Parse.AddressFamily to support both IPv4 and IPv6)
