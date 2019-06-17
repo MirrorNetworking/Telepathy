@@ -105,14 +105,21 @@ namespace Telepathy
             // We are connecting from now until Connect succeeds or fails
             _Connecting = true;
 
-            // IPAddress.Parse() can't parse "localhost"
-            if (ip.ToLower() == "localhost")
-                ip = "127.0.0.1";
+            // https://docs.microsoft.com/en-us/dotnet/api/system.net.ipaddress.maptoipv6?view=netframework-4.8#System_Net_IPAddress_MapToIPv6
+            // 'Dual-stack sockets always require IPv6 addresses' so if we pass
+            // an IPv4 address like "127.0.0.1" then we need to map it to IPv6.
+            if (IPAddress.TryParse(ip, out IPAddress address) &&
+                address.AddressFamily == AddressFamily.InterNetwork)
+            {
+                ip = address.MapToIPv6().ToString();
+            }
 
             // TcpClient can only be used once. need to create a new one each
             // time.
-            // (IPAddress.Parse.AddressFamily to support both IPv4 and IPv6)
-            client = new TcpClient(IPAddress.Parse(ip).AddressFamily);
+            // initialize it with InterNetworkV6 and dual mode to support
+            // both IPv6 and IPv4
+            client = new TcpClient(AddressFamily.InterNetworkV6);
+            client.Client.DualMode = true;
             client.NoDelay = NoDelay;
             client.SendTimeout = SendTimeout;
 
