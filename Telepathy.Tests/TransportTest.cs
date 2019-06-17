@@ -238,6 +238,36 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        // IPv4 needs to work
+        [Test]
+        public void ConnectIPv4Test()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("127.0.0.1", port);
+
+            // get server's connect message
+            Message serverConnectMsg = NextMessage(server);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            client.Disconnect();
+        }
+
+        // IPv6 needs to work
+        [Test]
+        public void ConnectIPv6Test()
+        {
+            // connect a client
+            Client client = new Client();
+            client.Connect("::ffff:127.0.0.1", port);
+
+            // get server's connect message
+            Message serverConnectMsg = NextMessage(server);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            client.Disconnect();
+        }
+
         [Test]
         public void LargeMessageTest()
         {
