@@ -55,6 +55,11 @@ namespace Telepathy
                 client.Connect(ip, port);
                 _Connecting = false;
 
+                // set socket options after the socket was created in Connect()
+                // (not after the constructor because we clear the socket there)
+                client.NoDelay = NoDelay;
+                client.SendTimeout = SendTimeout;
+
                 // start send thread only after connected
                 sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendPending); });
                 sendThread.IsBackground = true;
@@ -105,23 +110,23 @@ namespace Telepathy
             // We are connecting from now until Connect succeeds or fails
             _Connecting = true;
 
-            // https://docs.microsoft.com/en-us/dotnet/api/system.net.ipaddress.maptoipv6?view=netframework-4.8#System_Net_IPAddress_MapToIPv6
-            // 'Dual-stack sockets always require IPv6 addresses' so if we pass
-            // an IPv4 address like "127.0.0.1" then we need to map it to IPv6.
-            if (IPAddress.TryParse(ip, out IPAddress address) &&
-                address.AddressFamily == AddressFamily.InterNetwork)
-            {
-                ip = address.MapToIPv6().ToString();
-            }
-
-            // TcpClient can only be used once. need to create a new one each
-            // time.
-            // initialize it with InterNetworkV6 and dual mode to support
-            // both IPv6 and IPv4
-            client = new TcpClient(AddressFamily.InterNetworkV6);
-            client.Client.DualMode = true;
-            client.NoDelay = NoDelay;
-            client.SendTimeout = SendTimeout;
+            // create a TcpClient with perfect IPv4, IPv6 and hostname resolving
+            // support.
+            //
+            // * TcpClient(hostname, port): works but would connect (and block)
+            //   already
+            // * TcpClient(AddressFamily.InterNetworkV6): takes Ipv4 and IPv6
+            //   addresses but only connects to IPv6 servers (e.g. Telepathy).
+            //   does NOT connect to IPv4 servers (e.g. Mirror Booster), even
+            //   with DualMode enabled.
+            // * TcpClient(): creates IPv4 socket internally, which would force
+            //   Connect() to only use IPv4 sockets.
+            //
+            // => the trick is to clear the internal IPv4 socket so that Connect
+            //    resolves the hostname and creates either an IPv4 or an IPv6
+            //    socket as needed (see TcpClient source)
+            client = new TcpClient(); // creates IPv4 socket
+            client.Client = null; // clear internal IPv4 socket until Connect()
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
