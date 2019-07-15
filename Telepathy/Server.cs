@@ -34,8 +34,9 @@ namespace Telepathy
                 this.client = client;
             }
         }
+
         // clients with <connectionId, ClientData>
-        ConcurrentDictionary<int, ClientToken> clients = new ConcurrentDictionary<int, ClientToken>();
+        readonly ConcurrentDictionary<int, ClientToken> clients = new ConcurrentDictionary<int, ClientToken>();
 
         // connectionId counter
         // (right now we only use it from one listener thread, but we might have
