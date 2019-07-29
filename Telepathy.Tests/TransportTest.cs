@@ -29,6 +29,15 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void NextConnectionIdTest()
+        {
+            // it should always start at '1', because '0' is reserved for
+            // Mirror's local player
+            int id = server.NextConnectionId();
+            Assert.That(id, Is.EqualTo(1));
+        }
+
+        [Test]
         public void DisconnectImmediateTest()
         {
             Client client = new Client();
