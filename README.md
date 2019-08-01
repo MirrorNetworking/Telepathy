@@ -107,9 +107,9 @@ public class SimpleExample : MonoBehaviour
         Application.runInBackground = true;
 
         // use Debug.Log functions for Telepathy so we can see it in the console
-        Telepathy.Logger.LogMethod = Debug.Log;
-        Telepathy.Logger.LogWarningMethod = Debug.LogWarning;
-        Telepathy.Logger.LogErrorMethod = Debug.LogError;
+        Telepathy.Logger.Log = Debug.Log;
+        Telepathy.Logger.LogWarning = Debug.LogWarning;
+        Telepathy.Logger.LogError = Debug.LogError;
     }
 
     void Update()
