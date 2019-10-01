@@ -8,8 +8,8 @@ namespace Telepathy
 {
     public static class Logger
     {
-        public static Action<string> Log = Console.WriteLine;
-        public static Action<string> LogWarning = Console.WriteLine;
-        public static Action<string> LogError = Console.Error.WriteLine;
+        public static readonly Action<string> Log = Console.WriteLine;
+        public static readonly Action<string> LogWarning = Console.WriteLine;
+        public static readonly Action<string> LogError = Console.Error.WriteLine;
     }
 }

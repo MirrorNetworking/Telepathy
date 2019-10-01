@@ -14,7 +14,7 @@ namespace Telepathy
         //    for compatibility with erlang
         public static byte[] IntToBytesBigEndian(int value)
         {
-            return new byte[] {
+            return new[] {
                 (byte)(value >> 24),
                 (byte)(value >> 16),
                 (byte)(value >> 8),

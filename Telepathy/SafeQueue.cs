@@ -13,7 +13,7 @@ namespace Telepathy
 {
     public class SafeQueue<T>
     {
-        readonly Queue<T> queue = new Queue<T>();
+        private readonly Queue<T> queue = new Queue<T>();
 
         // for statistics. don't call Count and assume that it's the same after the
         // call.

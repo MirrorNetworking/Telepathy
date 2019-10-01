@@ -8,7 +8,7 @@ public static class NetworkStreamExtensions
     //
     // let's add a ReadSafely method that returns '0' in both cases so we don't
     // have to worry about exceptions, since a disconnect is a disconnect...
-    public static int ReadSafely(this NetworkStream stream, byte[] buffer, int offset, int size)
+    private static int ReadSafely(this NetworkStream stream, byte[] buffer, int offset, int size)
     {
         try
         {

@@ -23,7 +23,7 @@ namespace Telepathy
         // - 100k messages are 1.95MB
         // 2MB are not that much, but it is a bad sign if the caller process
         // can't call GetNextMessage faster than the incoming messages.
-        public static int messageQueueSizeWarning = 100000;
+        private const int messageQueueSizeWarning = 100_000;
 
         // removes and returns the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
@@ -38,7 +38,7 @@ namespace Telepathy
 
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
         // increases bandwidth
-        public bool NoDelay = true;
+        protected const bool NoDelay = true;
 
         // Prevent allocation attacks. Each packet is prefixed with a length
         // header, so an attacker could send a fake packet with length=2GB,
@@ -46,24 +46,24 @@ namespace Telepathy
         // -> simply increase max packet size if you want to send around bigger
         //    files!
         // -> 16KB per message should be more than enough.
-        public int MaxMessageSize = 16 * 1024;
+        public int MaxMessageSize = 16 * 1_024;
 
         // Send would stall forever if the network is cut off during a send, so
         // we need a timeout (in milliseconds)
-        public int SendTimeout = 5000;
+        protected const int SendTimeout = 5_000;
 
         // avoid header[4] allocations but don't use one buffer for all threads
-        [ThreadStatic] static byte[] header;
+        [ThreadStatic] private static byte[] header;
 
         // avoid payload[packetSize] allocations but don't use one buffer for
         // all threads
-        [ThreadStatic] static byte[] payload;
+        [ThreadStatic] private static byte[] payload;
 
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
+        private static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
@@ -106,13 +106,13 @@ namespace Telepathy
             catch (Exception exception)
             {
                 // log as regular message because servers do shut down sometimes
-                Logger.Log("Send: stream.Write exception: " + exception);
+                Logger.Log($"Send: stream.Write exception: {exception}");
                 return false;
             }
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
+        private static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
         {
             content = null;
 
@@ -136,7 +136,7 @@ namespace Telepathy
                 content = new byte[size];
                 return stream.ReadExactly(content, size);
             }
-            Logger.LogWarning("ReadMessageBlocking: possible allocation attack with a header of: " + size + " bytes.");
+            Logger.LogWarning($"ReadMessageBlocking: possible allocation attack with a header of: {size.ToString()} bytes.");
             return false;
         }
 
@@ -177,8 +177,7 @@ namespace Telepathy
                 while (true)
                 {
                     // read the next message (blocking) or stop if stream closed
-                    byte[] content;
-                    if (!ReadMessageBlocking(stream, MaxMessageSize, out content))
+                    if (!ReadMessageBlocking(stream, MaxMessageSize, out byte[] content))
                         break; // break instead of return so stream close still happens!
 
                     // queue it
@@ -195,7 +194,7 @@ namespace Telepathy
                         TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Logger.LogWarning("ReceiveLoop: messageQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            Logger.LogWarning($"ReceiveLoop: messageQueue is getting big ({receiveQueue.Count}), try calling GetNextMessage more often. You can call it more than once per frame!");
                             messageQueueLastWarning = DateTime.Now;
                         }
                     }
@@ -206,7 +205,7 @@ namespace Telepathy
                 // something went wrong. the thread was interrupted or the
                 // connection closed or we closed our own connection or ...
                 // -> either way we should stop gracefully
-                Logger.Log("ReceiveLoop: finished receive function for connectionId=" + connectionId + " reason: " + exception);
+                Logger.Log($"ReceiveLoop: finished receive function for connectionId= {connectionId} reason: {exception}");
             }
             finally
             {
@@ -246,8 +245,7 @@ namespace Telepathy
                     // dequeue all
                     // SafeQueue.TryDequeueAll is twice as fast as
                     // ConcurrentQueue, see SafeQueue.cs!
-                    byte[][] messages;
-                    if (sendQueue.TryDequeueAll(out messages))
+                    if (sendQueue.TryDequeueAll(out byte[][] messages))
                     {
                         // send message (blocking) or stop if stream is closed
                         if (!SendMessagesBlocking(stream, messages))
@@ -271,7 +269,7 @@ namespace Telepathy
                 // something went wrong. the thread was interrupted or the
                 // connection closed or we closed our own connection or ...
                 // -> either way we should stop gracefully
-                Logger.Log("SendLoop Exception: connectionId=" + connectionId + " reason: " + exception);
+                Logger.Log($"SendLoop Exception: connectionId= {connectionId} reason: {exception}");
             }
             finally
             {
