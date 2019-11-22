@@ -40,5 +40,14 @@ namespace Telepathy
                 (bytes[2] << 8) |
                 bytes[3];
         }
+
+        public static int GetRandomUnusedPort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Any, 0);
+            listener.Start();
+            var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
     }
 }
