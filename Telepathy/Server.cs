@@ -13,6 +13,9 @@ namespace Telepathy
         public TcpListener listener;
         Thread listenerThread;
 
+        // flag that shutsdown the listening thread
+        volatile bool listening;
+        
         // class with all the client's data. let's call it Token for consistency
         // with the async socket methods.
         class ClientToken
@@ -79,16 +82,18 @@ namespace Telepathy
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
-                Logger.Log("Server: listening port=" + port);
+                listening = true;
 
                 // keep accepting new clients
-                while (true)
+                while (listening)
                 {
-                    // wait and accept new client
-                    // note: 'using' sucks here because it will try to
-                    // dispose after thread was started but we still need it
-                    // in the thread
-                    TcpClient client = listener.AcceptTcpClient();
+                    // don't do anything if no clients are pending
+                    // this is needed to avoid waiting on blocking accept
+                    if (!listener.Pending())
+                        continue;
+                    
+                    TcpClient client = this.listener.AcceptTcpClient();
+                    Logger.Log("Server.Listen: New client accepted.");
 
                     // set socket options
                     client.NoDelay = NoDelay;
@@ -155,6 +160,10 @@ namespace Telepathy
                     receiveThread.IsBackground = true;
                     receiveThread.Start();
                 }
+                
+                // stop the listener after we are done listening 
+                // NOTE: must be closed on same thread as it was started to avoid a WinSock exception
+                listener.Stop();
             }
             catch (ThreadAbortException exception)
             {
@@ -181,7 +190,7 @@ namespace Telepathy
         {
             // not if already started
             if (Active) return false;
-
+            
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
@@ -206,26 +215,20 @@ namespace Telepathy
 
             Logger.Log("Server: stopping...");
 
-            // stop listening to connections so that no one can connect while we
-            // close the client connections
-            // (might be null if we call Stop so quickly after Start that the
-            //  thread was interrupted before even creating the listener)
-            listener?.Stop();
-
-            // kill listener thread at all costs. only way to guarantee that
-            // .Active is immediately false after Stop.
-            // -> calling .Join would sometimes wait forever
-            listenerThread?.Interrupt();
+            // flag the thread that we are done listening
+            listening = false;
+            // wait for the thread to gracefully exit
+            // NOTE: will block, however, should be instant
+            listenerThread?.Join();
             listenerThread = null;
 
             // close all client connections
             foreach (KeyValuePair<int, ClientToken> kvp in clients)
             {
                 TcpClient client = kvp.Value.client;
-                // close the stream if not closed yet. it may have been closed
-                // by a disconnect already, so use try/catch
-                try { client.GetStream().Close(); } catch {}
-                client.Close();
+                
+                // this will close the stream and the socket
+                try { client.Close(); } catch {}
             }
 
             // clear clients list
@@ -234,6 +237,8 @@ namespace Telepathy
             // reset the counter in case we start up again so
             // clients get connection ID's starting from 1
             counter = 0;
+            
+            Logger.Log("Server: stopped.");
         }
 
         // send message to client using socket connection.
