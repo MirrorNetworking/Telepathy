@@ -66,7 +66,7 @@ namespace Telepathy
         }
 
         // check if the server is running
-        public bool Active => listenerThread != null && listenerThread.IsAlive;
+        public bool Active => listening;
 
         // the listener thread's listen function
         // note: no maxConnections parameter. high level API should handle that.
@@ -82,7 +82,6 @@ namespace Telepathy
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
-                listening = true;
 
                 // keep accepting new clients
                 while (listening)
@@ -91,7 +90,7 @@ namespace Telepathy
                     // this is needed to avoid waiting on blocking accept
                     if (!listener.Pending())
                         continue;
-                    
+
                     TcpClient client = this.listener.AcceptTcpClient();
                     Logger.Log("Server.Listen: New client accepted.");
 
@@ -160,7 +159,7 @@ namespace Telepathy
                     receiveThread.IsBackground = true;
                     receiveThread.Start();
                 }
-                
+
                 // stop the listener after we are done listening 
                 // NOTE: must be closed on same thread as it was started to avoid a WinSock exception
                 listener.Stop();
@@ -182,6 +181,10 @@ namespace Telepathy
                 // something went wrong. probably important.
                 Logger.LogError("Server Exception: " + exception);
             }
+            finally
+            {
+                listening = false;
+            }
         }
 
         // start listening for new connections in a background thread and spawn
@@ -190,6 +193,7 @@ namespace Telepathy
         {
             // not if already started
             if (Active) return false;
+            listening = true;
             
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
@@ -219,7 +223,7 @@ namespace Telepathy
             listening = false;
             // wait for the thread to gracefully exit
             // NOTE: will block, however, should be instant
-            listenerThread?.Join();
+            listenerThread?.Join(1000);
             listenerThread = null;
 
             // close all client connections
