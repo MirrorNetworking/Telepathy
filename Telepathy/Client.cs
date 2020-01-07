@@ -77,6 +77,14 @@ namespace Telepathy
                 // knows that the Connect failed. otherwise they will never know
                 receiveQueue.Enqueue(new Message(0, EventType.Disconnected, null));
             }
+            catch (ThreadInterruptedException)
+            {
+                // expected if Disconnect() aborts it
+            }
+            catch (ThreadAbortException)
+            {
+                // expected if Disconnect() aborts it
+            }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
