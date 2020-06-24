@@ -83,7 +83,7 @@ namespace Telepathy
                 return true;
             }
 
-            return true;
+            return false;
         }
 
         // static helper functions /////////////////////////////////////////////
