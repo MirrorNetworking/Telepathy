@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
+//using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
+using System.Net;
+using System.Security.Authentication;
 
 namespace Telepathy
 {
@@ -73,7 +75,12 @@ namespace Telepathy
                         new RemoteCertificateValidationCallback(ValidateRemoteCertificate)
                     );
 
-                    sslStream.AuthenticateAsClient(address);
+                    sslStream.AuthenticateAsClient(
+                        address,
+                        new X509Certificate2Collection(),
+                        SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
+                        false
+                    );
 
                     stream = sslStream;
                 }
