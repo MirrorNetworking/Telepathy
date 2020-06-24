@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Telepathy
@@ -101,6 +104,17 @@ namespace Telepathy
                     ClientToken token = new ClientToken(client);
                     clients[connectionId] = token;
 
+                    Stream stream = client.GetStream();
+                    if (TlsEnabled)
+                    {
+                        var serverCertificate = X509Certificate.CreateFromCertFile(TlsCert);
+
+                        SslStream sslStream = new SslStream(stream, false, new RemoteCertificateValidationCallback(ValidateRemoteCertificate));
+                        sslStream.AuthenticateAsServer(serverCertificate, false, false);
+
+                        stream = sslStream;
+                    }
+
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
                     {
@@ -109,7 +123,7 @@ namespace Telepathy
                         try
                         {
                             // run the send loop
-                            SendLoop(connectionId, client, token.sendQueue, token.sendPending);
+                            SendLoop(connectionId, client, stream, token.sendQueue, token.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
@@ -134,7 +148,7 @@ namespace Telepathy
                         try
                         {
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue, MaxMessageSize);
+                            ReceiveLoop(connectionId, client, stream, receiveQueue, MaxMessageSize);
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);

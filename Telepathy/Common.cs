@@ -1,7 +1,11 @@
 ﻿// common code used by server and client
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Telepathy
@@ -52,6 +56,14 @@ namespace Telepathy
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
 
+        public bool TlsEnabled = false;
+
+        public string TlsCa;
+
+        public string TlsCert;
+
+        public string TlsKey;
+
         // avoid header[4] allocations but don't use one buffer for all threads
         [ThreadStatic] static byte[] header;
 
@@ -59,11 +71,26 @@ namespace Telepathy
         // all threads
         [ThreadStatic] static byte[] payload;
 
+        protected static bool ValidateRemoteCertificate(
+            object sender,
+            X509Certificate certificate,
+            X509Chain chain,
+            SslPolicyErrors policyErrors
+        )
+        {
+            if (policyErrors == SslPolicyErrors.None)
+            {
+                return true;
+            }
+
+            return true;
+        }
+
         // static helper functions /////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
+        protected static bool SendMessagesBlocking(Stream stream, byte[][] messages)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
@@ -112,7 +139,7 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
+        protected static bool ReadMessageBlocking(Stream stream, int MaxMessageSize, out byte[] content)
         {
             content = null;
 
@@ -121,7 +148,7 @@ namespace Telepathy
                 header = new byte[4];
 
             // read exactly 4 bytes for header (blocking)
-            if (!stream.ReadExactly(header, 4))
+            if (!ReadExactly(stream, header, 4))
                 return false;
 
             // convert to int
@@ -134,7 +161,7 @@ namespace Telepathy
             {
                 // read exactly 'size' bytes for content (blocking)
                 content = new byte[size];
-                return stream.ReadExactly(content, size);
+                return ReadExactly(stream, content, size);
             }
             Logger.LogWarning("ReadMessageBlocking: possible allocation attack with a header of: " + size + " bytes.");
             return false;
@@ -142,11 +169,8 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, Stream stream, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
         {
-            // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
-
             // keep track of last message queue warning
             DateTime messageQueueLastWarning = DateTime.Now;
 
@@ -226,11 +250,8 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
+        protected static void SendLoop(int connectionId, TcpClient client, Stream stream, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
         {
-            // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
-
             try
             {
                 while (client.Connected) // try this. client will get closed eventually.
@@ -284,6 +305,35 @@ namespace Telepathy
                 stream.Close();
                 client.Close();
             }
+        }
+
+        // helper function to read EXACTLY 'n' bytes
+        // -> default .Read reads up to 'n' bytes. this function reads exactly 'n'
+        //    bytes
+        // -> this is blocking until 'n' bytes were received
+        // -> immediately returns false in case of disconnects
+        protected static bool ReadExactly(Stream stream, byte[] buffer, int amount)
+        {
+            int bytesRead = 0;
+            while (bytesRead < amount)
+            {
+                int remaining = amount - bytesRead;
+
+                int result = 0;
+                try
+                {
+                    result = stream.Read(buffer, bytesRead, remaining);
+                }
+                catch (IOException)
+                {
+                }
+
+                if (result == 0)
+                    return false;
+
+                bytesRead += result;
+            }
+            return true;
         }
     }
 }

@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Telepathy
@@ -44,14 +48,14 @@ namespace Telepathy
         ManualResetEvent sendPending = new ManualResetEvent(false);
 
         // the thread function
-        void ReceiveThreadFunction(string ip, int port)
+        void ReceiveThreadFunction(string address, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
             try
             {
                 // connect (blocking)
-                client.Connect(ip, port);
+                client.Connect(address, port);
                 _Connecting = false;
 
                 // set socket options after the socket was created in Connect()
@@ -59,19 +63,34 @@ namespace Telepathy
                 client.NoDelay = NoDelay;
                 client.SendTimeout = SendTimeout;
 
+                Stream stream = client.GetStream();
+
+                if (TlsEnabled)
+                {
+                    SslStream sslStream = new SslStream(
+                        stream,
+                        false,
+                        new RemoteCertificateValidationCallback(ValidateRemoteCertificate)
+                    );
+
+                    sslStream.AuthenticateAsClient(address);
+
+                    stream = sslStream;
+                }
+
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendPending); });
+                sendThread = new Thread(() => { SendLoop(0, client, stream, sendQueue, sendPending); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 
                 // run the receive loop
-                ReceiveLoop(0, client, receiveQueue, MaxMessageSize);
+                ReceiveLoop(0, client, stream, receiveQueue, MaxMessageSize);
             }
             catch (SocketException exception)
             {
                 // this happens if (for example) the ip address is correct
                 // but there is no server running on that ip/port
-                Logger.Log("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
+                Logger.Log("Client Recv: failed to connect to address=" + address + " port=" + port + " reason=" + exception);
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
