@@ -10,4 +10,14 @@
     <Description>TCP based transport for use in Unity</Description>
     <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net471|AnyCPU'">
+    <DefineConstants>TRACE;UNITY_2018_2_OR_NEWER,NET_4_6</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

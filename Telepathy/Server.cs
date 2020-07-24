@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Telepathy
@@ -12,6 +15,12 @@ namespace Telepathy
         // listener
         public TcpListener listener;
         Thread listenerThread;
+
+        volatile bool _Encrypted;
+        public bool Encrypted => _Encrypted;
+
+        volatile string _CertFile;
+        public string CertFile => _CertFile;
 
         // class with all the client's data. let's call it Token for consistency
         // with the async socket methods.
@@ -81,6 +90,28 @@ namespace Telepathy
                 listener.Start();
                 Logger.Log("Server: listening port=" + port);
 
+                X509Certificate cert = null;
+                bool selfSignedCert = false;
+                
+                if (Encrypted)
+                {
+                    if (CertFile == null)
+                    {
+                        // Create a new self-signed certificate
+                        selfSignedCert = true;
+                        cert =
+                            new X509Certificate2Builder
+                            {
+                                SubjectName = string.Format("CN={0}", ((IPEndPoint)listener.LocalEndpoint).Address.ToString())
+                            }.Build();
+                    }
+                    else
+                    {
+                        cert = X509Certificate.CreateFromCertFile(CertFile);
+                        selfSignedCert = false;
+                    }
+                }
+
                 // keep accepting new clients
                 while (true)
                 {
@@ -101,6 +132,60 @@ namespace Telepathy
                     ClientToken token = new ClientToken(client);
                     clients[connectionId] = token;
 
+                    Stream stream = client.GetStream();
+                    
+                    Thread sslAuthenticator = null;
+                    if (Encrypted)
+                    {
+                        RemoteCertificateValidationCallback trustCert = (object sender, X509Certificate x509Certificate,
+                            X509Chain x509Chain, SslPolicyErrors policyErrors) =>
+                        {
+                            if (selfSignedCert)
+                            {
+                                // All certificates are accepted
+                                return true;
+                            }
+                            else
+                            {
+                                if (policyErrors == SslPolicyErrors.None)
+                                {
+                                    return true;
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+                            }
+                        };
+
+						SslStream sslStream = new SslStream(client.GetStream(), false, trustCert);
+                        stream = sslStream;
+
+                        sslAuthenticator = new Thread(() => {
+                            try
+                            {
+                                // Using System.Security.Authentication.SslProtocols.None (the Microsoft recommended parameter which
+                                // chooses the highest version of TLS) does not seem to work with Unity. Unity 2018.2 added support
+                                // for TLS 1.2 when used with the .NET 4.x runtime, so use preprocessor directives to choose the right protocol
+#if UNITY_2018_2_OR_NEWER && NET_4_6
+                                System.Security.Authentication.SslProtocols protocol = System.Security.Authentication.SslProtocols.Tls12;
+#else
+                                System.Security.Authentication.SslProtocols protocol = System.Security.Authentication.SslProtocols.Default;
+#endif
+
+                                bool checkCertificateRevocation = !selfSignedCert;
+                                sslStream.AuthenticateAsServer(cert, false, protocol, checkCertificateRevocation);
+                            }
+                            catch (Exception exception)
+                            {
+                                Logger.LogError("SSL Authenticator exception: " + exception);
+                            }
+                        });
+
+                        sslAuthenticator.IsBackground = true;
+                        sslAuthenticator.Start();
+                    }
+
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
                     {
@@ -108,8 +193,13 @@ namespace Telepathy
                         // are silent
                         try
                         {
+                            if (sslAuthenticator != null)
+                            {
+                                sslAuthenticator.Join();
+                            }
+
                             // run the send loop
-                            SendLoop(connectionId, client, token.sendQueue, token.sendPending);
+                            SendLoop(connectionId, client, stream, token.sendQueue, token.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
@@ -133,8 +223,13 @@ namespace Telepathy
                         // are silent
                         try
                         {
+                            if (sslAuthenticator != null)
+                            {
+                                sslAuthenticator.Join();
+                            }
+
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue, MaxMessageSize);
+                            ReceiveLoop(connectionId, client, stream, receiveQueue, MaxMessageSize);
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);
@@ -177,10 +272,13 @@ namespace Telepathy
 
         // start listening for new connections in a background thread and spawn
         // a new thread for each one.
-        public bool Start(int port)
+        public bool Start(int port, bool encrypt, string certFile)
         {
             // not if already started
             if (Active) return false;
+
+            _Encrypted = encrypt;
+            _CertFile = certFile;
 
             // clear old messages in queue, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
@@ -197,6 +295,11 @@ namespace Telepathy
             listenerThread.Priority = ThreadPriority.BelowNormal;
             listenerThread.Start();
             return true;
+        }
+
+        public bool Start(int port)
+        {
+            return Start(port, false, null);
         }
 
         public void Stop()

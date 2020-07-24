@@ -3,6 +3,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
+using System.IO;
+using System.Net.Security;
 
 namespace Telepathy
 {
@@ -63,7 +65,7 @@ namespace Telepathy
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
+        protected static bool SendMessagesBlocking(Stream stream, byte[][] messages)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
@@ -112,7 +114,7 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
+        protected static bool ReadMessageBlocking(Stream stream, int MaxMessageSize, out byte[] content)
         {
             content = null;
 
@@ -142,11 +144,8 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, Stream stream, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
         {
-            // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
-
             // keep track of last message queue warning
             DateTime messageQueueLastWarning = DateTime.Now;
 
@@ -226,11 +225,8 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
+        protected static void SendLoop(int connectionId, TcpClient client, Stream stream, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
         {
-            // get NetworkStream from client
-            NetworkStream stream = client.GetStream();
-
             try
             {
                 while (client.Connected) // try this. client will get closed eventually.

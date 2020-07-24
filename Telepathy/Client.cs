@@ -1,13 +1,21 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Telepathy
 {
     public class Client : Common
     {
         public TcpClient client;
+        volatile bool _Encrypted;
+        public bool Encrypted => _Encrypted;
+        volatile bool _AcceptSelfSignedCert;
+        public bool AcceptSelfSignedCert => _AcceptSelfSignedCert;
         Thread receiveThread;
         Thread sendThread;
 
@@ -52,6 +60,38 @@ namespace Telepathy
             {
                 // connect (blocking)
                 client.Connect(ip, port);
+
+                Stream stream = client.GetStream();
+                
+                if (_Encrypted)
+                {
+                    RemoteCertificateValidationCallback trustCert = (object sender, X509Certificate x509Certificate,
+                        X509Chain x509Chain, SslPolicyErrors policyErrors) =>
+                    {
+                        if (_AcceptSelfSignedCert)
+                        {
+                            // All certificates are accepted
+                            return true;
+                        }
+                        else
+                        {
+                            if (policyErrors == SslPolicyErrors.None)
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
+                    };
+
+                    SslStream encryptedStream = new SslStream(client.GetStream(), false, trustCert, null);
+                    stream = encryptedStream;
+
+                    encryptedStream.AuthenticateAsClient(ip);
+                }
+
                 _Connecting = false;
 
                 // set socket options after the socket was created in Connect()
@@ -60,12 +100,12 @@ namespace Telepathy
                 client.SendTimeout = SendTimeout;
 
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendPending); });
+                sendThread = new Thread(() => { SendLoop(0, client, stream, sendQueue, sendPending); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 
                 // run the receive loop
-                ReceiveLoop(0, client, receiveQueue, MaxMessageSize);
+                ReceiveLoop(0, client, stream, receiveQueue, MaxMessageSize);
             }
             catch (SocketException exception)
             {
@@ -111,12 +151,20 @@ namespace Telepathy
 
         public void Connect(string ip, int port)
         {
+            Connect(ip, port, false, false);
+        }
+
+        public void Connect(string ip, int port, bool encrypt, bool acceptSelfSignedCert)
+        {
             // not if already started
             if (Connecting || Connected)
             {
                 Logger.LogWarning("Telepathy Client can not create connection because an existing connection is connecting or connected");
                 return;
             }
+
+            _Encrypted = encrypt;
+            _AcceptSelfSignedCert = acceptSelfSignedCert;
 
             // We are connecting from now until Connect succeeds or fails
             _Connecting = true;
