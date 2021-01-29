@@ -1,6 +1,4 @@
 ﻿using NUnit.Framework;
-using System;
-using System.Net;
 using System.Text;
 using System.Threading;
 
@@ -19,7 +17,6 @@ namespace Telepathy.Tests
         {
             server = new Server();
             server.Start(port);
-
         }
 
         [TearDown]
