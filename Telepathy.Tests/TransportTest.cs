@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using System.Text;
 using System.Threading;
 
@@ -78,7 +79,7 @@ namespace Telepathy.Tests
             byte[] data = new byte[99999];
             for (int i = 0; i < 1000; i++)
             {
-                client.Send(data);
+                client.Send(new ArraySegment<byte>(data));
             }
 
             client.Disconnect();
@@ -123,7 +124,8 @@ namespace Telepathy.Tests
             Assert.That(connectMsg.eventType, Is.EqualTo(EventType.Connected));
 
             // then we should receive the data
-            client.Send(utf8.GetBytes("Hello world"));
+            byte[] bytes = utf8.GetBytes("Hello world");
+            client.Send(new ArraySegment<byte>(bytes));
             Message dataMsg = NextMessage(server);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
             string str = utf8.GetString(dataMsg.data);
@@ -152,7 +154,8 @@ namespace Telepathy.Tests
             Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
 
             // Send some data to the client
-            server.Send(id, utf8.GetBytes("Hello world"));
+            byte[] bytes = utf8.GetBytes("Hello world");
+            server.Send(id, new ArraySegment<byte>(bytes));
             Message dataMsg = NextMessage(client);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
             string str = utf8.GetString(dataMsg.data);
@@ -286,7 +289,8 @@ namespace Telepathy.Tests
             int id = serverConnectMsg.connectionId;
 
             // Send largest allowed message
-            bool sent = client.Send(new byte[server.MaxMessageSize]);
+            byte[] bytes = new byte[server.MaxMessageSize];
+            bool sent = client.Send(new ArraySegment<byte>(bytes));
             Assert.That(sent, Is.EqualTo(true));
             Message dataMsg = NextMessage(server);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
@@ -314,7 +318,8 @@ namespace Telepathy.Tests
 
             // Send a large message, bigger thank max message size
             // -> this should disconnect the client
-            bool sent = client.Send(new byte[attackSize]);
+            byte[] bytes = new byte[attackSize];
+            bool sent = client.Send(new ArraySegment<byte>(bytes));
             Assert.That(sent, Is.EqualTo(true));
             Message dataMsg = NextMessage(server);
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Disconnected));

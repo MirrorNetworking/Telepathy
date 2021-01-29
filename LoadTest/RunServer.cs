@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Telepathy.LoadTest
@@ -25,7 +26,7 @@ namespace Telepathy.LoadTest
                 {
                     if (msg.eventType == EventType.Data)
                     {
-                        server.Send(msg.connectionId, msg.data);
+                        server.Send(msg.connectionId, new ArraySegment<byte>(msg.data));
 
                         messagesReceived++;
                         dataReceived += msg.data.Length;

@@ -186,21 +186,30 @@ namespace Telepathy
             }
         }
 
-        public bool Send(byte[] data)
+        // send message to server using socket connection.
+        // arraysegment for allocation free sends later.
+        // -> the segment's array is only used until Send() returns!
+        public bool Send(ArraySegment<byte> message)
         {
             if (Connected)
             {
                 // respect max message size to avoid allocation attacks.
-                if (data.Length <= MaxMessageSize)
+                if (message.Count <= MaxMessageSize)
                 {
+                    // ArraySegment array is only valid until returning, so copy
+                    // it into a byte[] that we can queue safely.
+                    // TODO byte[] pool later!
+                    byte[] data = new byte[message.Count];
+                    Array.Copy(message.Array, message.Offset, data, 0, message.Count);
+
                     // add to send queue and return immediately.
-                    // calling Send here would be blocking (sometimes for long times
-                    // if other side lags or wire was disconnected)
+                    // calling Send here would be blocking (sometimes for long
+                    // times if other side lags or wire was disconnected)
                     sendQueue.Enqueue(data);
                     sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }
-                Log.Error("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
+                Log.Error("Client.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
                 return false;
             }
             Log.Warning("Client.Send: not connected!");

@@ -49,14 +49,13 @@ namespace Telepathy.LoadTest
             // so make sure that GetNextMessage is thread safe!
             timer.Elapsed += (object sender, ElapsedEventArgs e) =>
             {
-
                 foreach (Client client in clients)
                 {
                     if (client.Connected)
                     {
                         // send 2 messages each time
-                        client.Send(messageBytes);
-                        client.Send(messageBytes);
+                        client.Send(new ArraySegment<byte>(messageBytes));
+                        client.Send(new ArraySegment<byte>(messageBytes));
 
                         messagesSent += 2;
                         // get new messages from queue
@@ -71,7 +70,6 @@ namespace Telepathy.LoadTest
                         }
                     }
                 }
-
 
                 // report every 10 seconds
                 if (stopwatch.ElapsedMilliseconds > 1000 * 2)
@@ -100,7 +98,6 @@ namespace Telepathy.LoadTest
             Console.ReadLine();
             timer.Stop();
             timer.Dispose();
-
 
             foreach (Client client in clients)
             {
