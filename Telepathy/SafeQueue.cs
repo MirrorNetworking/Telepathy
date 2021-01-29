@@ -58,6 +58,11 @@ namespace Telepathy
         {
             lock (queue)
             {
+                // IMPORTANT: this transfers ownership of the internal array to
+                //            whoever calls this function.
+                //            the out array can safely be used from the caller,
+                //            while nobody else will use it anymore since we
+                //            clear it here.
                 result = queue.ToArray();
                 queue.Clear();
                 return result.Length > 0;
