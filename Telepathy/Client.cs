@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -33,8 +32,7 @@ namespace Telepathy
         volatile bool _Connecting;
         public bool Connecting => _Connecting;
 
-        // send queue
-        // => SafeQueue is twice as fast as ConcurrentQueue, see SafeQueue.cs!
+        // send queue (ConcurrentQueue allocates. we use SafeQueue)
         SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
@@ -143,7 +141,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue = new ConcurrentQueue<Message>();
+            receiveQueue.Clear();
             sendQueue.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread

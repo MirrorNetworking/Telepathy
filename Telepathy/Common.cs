@@ -1,6 +1,5 @@
 ﻿// common code used by server and client
 using System;
-using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -11,7 +10,7 @@ namespace Telepathy
         // common code /////////////////////////////////////////////////////////
         // incoming message queue of <connectionId, message>
         // (not a HashSet because one connection can have multiple new messages)
-        protected ConcurrentQueue<Message> receiveQueue = new ConcurrentQueue<Message>();
+        protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
 
         // queue count, useful for debugging / benchmarks
         public int ReceiveQueueCount => receiveQueue.Count;
@@ -146,7 +145,7 @@ namespace Telepathy
 
         // thread receive function is the same for client and server's clients
         // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, ConcurrentQueue<Message> receiveQueue, int MaxMessageSize)
+        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> receiveQueue, int MaxMessageSize)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();

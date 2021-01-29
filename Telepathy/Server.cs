@@ -19,8 +19,7 @@ namespace Telepathy
         {
             public TcpClient client;
 
-            // send queue
-            // SafeQueue is twice as fast as ConcurrentQueue, see SafeQueue.cs!
+            // send queue (ConcurrentQueue allocates. we use SafeQueue)
             public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
 
             // ManualResetEvent to wake up the send thread. better than Thread.Sleep
@@ -186,7 +185,7 @@ namespace Telepathy
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue = new ConcurrentQueue<Message>();
+            receiveQueue.Clear();
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
