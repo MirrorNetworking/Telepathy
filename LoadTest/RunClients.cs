@@ -12,7 +12,7 @@ namespace Telepathy.LoadTest
     {
         public static void StartClients(string host, int port, int clientAmount)
         {
-            Logger.LogError("starting " + clientAmount + " clients...");
+            Log.Error("starting " + clientAmount + " clients...");
 
             // start n clients and get queue messages all in this thread
             string message = "Sometimes we just need a good networking library";
@@ -26,14 +26,14 @@ namespace Telepathy.LoadTest
                 clients.Add(client);
                 Thread.Sleep(15);
             }
-            Logger.Log("started all clients");
+            Log.Info("started all clients");
 
             // make sure that all clients connected successfully. otherwise
             // the sleep might be too small, or other reasons. no point in
             // load testing if the connect failed already.
             if (!clients.All(cl => cl.Connected))
             {
-                Logger.Log("not all clients were connected successfully. aborting.");
+                Log.Info("not all clients were connected successfully. aborting.");
                 return;
             }
 
@@ -79,7 +79,7 @@ namespace Telepathy.LoadTest
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
 
-                    Logger.Log(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
+                    Log.Info(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
                                              messagesReceived,
                                              bandwithIn,
                                              messagesSent,

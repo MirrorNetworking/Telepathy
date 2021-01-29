@@ -71,7 +71,7 @@ namespace Telepathy
             {
                 // this happens if (for example) the ip address is correct
                 // but there is no server running on that ip/port
-                Logger.Log("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
+                Log.Info("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
                 // add 'Disconnected' event to message queue so that the caller
                 // knows that the Connect failed. otherwise they will never know
@@ -88,7 +88,7 @@ namespace Telepathy
             catch (Exception exception)
             {
                 // something went wrong. probably important.
-                Logger.LogError("Client Recv Exception: " + exception);
+                Log.Error("Client Recv Exception: " + exception);
             }
 
             // sendthread might be waiting on ManualResetEvent,
@@ -114,7 +114,7 @@ namespace Telepathy
             // not if already started
             if (Connecting || Connected)
             {
-                Logger.LogWarning("Telepathy Client can not create connection because an existing connection is connecting or connected");
+                Log.Warning("Telepathy Client can not create connection because an existing connection is connecting or connected");
                 return;
             }
 
@@ -200,10 +200,10 @@ namespace Telepathy
                     sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }
-                Logger.LogError("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
+                Log.Error("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
                 return false;
             }
-            Logger.LogWarning("Client.Send: not connected!");
+            Log.Warning("Client.Send: not connected!");
             return false;
         }
     }
