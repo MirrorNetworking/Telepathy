@@ -71,6 +71,11 @@ namespace Telepathy
             {
                 // we might have multiple pending messages. merge into one
                 // packet to avoid TCP overheads and improve performance.
+                //
+                // IMPORTANT: Mirror & DOTSNET already batch into MaxMessageSize
+                //            chunks, but we STILL pack all pending messages
+                //            into one large payload so we only give it to TCP
+                //            ONCE. This is HUGE for performance so we keep it!
                 int packetSize = 0;
                 for (int i = 0; i < messages.Length; ++i)
                     packetSize += sizeof(int) + messages[i].Length; // header + content
