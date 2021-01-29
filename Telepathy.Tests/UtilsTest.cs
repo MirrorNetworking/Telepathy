@@ -31,5 +31,12 @@ namespace Telepathy.Tests
             Assert.That(bytes[4], Is.EqualTo(0x03));
             Assert.That(bytes[5], Is.EqualTo(0x04));
         }
+
+        [Test]
+        public void BytesToIntBigEndian()
+        {
+            byte[] bytes = {0x01, 0x02, 0x03, 0x04};
+            Assert.That(Utils.BytesToIntBigEndian(bytes), Is.EqualTo(0x01020304));
+        }
     }
 }
