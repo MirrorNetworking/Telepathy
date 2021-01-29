@@ -78,7 +78,7 @@ namespace Telepathy
                 //            ONCE. This is HUGE for performance so we keep it!
                 int packetSize = 0;
                 for (int i = 0; i < messages.Length; ++i)
-                    packetSize += sizeof(int) + messages[i].Length; // header + content
+                    packetSize += 4 + messages[i].Length; // header + content
 
                 // create payload buffer if not created yet or previous one is
                 // too small
