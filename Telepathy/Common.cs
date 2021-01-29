@@ -135,6 +135,7 @@ namespace Telepathy
             if (size > 0 && size <= MaxMessageSize)
             {
                 // read exactly 'size' bytes for content (blocking)
+                // TODO byte[] pool
                 content = new byte[size];
                 return stream.ReadExactly(content, size);
             }
