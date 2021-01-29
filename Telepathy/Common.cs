@@ -51,18 +51,18 @@ namespace Telepathy
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
 
-        // avoid header[4] allocations but don't use one buffer for all threads
-        [ThreadStatic] static byte[] header;
+        // avoid header[4] allocations
+        readonly byte[] header = new byte[4];
 
-        // avoid payload[packetSize] allocations but don't use one buffer for
-        // all threads
-        [ThreadStatic] static byte[] payload;
+        // avoid payload[packetSize] allocations. size increases dynamically as
+        // needed for batching.
+        byte[] payload;
 
-        // static helper functions /////////////////////////////////////////////
+        // helper functions ////////////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected static bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
+        protected bool SendMessagesBlocking(NetworkStream stream, byte[][] messages)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
@@ -111,13 +111,9 @@ namespace Telepathy
         }
 
         // read message (via stream) with the <size,content> message structure
-        protected static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, out byte[] content)
+        protected bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
         {
             content = null;
-
-            // create header buffer if not created yet
-            if (header == null)
-                header = new byte[4];
 
             // read exactly 4 bytes for header (blocking)
             if (!stream.ReadExactly(header, 4))
@@ -143,8 +139,7 @@ namespace Telepathy
         }
 
         // thread receive function is the same for client and server's clients
-        // (static to reduce state for maximum reliability)
-        protected static void ReceiveLoop(int connectionId, TcpClient client, SafeQueue<Message> receiveQueue, int MaxMessageSize)
+        protected void ReceiveLoop(int connectionId, TcpClient client)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -180,7 +175,7 @@ namespace Telepathy
                 {
                     // read the next message (blocking) or stop if stream closed
                     byte[] content;
-                    if (!ReadMessageBlocking(stream, MaxMessageSize, out content))
+                    if (!ReadMessageBlocking(stream, out content))
                         // break instead of return so stream close still happens!
                         break;
 
@@ -229,7 +224,7 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected static void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
+        protected void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();

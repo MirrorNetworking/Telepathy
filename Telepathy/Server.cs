@@ -133,7 +133,7 @@ namespace Telepathy
                         try
                         {
                             // run the receive loop
-                            ReceiveLoop(connectionId, client, receiveQueue, MaxMessageSize);
+                            ReceiveLoop(connectionId, client);
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);

@@ -63,7 +63,7 @@ namespace Telepathy
                 sendThread.Start();
 
                 // run the receive loop
-                ReceiveLoop(0, client, receiveQueue, MaxMessageSize);
+                ReceiveLoop(0, client);
             }
             catch (SocketException exception)
             {
