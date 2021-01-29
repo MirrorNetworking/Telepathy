@@ -253,6 +253,7 @@ namespace Telepathy
                     token.sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }
+
                 // sending to an invalid connectionId is expected sometimes.
                 // for example, if a client disconnects, the server might still
                 // try to send for one frame before it calls GetNextMessages
