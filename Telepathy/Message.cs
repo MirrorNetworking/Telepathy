@@ -3,7 +3,7 @@
 // -> a struct to minimize GC
 namespace Telepathy
 {
-    public struct Message
+    public readonly struct Message
     {
         public readonly int connectionId;
         public readonly EventType eventType;
