@@ -95,7 +95,7 @@ namespace Telepathy
                     position += 4;
 
                     // copy message into buffer
-                    Array.Copy(messages[i], 0, payload, position, messages[i].Length);
+                    Buffer.BlockCopy(messages[i], 0, payload, position, messages[i].Length);
                     position += messages[i].Length;
                 }
 

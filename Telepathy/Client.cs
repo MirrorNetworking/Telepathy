@@ -200,7 +200,7 @@ namespace Telepathy
                     // it into a byte[] that we can queue safely.
                     // TODO byte[] pool later!
                     byte[] data = new byte[message.Count];
-                    Array.Copy(message.Array, message.Offset, data, 0, message.Count);
+                    Buffer.BlockCopy(message.Array, message.Offset, data, 0, message.Count);
 
                     // add to send queue and return immediately.
                     // calling Send here would be blocking (sometimes for long
