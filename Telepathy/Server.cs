@@ -292,7 +292,7 @@ namespace Telepathy
             ClientToken token;
             if (clients.TryGetValue(connectionId, out token))
             {
-                // just close it. client thread will take care of the rest.
+                // just close it. send thread will take care of the rest.
                 token.client.Close();
                 Log.Info("Server.Disconnect connectionId:" + connectionId);
                 return true;
