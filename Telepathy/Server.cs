@@ -269,7 +269,7 @@ namespace Telepathy
                 //Logger.Log("Server.Send: invalid connectionId: " + connectionId);
                 return false;
             }
-            Log.Error("Client.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
+            Log.Error("Server.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
             return false;
         }
 
