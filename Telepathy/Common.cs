@@ -25,7 +25,7 @@ namespace Telepathy
         // can't call GetNextMessage faster than the incoming messages.
         public static int messageQueueSizeWarning = 100000;
 
-        // removes and returns the oldest message from the message queue.
+        // dequeues the oldest message from the message queue.
         // (might want to call this until it doesn't return anything anymore)
         // -> Connected, Data, Disconnected events are all added here
         // -> bool return makes while (GetMessage(out Message)) easier!
