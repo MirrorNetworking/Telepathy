@@ -224,7 +224,7 @@ namespace Telepathy.Tests
 
             // get server's connection info for that client
             string address = server.GetClientAddress(serverConnectMsg.connectionId);
-            Assert.That(address == "127.0.0.1" || address == "::ffff:127.0.0.1");
+            Assert.That(address == "127.0.0.1" || address == "::1");
 
             client.Disconnect();
         }
@@ -265,7 +265,7 @@ namespace Telepathy.Tests
         {
             // connect a client
             Client client = new Client();
-            client.Connect("::ffff:127.0.0.1", port);
+            client.Connect("::1", port);
 
             // get server's connect message
             Message serverConnectMsg = NextMessage(server);
