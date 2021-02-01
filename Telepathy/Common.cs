@@ -46,7 +46,7 @@ namespace Telepathy
         // -> simply increase max packet size if you want to send around bigger
         //    files!
         // -> 16KB per message should be more than enough.
-        public int MaxMessageSize = 16 * 1024;
+        public readonly int MaxMessageSize;
 
         // Send would stall forever if the network is cut off during a send, so
         // we need a timeout (in milliseconds)
@@ -63,6 +63,12 @@ namespace Telepathy
         // -> we use a List because it automatically grows internally as needed
         // -> won't allocate in hot path except when occasionally growing it
         List<byte[]> dequeueList = new List<byte[]>();
+
+        // constructor /////////////////////////////////////////////////////////
+        protected Common(int MaxMessageSize)
+        {
+            this.MaxMessageSize = MaxMessageSize;
+        }
 
         // helper functions ////////////////////////////////////////////////////
         // send message (via stream) with the <size,content> message structure

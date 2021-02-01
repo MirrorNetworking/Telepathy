@@ -64,6 +64,9 @@ namespace Telepathy
         // check if the server is running
         public bool Active => listenerThread != null && listenerThread.IsAlive;
 
+        // constructor
+        public Server(int MaxMessageSize) : base(MaxMessageSize) {}
+
         // the listener thread's listen function
         // note: no maxConnections parameter. high level API should handle that.
         //       (Transport can't send a 'too full' message anyway)

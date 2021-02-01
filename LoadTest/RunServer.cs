@@ -6,10 +6,12 @@ namespace Telepathy.LoadTest
 {
     public class RunServer
     {
+        public const int MaxMessageSize = 16 * 1024;
+
         public static void StartServer(int port)
         {
             // start server
-            Server server = new Server();
+            Server server = new Server(MaxMessageSize);
             server.Start(port);
             int serverFrequency = 60;
             Log.Info("started server");

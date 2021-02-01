@@ -21,7 +21,7 @@ namespace Telepathy.LoadTest
             List<Client> clients = new List<Client>();
             for (int i = 0; i < clientAmount; ++i)
             {
-                Client client = new Client();
+                Client client = new Client(RunServer.MaxMessageSize);
                 client.Connect(host, port);
                 clients.Add(client);
                 Thread.Sleep(15);
