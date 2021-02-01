@@ -225,7 +225,7 @@ namespace Telepathy
         // thread send function
         // note: we really do need one per connection, so that if one connection
         //       blocks, the rest will still continue to get sends
-        protected void SendLoop(int connectionId, TcpClient client, SafeQueue<byte[]> sendQueue, ManualResetEvent sendPending)
+        protected void SendLoop(int connectionId, TcpClient client, MagnificentSendPipe sendPipe, ManualResetEvent sendPending)
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
@@ -243,9 +243,9 @@ namespace Telepathy
                     sendPending.Reset(); // WaitOne() blocks until .Set() again
 
                     // dequeue all
-                    // SafeQueue.TryDequeueAll is twice as fast as
+                    // a locked{} TryDequeueAll is twice as fast as
                     // ConcurrentQueue, see SafeQueue.cs!
-                    if (sendQueue.TryDequeueAll(dequeueList))
+                    if (sendPipe.DequeueAll(dequeueList))
                     {
                         // send message (blocking) or stop if stream is closed
                         if (!SendMessagesBlocking(stream, dequeueList))

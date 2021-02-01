@@ -56,37 +56,6 @@ namespace Telepathy
             }
         }
 
-        // for when we want to dequeue and remove all of them at once without
-        // locking every single TryDequeue.
-        // -> COPIES all into a List, so we don't need to allocate via .ToArray
-        // -> list passed as parameter to avoid allocations
-        public bool TryDequeueAll(List<T> result)
-        {
-            // clear first, don't need to do that inside the lock.
-            result.Clear();
-
-            lock (queue)
-            {
-                // IMPORTANT: this transfers ownership of the internal array to
-                //            whoever calls this function.
-                //            the out array can safely be used from the caller,
-                //            while nobody else will use it anymore since we
-                //            clear it here.
-
-                // Linq.ToList allocates a new list, which we don't want.
-                // Note: this COULD be way faster if we make our own queue where
-                //       we can Array.Copy the internal array to the new list.
-                while (queue.Count > 0)
-                {
-                    result.Add(queue.Dequeue());
-                }
-                queue.Clear();
-            }
-
-            // return amount copied. don't need to do that inside the lock.
-            return result.Count > 0;
-        }
-
         public void Clear()
         {
             lock (queue)

@@ -37,8 +37,8 @@ namespace Telepathy
         volatile bool _Connecting;
         public bool Connecting => _Connecting;
 
-        // send queue (ConcurrentQueue allocates. we use SafeQueue)
-        SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+        // thread safe pipe to send messages from main thread to send thread
+        MagnificentSendPipe sendPipe = new MagnificentSendPipe();
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
         // -> call Set() if everything was sent
@@ -66,7 +66,7 @@ namespace Telepathy
                 client.SendTimeout = SendTimeout;
 
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendQueue, sendPending); });
+                sendThread = new Thread(() => { SendLoop(0, client, sendPipe, sendPending); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 
@@ -150,7 +150,7 @@ namespace Telepathy
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
             receiveQueue.Clear();
-            sendQueue.Clear();
+            sendPipe.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
@@ -181,10 +181,10 @@ namespace Telepathy
                 // connecting was reset. let's do it manually.
                 _Connecting = false;
 
-                // clear send queues. no need to hold on to them.
+                // clear send pipe. no need to hold on to elements.
                 // (unlike receiveQueue, which is still needed to process the
                 //  latest Disconnected message, etc.)
-                sendQueue.Clear();
+                sendPipe.Clear();
 
                 // let go of this one completely. the thread ended, no one uses
                 // it anymore and this way Connected is false again immediately.
@@ -208,10 +208,10 @@ namespace Telepathy
                     byte[] data = new byte[message.Count];
                     Buffer.BlockCopy(message.Array, message.Offset, data, 0, message.Count);
 
-                    // add to send queue and return immediately.
+                    // add to thread safe send pipe and return immediately.
                     // calling Send here would be blocking (sometimes for long
                     // times if other side lags or wire was disconnected)
-                    sendQueue.Enqueue(data);
+                    sendPipe.Enqueue(data);
                     sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }

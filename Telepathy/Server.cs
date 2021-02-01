@@ -24,8 +24,8 @@ namespace Telepathy
         {
             public TcpClient client;
 
-            // send queue (ConcurrentQueue allocates. we use SafeQueue)
-            public SafeQueue<byte[]> sendQueue = new SafeQueue<byte[]>();
+            // thread safe pipe to send messages from main thread to send thread
+            public MagnificentSendPipe sendPipe = new MagnificentSendPipe();
 
             // ManualResetEvent to wake up the send thread. better than Thread.Sleep
             // -> call Set() if everything was sent
@@ -116,7 +116,7 @@ namespace Telepathy
                         try
                         {
                             // run the send loop
-                            SendLoop(connectionId, client, token.sendQueue, token.sendPending);
+                            SendLoop(connectionId, client, token.sendPipe, token.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
@@ -261,10 +261,10 @@ namespace Telepathy
                 ClientToken token;
                 if (clients.TryGetValue(connectionId, out token))
                 {
-                    // add to send queue and return immediately.
+                    // add to thread safe send pipe and return immediately.
                     // calling Send here would be blocking (sometimes for long
                     // times if other side lags or wire was disconnected)
-                    token.sendQueue.Enqueue(data);
+                    token.sendPipe.Enqueue(data);
                     token.sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }
