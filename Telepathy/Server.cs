@@ -189,11 +189,11 @@ namespace Telepathy
             // not if already started
             if (Active) return false;
 
-            // clear old messages in queue, just to be sure that the caller
+            // clear old messages in pipe, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Stop isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue.Clear();
+            receivePipe.Clear();
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
@@ -312,7 +312,7 @@ namespace Telepathy
         // -> tick it while returning true (or up to a limit to avoid deadlocks)
         public bool Tick()
         {
-            if (receiveQueue.TryDequeue(out Message message))
+            if (receivePipe.TryDequeue(out Message message))
             {
                 switch (message.eventType)
                 {

@@ -81,7 +81,7 @@ namespace Telepathy.LoadTest
                                              bandwithIn,
                                              messagesSent,
                                              bandwithOut,
-                                             (clients.Sum(cl => cl.ReceiveQueueCount) / clients.Count)));
+                                             (clients.Sum(cl => cl.ReceivePipeCount) / clients.Count)));
                     stopwatch.Stop();
                     stopwatch = Stopwatch.StartNew();
                     messagesSent = 0;

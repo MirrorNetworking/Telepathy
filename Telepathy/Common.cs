@@ -9,12 +9,12 @@ namespace Telepathy
     public abstract class Common
     {
         // common code /////////////////////////////////////////////////////////
-        // incoming message queue of <connectionId, message>
+        // thread safe pipe for received messages
         // (not a HashSet because one connection can have multiple new messages)
-        protected SafeQueue<Message> receiveQueue = new SafeQueue<Message>();
+        protected MagnificentReceivePipe receivePipe = new MagnificentReceivePipe();
 
-        // queue count, useful for debugging / benchmarks
-        public int ReceiveQueueCount => receiveQueue.Count;
+        // pipe count, useful for debugging / benchmarks
+        public int ReceivePipeCount => receivePipe.Count;
 
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
@@ -152,9 +152,8 @@ namespace Telepathy
             // are silent
             try
             {
-                // add connected event to queue with ip address as data in case
-                // it's needed
-                receiveQueue.Enqueue(new Message(connectionId, EventType.Connected, null));
+                // add connected event to pipe
+                receivePipe.Enqueue(new Message(connectionId, EventType.Connected, null));
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -180,21 +179,21 @@ namespace Telepathy
                         // break instead of return so stream close still happens!
                         break;
 
-                    // queue it
-                    receiveQueue.Enqueue(new Message(connectionId, EventType.Data, content));
+                    // send to main thread via pipe
+                    receivePipe.Enqueue(new Message(connectionId, EventType.Data, content));
 
-                    // and show a warning if the queue gets too big
+                    // and show a warning if the pipe gets too big
                     // -> we don't want to show a warning every single time,
                     //    because then a lot of processing power gets wasted on
                     //    logging, which will make the queue pile up even more.
                     // -> instead we show it every 10s, so that the system can
                     //    use most it's processing power to hopefully process it.
-                    if (receiveQueue.Count > messageQueueSizeWarning)
+                    if (receivePipe.Count > messageQueueSizeWarning)
                     {
                         TimeSpan elapsed = DateTime.Now - messageQueueLastWarning;
                         if (elapsed.TotalSeconds > 10)
                         {
-                            Log.Warning("ReceiveLoop: messageQueue is getting big(" + receiveQueue.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
+                            Log.Warning("ReceiveLoop: receivePipe is getting big(" + receivePipe.Count + "), try calling GetNextMessage more often. You can call it more than once per frame!");
                             messageQueueLastWarning = DateTime.Now;
                         }
                     }
@@ -218,7 +217,7 @@ namespace Telepathy
                 //    where Disconnected -> Reconnect wouldn't work because
                 //    Connected is still true for a short moment before the stream
                 //    would be closed.
-                receiveQueue.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+                receivePipe.Enqueue(new Message(connectionId, EventType.Disconnected, null));
             }
         }
 

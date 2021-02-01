@@ -79,9 +79,9 @@ namespace Telepathy
                 // but there is no server running on that ip/port
                 Log.Info("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
-                // add 'Disconnected' event to message queue so that the caller
+                // add 'Disconnected' event to receive pipe so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                receiveQueue.Enqueue(new Message(0, EventType.Disconnected, null));
+                receivePipe.Enqueue(new Message(0, EventType.Disconnected, null));
             }
             catch (ThreadInterruptedException)
             {
@@ -145,11 +145,11 @@ namespace Telepathy
             client = new TcpClient(); // creates IPv4 socket
             client.Client = null; // clear internal IPv4 socket until Connect()
 
-            // clear old messages in queue, just to be sure that the caller
+            // clear old messages in pipe, just to be sure that the caller
             // doesn't receive data from last time and gets out of sync.
             // -> calling this in Disconnect isn't smart because the caller may
             //    still want to process all the latest messages afterwards
-            receiveQueue.Clear();
+            receivePipe.Clear();
             sendPipe.Clear();
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
@@ -226,7 +226,7 @@ namespace Telepathy
         // -> tick it while returning true (or up to a limit to avoid deadlocks)
         public bool Tick()
         {
-            if (receiveQueue.TryDequeue(out Message message))
+            if (receivePipe.TryDequeue(out Message message))
             {
                 switch (message.eventType)
                 {
