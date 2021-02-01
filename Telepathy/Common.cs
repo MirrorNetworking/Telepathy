@@ -25,17 +25,6 @@ namespace Telepathy
         // can't call GetNextMessage faster than the incoming messages.
         public static int messageQueueSizeWarning = 100000;
 
-        // dequeues the oldest message from the message queue.
-        // (might want to call this until it doesn't return anything anymore)
-        // -> Connected, Data, Disconnected events are all added here
-        // -> bool return makes while (GetMessage(out Message)) easier!
-        // -> no 'is client connected' check because we still want to read the
-        //    Disconnected message after a disconnect
-        public bool GetNextMessage(out Message message)
-        {
-            return receiveQueue.TryDequeue(out message);
-        }
-
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
         // increases bandwidth
         public bool NoDelay = true;

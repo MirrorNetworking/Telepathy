@@ -356,10 +356,21 @@ namespace Telepathy.Tests
 
         static Message NextMessage(Server server)
         {
-            Message message;
-            int count = 0;
+            // GetNextMessage was changed to Tick()
+            // but for testing, NextMessage is still extremely useful.
+            // let's wrap it.
 
-            while (!server.GetNextMessage(out message))
+            // -> setup the events before we call tick
+            //    (they are only used in Tick, so it's fine if we just set them
+            //     up before calling Tick)
+            Message message = default;
+            server.OnConnected = connectionId => { message = new Message(connectionId, EventType.Connected, null); };
+            server.OnData = (connectionId, data) => { message = new Message(connectionId, EventType.Data, data); };
+            server.OnDisconnected = connectionId => { message = new Message(connectionId, EventType.Disconnected, null); };
+
+            // try tick for 10s until we receive a new message
+            int count = 0;
+            while (!server.Tick())
             {
                 count++;
                 Thread.Sleep(100);
@@ -375,17 +386,28 @@ namespace Telepathy.Tests
 
         static Message NextMessage(Client client)
         {
-            Message message;
-            int count = 0;
+            // GetNextMessage was changed to Tick()
+            // but for testing, NextMessage is still extremely useful.
+            // let's wrap it.
 
-            while (!client.GetNextMessage(out message))
+            // -> setup the events before we call tick
+            //    (they are only used in Tick, so it's fine if we just set them
+            //     up before calling Tick)
+            Message message = default;
+            client.OnConnected = () => { message = new Message(0, EventType.Connected, null); };
+            client.OnData = (data) => { message = new Message(0, EventType.Data, data); };
+            client.OnDisconnected = () => { message = new Message(0, EventType.Disconnected, null); };
+
+            // try tick for 10s until we receive a new message
+            int count = 0;
+            while (!client.Tick())
             {
                 count++;
                 Thread.Sleep(100);
 
                 if (count >= 100)
                 {
-                    Assert.Fail("The message did not get to the client");
+                    Assert.Fail("The message did not get to the server");
                 }
             }
 

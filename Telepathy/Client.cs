@@ -6,6 +6,11 @@ namespace Telepathy
 {
     public class Client : Common
     {
+        // events to hook into
+        public Action OnConnected;
+        public Action<byte[]> OnData;
+        public Action OnDisconnected;
+
         public TcpClient client;
         Thread receiveThread;
         Thread sendThread;
@@ -214,6 +219,29 @@ namespace Telepathy
                 return false;
             }
             Log.Warning("Client.Send: not connected!");
+            return false;
+        }
+
+        // tick once, processes the next message (if any)
+        // -> tick it while returning true (or up to a limit to avoid deadlocks)
+        public bool Tick()
+        {
+            if (receiveQueue.TryDequeue(out Message message))
+            {
+                switch (message.eventType)
+                {
+                    case EventType.Connected:
+                        OnConnected?.Invoke();
+                        break;
+                    case EventType.Data:
+                        OnData?.Invoke(message.data);
+                        break;
+                    case EventType.Disconnected:
+                        OnDisconnected?.Invoke();
+                        break;
+                }
+                return true;
+            }
             return false;
         }
     }

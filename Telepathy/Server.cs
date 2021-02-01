@@ -9,6 +9,11 @@ namespace Telepathy
 {
     public class Server : Common
     {
+        // events to hook into
+        public Action<int> OnConnected;
+        public Action<int, byte[]> OnData;
+        public Action<int> OnDisconnected;
+
         // listener
         public TcpListener listener;
         Thread listenerThread;
@@ -298,6 +303,29 @@ namespace Telepathy
                 // just close it. send thread will take care of the rest.
                 token.client.Close();
                 Log.Info("Server.Disconnect connectionId:" + connectionId);
+                return true;
+            }
+            return false;
+        }
+
+        // tick once, processes the next message (if any)
+        // -> tick it while returning true (or up to a limit to avoid deadlocks)
+        public bool Tick()
+        {
+            if (receiveQueue.TryDequeue(out Message message))
+            {
+                switch (message.eventType)
+                {
+                    case EventType.Connected:
+                        OnConnected?.Invoke(message.connectionId);
+                        break;
+                    case EventType.Data:
+                        OnData?.Invoke(message.connectionId, message.data);
+                        break;
+                    case EventType.Disconnected:
+                        OnDisconnected?.Invoke(message.connectionId);
+                        break;
+                }
                 return true;
             }
             return false;

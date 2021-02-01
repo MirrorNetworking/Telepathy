@@ -7,33 +7,32 @@ namespace Telepathy.LoadTest
     public class RunServer
     {
         public const int MaxMessageSize = 16 * 1024;
+        static long messagesReceived = 0;
+        static long dataReceived = 0;
 
         public static void StartServer(int port)
         {
-            // start server
+
+            // create server
             Server server = new Server(MaxMessageSize);
+
+            // OnData replies and updates statistics
+            server.OnData = (connectionId, data) => {
+                server.Send(connectionId, new ArraySegment<byte>(data));
+                messagesReceived++;
+                dataReceived += data.Length;
+            };
+
             server.Start(port);
             int serverFrequency = 60;
             Log.Info("started server");
 
-            long messagesReceived = 0;
-            long dataReceived = 0;
             Stopwatch stopwatch = Stopwatch.StartNew();
 
             while (true)
             {
-                // reply to each incoming message
-                Message msg;
-                while (server.GetNextMessage(out msg))
-                {
-                    if (msg.eventType == EventType.Data)
-                    {
-                        server.Send(msg.connectionId, new ArraySegment<byte>(msg.data));
-
-                        messagesReceived++;
-                        dataReceived += msg.data.Length;
-                    }
-                }
+                // tick while receiving. will auto reply.
+                while (server.Tick()) {}
 
                 // sleep
                 Thread.Sleep(1000 / serverFrequency);

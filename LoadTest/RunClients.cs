@@ -10,6 +10,10 @@ namespace Telepathy.LoadTest
 {
     public class RunClients
     {
+        static long messagesSent = 0;
+        static long messagesReceived = 0;
+        static long dataReceived = 0;
+
         public static void StartClients(string host, int port, int clientAmount)
         {
             Log.Error("starting " + clientAmount + " clients...");
@@ -22,6 +26,11 @@ namespace Telepathy.LoadTest
             for (int i = 0; i < clientAmount; ++i)
             {
                 Client client = new Client(RunServer.MaxMessageSize);
+                // setup hook to add to statistics
+                client.OnData = data => {
+                    messagesReceived++;
+                    dataReceived += data.Length;
+                };
                 client.Connect(host, port);
                 clients.Add(client);
                 Thread.Sleep(15);
@@ -39,9 +48,6 @@ namespace Telepathy.LoadTest
 
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            long messagesSent = 0;
-            long messagesReceived = 0;
-            long dataReceived = 0;
 
             var timer = new System.Timers.Timer(1000.0 / clientFrequency);
 
@@ -58,16 +64,9 @@ namespace Telepathy.LoadTest
                         client.Send(new ArraySegment<byte>(messageBytes));
 
                         messagesSent += 2;
-                        // get new messages from queue
-                        Message msg;
-                        while (client.GetNextMessage(out msg))
-                        {
-                            if (msg.eventType == EventType.Data)
-                            {
-                                messagesReceived++;
-                                dataReceived += msg.data.Length;
-                            }
-                        }
+
+                        // tick client to receive and update statistics in OnData
+                        client.Tick();
                     }
                 }
 
@@ -89,7 +88,6 @@ namespace Telepathy.LoadTest
                     dataReceived = 0;
                     messagesReceived = 0;
                 }
-
             };
 
             timer.AutoReset = true;
