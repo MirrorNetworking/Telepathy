@@ -1,1 +1,17 @@
+V1.1 [2021-02-01]
+- stability: added more tests
+- breaking: Server/Client.Send: ArraySegment parameter and copy internally so
+  that Transports don't need to worry about it
+- perf: Buffer.BlockCopy instead of Array.Copy
+- perf: SendMessageBlocking puts message header directly into payload now
+- perf: receiveQueues use SafeQueue instead of ConcurrentQueue to avoid
+  allocations
+- Common: removed static state
+- perf: SafeQueue.TryDequeueAll: avoid queue.ToArray() allocations. copy into a
+  list instead.
+- Logger.Log/LogWarning/LogError renamed to Log.Info/Warning/Error
+- MaxMessageSize is now specified in constructor to prepare for pooling
+- flaky tests are ignored for now
+- smaller improvements
+
 V1.0
