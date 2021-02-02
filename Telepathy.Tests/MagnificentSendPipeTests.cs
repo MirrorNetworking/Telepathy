@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -16,10 +17,10 @@ namespace Telepathy.Tests
         [Test]
         public void Enqueue()
         {
-            pipe.Enqueue(new byte[]{0x1});
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x1}));
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            pipe.Enqueue(new byte[]{0x2});
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x2}));
             Assert.That(pipe.Count, Is.EqualTo(2));
         }
 
@@ -27,8 +28,8 @@ namespace Telepathy.Tests
         public void DequeueAll()
         {
             // enqueue two
-            pipe.Enqueue(new byte[]{0x1});
-            pipe.Enqueue(new byte[]{0x2});
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x1}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x2}));
 
             // create the helper list and add an old value to make sure
             // DequeueAll clears it before dequeuing
@@ -48,7 +49,7 @@ namespace Telepathy.Tests
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(new byte[]{0x1});
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x1}));
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             pipe.Clear();

@@ -251,12 +251,6 @@ namespace Telepathy
             // respect max message size to avoid allocation attacks.
             if (message.Count <= MaxMessageSize)
             {
-                // ArraySegment array is only valid until returning, so copy
-                // it into a byte[] that we can queue safely.
-                // TODO byte[] pool later!
-                byte[] data = new byte[message.Count];
-                Buffer.BlockCopy(message.Array, message.Offset, data, 0, message.Count);
-
                 // find the connection
                 ClientToken token;
                 if (clients.TryGetValue(connectionId, out token))
@@ -264,7 +258,7 @@ namespace Telepathy
                     // add to thread safe send pipe and return immediately.
                     // calling Send here would be blocking (sometimes for long
                     // times if other side lags or wire was disconnected)
-                    token.sendPipe.Enqueue(data);
+                    token.sendPipe.Enqueue(message);
                     token.sendPending.Set(); // interrupt SendThread WaitOne()
                     return true;
                 }

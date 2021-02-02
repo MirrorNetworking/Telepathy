@@ -6,6 +6,8 @@
 // => hides all the complexity from telepathy
 // => easy to switch between stack/queue/concurrentqueue/etc.
 // => easy to test
+
+using System;
 using System.Collections.Generic;
 
 namespace Telepathy
@@ -23,9 +25,19 @@ namespace Telepathy
             get { lock (this) { return queue.Count; } }
         }
 
-        public void Enqueue(byte[] message)
+        // enqueue a message
+        // arraysegment for allocation free sends later.
+        // -> the segment's array is only used until Enqueue() returns!
+        public void Enqueue(ArraySegment<byte> message)
         {
-            lock (this) { queue.Enqueue(message); }
+            // ArraySegment array is only valid until returning, so copy
+            // it into a byte[] that we can queue safely.
+            // TODO byte[] pool later!
+            byte[] data = new byte[message.Count];
+            Buffer.BlockCopy(message.Array, message.Offset, data, 0, message.Count);
+
+            // safely enqueue
+            lock (this) { queue.Enqueue(data); }
         }
 
         // for when we want to dequeue and remove all of them at once without
