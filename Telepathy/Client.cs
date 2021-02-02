@@ -76,7 +76,8 @@ namespace Telepathy
                 sendThread.Start();
 
                 // run the receive loop
-                ReceiveLoop(0, client);
+                // (receive pipe is shared across all loops)
+                ThreadFunctions.ReceiveLoop(0, client, MaxMessageSize, receivePipe, messageQueueSizeWarning);
             }
             catch (SocketException exception)
             {

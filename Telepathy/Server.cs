@@ -145,7 +145,8 @@ namespace Telepathy
                         try
                         {
                             // run the receive loop
-                            ReceiveLoop(connectionId, client);
+                            // (receive pipe is shared across all loops)
+                            ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, receivePipe, messageQueueSizeWarning);
 
                             // remove client from clients dict afterwards
                             clients.TryRemove(connectionId, out ClientToken _);
