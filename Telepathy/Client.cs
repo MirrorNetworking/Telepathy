@@ -225,7 +225,9 @@ namespace Telepathy
         // -> tick it while returning true (or up to a limit to avoid deadlocks)
         public bool Tick()
         {
-            if (receivePipe.TryDequeue(out int _, out EventType eventType, out byte[] data))
+            // peek first. allows us to process the first queued entry while
+            // still keeping the pooled byte[] alive by not removing anything.
+            if (receivePipe.TryPeek(out int _, out EventType eventType, out ArraySegment<byte> message))
             {
                 switch (eventType)
                 {
@@ -233,12 +235,16 @@ namespace Telepathy
                         OnConnected?.Invoke();
                         break;
                     case EventType.Data:
-                        OnData?.Invoke(new ArraySegment<byte>(data));
+                        OnData?.Invoke(message);
                         break;
                     case EventType.Disconnected:
                         OnDisconnected?.Invoke();
                         break;
                 }
+
+                // IMPORTANT: now dequeue and return it to pool AFTER we are
+                //            done processing the event.
+                receivePipe.TryDequeue();
                 return true;
             }
             return false;
