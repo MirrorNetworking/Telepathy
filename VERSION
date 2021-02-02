@@ -1,3 +1,10 @@
+V1.2 [2021-02-02]
+- Client/Server Tick & OnConnected/OnData/OnDisconnected events instead of
+  having the outside process messages via GetNextMessage. That's easier for
+  Mirror/DOTSNET and allows for allocation free data message processing later.
+- MagnificientSend/RecvPipe to shield Telepathy from all the complexity
+- perf: SendPipe: byte[] pool for allocation free sends (╯°□°)╯︵ ┻━┻
+
 V1.1 [2021-02-01]
 - stability: added more tests
 - breaking: Server/Client.Send: ArraySegment parameter and copy internally so
@@ -15,3 +22,4 @@ V1.1 [2021-02-01]
 - smaller improvements
 
 V1.0
+- first stable release
