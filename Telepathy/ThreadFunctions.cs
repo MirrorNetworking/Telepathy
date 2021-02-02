@@ -38,5 +38,38 @@ namespace Telepathy
                 return false;
             }
         }
+        // read message (via stream) blocking.
+        // writes into byte[] and returns bytes written to avoid allocations.
+        public static bool ReadMessageBlocking(NetworkStream stream, int MaxMessageSize, byte[] headerBuffer, byte[] payloadBuffer, out int size)
+        {
+            size = 0;
+
+            // buffer needs to be of Header + MaxMessageSize
+            if (payloadBuffer.Length != 4 + MaxMessageSize)
+            {
+                Log.Error($"ReadMessageBlocking: payloadBuffer needs to be of size 4 + MaxMessageSize = {4 + MaxMessageSize} instead of {payloadBuffer.Length}");
+                return false;
+            }
+
+            // read exactly 4 bytes for header (blocking)
+            if (!stream.ReadExactly(headerBuffer, 4))
+                return false;
+
+            // convert to int
+            size = Utils.BytesToIntBigEndian(headerBuffer);
+
+            // protect against allocation attacks. an attacker might send
+            // multiple fake '2GB header' packets in a row, causing the server
+            // to allocate multiple 2GB byte arrays and run out of memory.
+            //
+            // also protect against size <= 0 which would cause issues
+            if (size > 0 && size <= MaxMessageSize)
+            {
+                // read exactly 'size' bytes for content (blocking)
+                return stream.ReadExactly(payloadBuffer, size);
+            }
+            Log.Warning("ReadMessageBlocking: possible header attack with a header of: " + size + " bytes.");
+            return false;
+        }
     }
 }
