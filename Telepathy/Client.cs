@@ -71,7 +71,8 @@ namespace Telepathy
                 client.SendTimeout = SendTimeout;
 
                 // start send thread only after connected
-                sendThread = new Thread(() => { SendLoop(0, client, sendPipe, sendPending); });
+                // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
+                sendThread = new Thread(() => { ThreadFunctions.SendLoop(0, client, sendPipe, sendPending); });
                 sendThread.IsBackground = true;
                 sendThread.Start();
 

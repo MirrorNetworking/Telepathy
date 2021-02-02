@@ -120,7 +120,8 @@ namespace Telepathy
                         try
                         {
                             // run the send loop
-                            SendLoop(connectionId, client, token.sendPipe, token.sendPending);
+                            // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
+                            ThreadFunctions.SendLoop(connectionId, client, token.sendPipe, token.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
