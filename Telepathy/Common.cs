@@ -57,29 +57,6 @@ namespace Telepathy
         }
 
         // helper functions ////////////////////////////////////////////////////
-        // send message (via stream) with the <size,content> message structure
-        // this function is blocking sometimes!
-        // (e.g. if someone has high latency or wire was cut off)
-        // -> payload is of multiple <<size, content, size, content, ...> parts
-        protected static bool SendMessagesBlocking(NetworkStream stream, byte[] payload, int packetSize)
-        {
-            // stream.Write throws exceptions if client sends with high
-            // frequency and the server stops
-            try
-            {
-
-                // write the whole thing
-                stream.Write(payload, 0, packetSize);
-                return true;
-            }
-            catch (Exception exception)
-            {
-                // log as regular message because servers do shut down sometimes
-                Log.Info("Send: stream.Write exception: " + exception);
-                return false;
-            }
-        }
-
         // read message (via stream) blocking.
         // writes into byte[] and returns bytes written to avoid allocations.
         protected bool ReadMessageBlocking(NetworkStream stream, byte[] buffer, out int size)
@@ -234,7 +211,7 @@ namespace Telepathy
                     if (sendPipe.DequeueAndSerializeAll(ref payload, out int packetSize))
                     {
                         // send messages (blocking) or stop if stream is closed
-                        if (!SendMessagesBlocking(stream, payload, packetSize))
+                        if (!ThreadFunctions.SendMessagesBlocking(stream, payload, packetSize))
                             // break instead of return so stream close still happens!
                             break;
                     }
