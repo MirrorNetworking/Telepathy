@@ -1,3 +1,10 @@
+V1.3 [2021-02-02]
+- perf: ReceivePipe: byte[] pool for allocation free receives (╯°□°)╯︵ ┻━┻
+- fix: header buffer, payload buffer data races because they were made non
+  static earlier. server threads would all access the same ones.
+  => all threaded code was moved into a static ThreadFunctions class to make it
+     100% obvious that there should be no shared state in the future
+
 V1.2 [2021-02-02]
 - Client/Server Tick & OnConnected/OnData/OnDisconnected events instead of
   having the outside process messages via GetNextMessage. That's easier for
