@@ -77,17 +77,25 @@ namespace Telepathy
             }
         }
 
-        // read message (via stream) with the <size,content> message structure
-        protected bool ReadMessageBlocking(NetworkStream stream, out byte[] content)
+        // read message (via stream) blocking.
+        // writes into byte[] and returns bytes written to avoid allocations.
+        protected bool ReadMessageBlocking(NetworkStream stream, byte[] buffer, out int size)
         {
-            content = null;
+            size = 0;
+
+            // buffer needs to be of Header + MaxMessageSize
+            if (buffer.Length != 4 + MaxMessageSize)
+            {
+                Log.Error($"ReadMessageBlocking: buffer needs to be of size 4 + MaxMessageSize = {4 + MaxMessageSize} instead of {buffer.Length}");
+                return false;
+            }
 
             // read exactly 4 bytes for header (blocking)
             if (!stream.ReadExactly(header, 4))
                 return false;
 
             // convert to int
-            int size = Utils.BytesToIntBigEndian(header);
+            size = Utils.BytesToIntBigEndian(header);
 
             // protect against allocation attacks. an attacker might send
             // multiple fake '2GB header' packets in a row, causing the server
@@ -97,9 +105,7 @@ namespace Telepathy
             if (size > 0 && size <= MaxMessageSize)
             {
                 // read exactly 'size' bytes for content (blocking)
-                // TODO byte[] pool
-                content = new byte[size];
-                return stream.ReadExactly(content, size);
+                return stream.ReadExactly(buffer, size);
             }
             Log.Warning("ReadMessageBlocking: possible header attack with a header of: " + size + " bytes.");
             return false;
@@ -113,6 +119,14 @@ namespace Telepathy
 
             // keep track of last message queue warning
             DateTime messageQueueLastWarning = DateTime.Now;
+
+            // every receive loop needs it's own receive buffer of
+            // HeaderSize + MaxMessageSize
+            // to avoid runtime allocations.
+            //
+            // IMPORTANT: DO NOT make this a member, otherwise every connection
+            //            on the server would use the same buffer simulatenously
+            byte[] receiveBuffer = new byte[4 + MaxMessageSize];
 
             // absolutely must wrap with try/catch, otherwise thread exceptions
             // are silent
@@ -140,14 +154,17 @@ namespace Telepathy
                 while (true)
                 {
                     // read the next message (blocking) or stop if stream closed
-                    // TODO buffered content to avoid allocations!
-                    byte[] content;
-                    if (!ReadMessageBlocking(stream, out content))
+                    if (!ReadMessageBlocking(stream, receiveBuffer, out int size))
                         // break instead of return so stream close still happens!
                         break;
 
+                    // create arraysegment for the read message
+                    ArraySegment<byte> message = new ArraySegment<byte>(receiveBuffer, 0, size);
+
                     // send to main thread via pipe
-                    receivePipe.Enqueue(connectionId, EventType.Data, new ArraySegment<byte>(content));
+                    // -> it'll copy the message internally so we can reuse the
+                    //    receive buffer for next read!
+                    receivePipe.Enqueue(connectionId, EventType.Data, message);
 
                     // and show a warning if the pipe gets too big
                     // -> we don't want to show a warning every single time,
