@@ -80,8 +80,8 @@ namespace Telepathy
                 //            into one large payload so we only give it to TCP
                 //            ONCE. This is HUGE for performance so we keep it!
                 packetSize = 0;
-                foreach (byte[] entry in queue)
-                    packetSize += 4 + entry.Length; // header + content
+                foreach (byte[] message in queue)
+                    packetSize += 4 + message.Length; // header + content
 
                 // create payload buffer if not created yet or previous one is
                 // too small
@@ -89,21 +89,21 @@ namespace Telepathy
                 if (payload == null || payload.Length < packetSize)
                     payload = new byte[packetSize];
 
-                // create the packet
+                // dequeue all byte arrays and serialize into the packet
                 int position = 0;
-                foreach (byte[] entry in queue)
+                while (queue.Count > 0)
                 {
+                    // dequeue
+                    byte[] message = queue.Dequeue();
+
                     // write header (size) into buffer at position
-                    Utils.IntToBytesBigEndianNonAlloc(entry.Length, payload, position);
+                    Utils.IntToBytesBigEndianNonAlloc(message.Length, payload, position);
                     position += 4;
 
                     // copy message into payload at position
-                    Buffer.BlockCopy(entry, 0, payload, position, entry.Length);
-                    position += entry.Length;
+                    Buffer.BlockCopy(message, 0, payload, position, message.Length);
+                    position += message.Length;
                 }
-
-                // we are supposed to dequeue all. so clear the queue now.
-                queue.Clear();
 
                 // we did serialize something
                 return true;
