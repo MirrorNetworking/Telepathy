@@ -7,7 +7,9 @@ namespace Telepathy
 {
     public abstract class Common
     {
-        // common code /////////////////////////////////////////////////////////
+        // IMPORTANT: DO NOT SHARE STATE ACROSS SEND/RECV LOOPS (DATA RACES)
+        // (except receive pipe which is used for all threads)
+
         // thread safe pipe for received messages
         // (not a HashSet because one connection can have multiple new messages)
         protected readonly MagnificentReceivePipe receivePipe;
@@ -39,10 +41,6 @@ namespace Telepathy
         // Send would stall forever if the network is cut off during a send, so
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
-
-        // avoid payload[packetSize] allocations. size increases dynamically as
-        // needed for batching.
-        byte[] payload;
 
         // constructor /////////////////////////////////////////////////////////
         protected Common(int MaxMessageSize)
@@ -161,6 +159,13 @@ namespace Telepathy
         {
             // get NetworkStream from client
             NetworkStream stream = client.GetStream();
+
+            // avoid payload[packetSize] allocations. size increases dynamically as
+            // needed for batching.
+            //
+            // IMPORTANT: DO NOT make this a member, otherwise every connection
+            //            on the server would use the same buffer simulatenously
+            byte[] payload = null;
 
             try
             {
