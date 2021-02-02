@@ -86,7 +86,7 @@ namespace Telepathy
 
                 // add 'Disconnected' event to receive pipe so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                receivePipe.Enqueue(0, EventType.Disconnected, null);
+                receivePipe.Enqueue(0, EventType.Disconnected, default);
             }
             catch (ThreadInterruptedException)
             {

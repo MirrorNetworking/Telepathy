@@ -119,7 +119,7 @@ namespace Telepathy
             try
             {
                 // add connected event to pipe
-                receivePipe.Enqueue(connectionId, EventType.Connected, null);
+                receivePipe.Enqueue(connectionId, EventType.Connected, default);
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -140,13 +140,14 @@ namespace Telepathy
                 while (true)
                 {
                     // read the next message (blocking) or stop if stream closed
+                    // TODO buffered content to avoid allocations!
                     byte[] content;
                     if (!ReadMessageBlocking(stream, out content))
                         // break instead of return so stream close still happens!
                         break;
 
                     // send to main thread via pipe
-                    receivePipe.Enqueue(connectionId, EventType.Data, content);
+                    receivePipe.Enqueue(connectionId, EventType.Data, new ArraySegment<byte>(content));
 
                     // and show a warning if the pipe gets too big
                     // -> we don't want to show a warning every single time,
@@ -183,7 +184,7 @@ namespace Telepathy
                 //    where Disconnected -> Reconnect wouldn't work because
                 //    Connected is still true for a short moment before the stream
                 //    would be closed.
-                receivePipe.Enqueue(connectionId, EventType.Disconnected, null);
+                receivePipe.Enqueue(connectionId, EventType.Disconnected, default);
             }
         }
 

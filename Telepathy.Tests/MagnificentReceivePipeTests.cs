@@ -15,17 +15,17 @@ namespace Telepathy.Tests
         [Test]
         public void Enqueue()
         {
-            pipe.Enqueue(0, EventType.Connected, null);
+            pipe.Enqueue(0, EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            pipe.Enqueue(0, EventType.Connected, null);
+            pipe.Enqueue(0, EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(2));
         }
 
         [Test]
         public void TryDequeue()
         {
-            pipe.Enqueue(42, EventType.Connected, null);
+            pipe.Enqueue(42, EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             bool result = pipe.TryDequeue(out int connectionId, out EventType eventType, out byte[] data);
@@ -38,7 +38,7 @@ namespace Telepathy.Tests
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(0, EventType.Connected, null);
+            pipe.Enqueue(0, EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             pipe.Clear();

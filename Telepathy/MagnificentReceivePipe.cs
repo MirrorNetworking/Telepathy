@@ -6,6 +6,8 @@
 // => hides all the complexity from telepathy
 // => easy to switch between stack/queue/concurrentqueue/etc.
 // => easy to test
+
+using System;
 using System.Collections.Generic;
 
 namespace Telepathy
@@ -13,12 +15,12 @@ namespace Telepathy
     public class MagnificentReceivePipe
     {
         // queue entry message. only used in here.
-        struct Message
+        struct Entry
         {
             public int connectionId;
             public EventType eventType;
             public byte[] data;
-            public Message(int connectionId, EventType eventType, byte[] data)
+            public Entry(int connectionId, EventType eventType, byte[] data)
             {
                 this.connectionId = connectionId;
                 this.eventType = eventType;
@@ -28,7 +30,7 @@ namespace Telepathy
 
         // message queue
         // ConcurrentQueue allocates. lock{} instead.
-        readonly Queue<Message> queue = new Queue<Message>();
+        readonly Queue<Entry> queue = new Queue<Entry>();
 
         // for statistics. don't call Count and assume that it's the same after
         // the call.
@@ -38,14 +40,28 @@ namespace Telepathy
         }
 
         // enqueue a message
-        // (parameters passed directly instead of using Message. this way we can
-        //  pass ArraySegments and do pooling later)
-        public void Enqueue(int connectionId, EventType eventType, byte[] data)
+        // -> ArraySegment to avoid allocations later
+        // -> parameters passed directly so it's more obvious that we don't just
+        //    queue a passed 'Message', instead we copy the ArraySegment into
+        //    a byte[] and store it internally, etc.)
+        public void Enqueue(int connectionId, EventType eventType, ArraySegment<byte> data)
         {
             lock (this)
             {
-                Message message = new Message(connectionId, eventType, data);
-                queue.Enqueue(message);
+                // does this message have a data array content?
+                byte[] bytes = null;
+                if (data != default)
+                {
+                    // ArraySegment is only valid until returning.
+                    // copy it into a byte[] that we can store.
+                    // TODO pooling later
+                    bytes = new byte[data.Count];
+                    Buffer.BlockCopy(data.Array, data.Offset, bytes, 0, data.Count);
+                }
+
+                // queue it
+                Entry entry = new Entry(connectionId, eventType, bytes);
+                queue.Enqueue(entry);
             }
         }
 
@@ -62,10 +78,10 @@ namespace Telepathy
             {
                 if (queue.Count > 0)
                 {
-                    Message message = queue.Dequeue();
-                    connectionId = message.connectionId;
-                    eventType = message.eventType;
-                    data = message.data;
+                    Entry entry = queue.Dequeue();
+                    connectionId = entry.connectionId;
+                    eventType = entry.eventType;
+                    data = entry.data;
                     return true;
                 }
                 return false;
