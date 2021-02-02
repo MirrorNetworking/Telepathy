@@ -86,7 +86,7 @@ namespace Telepathy
 
                 // add 'Disconnected' event to receive pipe so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                receivePipe.Enqueue(new Message(0, EventType.Disconnected, null));
+                receivePipe.Enqueue(0, EventType.Disconnected, null);
             }
             catch (ThreadInterruptedException)
             {
@@ -225,15 +225,15 @@ namespace Telepathy
         // -> tick it while returning true (or up to a limit to avoid deadlocks)
         public bool Tick()
         {
-            if (receivePipe.TryDequeue(out Message message))
+            if (receivePipe.TryDequeue(out int _, out EventType eventType, out byte[] data))
             {
-                switch (message.eventType)
+                switch (eventType)
                 {
                     case EventType.Connected:
                         OnConnected?.Invoke();
                         break;
                     case EventType.Data:
-                        OnData?.Invoke(new ArraySegment<byte>(message.data));
+                        OnData?.Invoke(new ArraySegment<byte>(data));
                         break;
                     case EventType.Disconnected:
                         OnDisconnected?.Invoke();

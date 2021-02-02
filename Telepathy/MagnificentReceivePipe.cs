@@ -12,6 +12,20 @@ namespace Telepathy
 {
     public class MagnificentReceivePipe
     {
+        // queue entry message. only used in here.
+        struct Message
+        {
+            public int connectionId;
+            public EventType eventType;
+            public byte[] data;
+            public Message(int connectionId, EventType eventType, byte[] data)
+            {
+                this.connectionId = connectionId;
+                this.eventType = eventType;
+                this.data = data;
+            }
+        }
+
         // message queue
         // ConcurrentQueue allocates. lock{} instead.
         readonly Queue<Message> queue = new Queue<Message>();
@@ -23,19 +37,35 @@ namespace Telepathy
             get { lock (this) { return queue.Count; } }
         }
 
-        public void Enqueue(Message message)
-        {
-            lock (this) { queue.Enqueue(message); }
-        }
-
-        public bool TryDequeue(out Message result)
+        // enqueue a message
+        // (parameters passed directly instead of using Message. this way we can
+        //  pass ArraySegments and do pooling later)
+        public void Enqueue(int connectionId, EventType eventType, byte[] data)
         {
             lock (this)
             {
-                result = default;
+                Message message = new Message(connectionId, eventType, data);
+                queue.Enqueue(message);
+            }
+        }
+
+        // dequeue a message
+        // (parameters passed directly instead of using Message. this way we can
+        //  pass ArraySegments and do pooling later)
+        public bool TryDequeue(out int connectionId, out EventType eventType, out byte[] data)
+        {
+            connectionId = 0;
+            eventType = EventType.Disconnected;
+            data = null;
+
+            lock (this)
+            {
                 if (queue.Count > 0)
                 {
-                    result = queue.Dequeue();
+                    Message message = queue.Dequeue();
+                    connectionId = message.connectionId;
+                    eventType = message.eventType;
+                    data = message.data;
                     return true;
                 }
                 return false;

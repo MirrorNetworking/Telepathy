@@ -310,18 +310,18 @@ namespace Telepathy
         // -> tick it while returning true (or up to a limit to avoid deadlocks)
         public bool Tick()
         {
-            if (receivePipe.TryDequeue(out Message message))
+            if (receivePipe.TryDequeue(out int connectionId, out EventType eventType, out byte[] data))
             {
-                switch (message.eventType)
+                switch (eventType)
                 {
                     case EventType.Connected:
-                        OnConnected?.Invoke(message.connectionId);
+                        OnConnected?.Invoke(connectionId);
                         break;
                     case EventType.Data:
-                        OnData?.Invoke(message.connectionId, new ArraySegment<byte>(message.data));
+                        OnData?.Invoke(connectionId, new ArraySegment<byte>(data));
                         break;
                     case EventType.Disconnected:
-                        OnDisconnected?.Invoke(message.connectionId);
+                        OnDisconnected?.Invoke(connectionId);
                         break;
                 }
                 return true;

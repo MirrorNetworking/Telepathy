@@ -5,6 +5,20 @@ using System.Threading;
 
 namespace Telepathy.Tests
 {
+    // message struct to queue and test events more easily
+    struct Message
+    {
+        public int connectionId;
+        public EventType eventType;
+        public byte[] data;
+        public Message(int connectionId, EventType eventType, byte[] data)
+        {
+            this.connectionId = connectionId;
+            this.eventType = eventType;
+            this.data = data;
+        }
+    }
+
     [TestFixture]
     public class TransportTest
     {

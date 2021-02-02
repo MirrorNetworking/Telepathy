@@ -119,7 +119,7 @@ namespace Telepathy
             try
             {
                 // add connected event to pipe
-                receivePipe.Enqueue(new Message(connectionId, EventType.Connected, null));
+                receivePipe.Enqueue(connectionId, EventType.Connected, null);
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -146,7 +146,7 @@ namespace Telepathy
                         break;
 
                     // send to main thread via pipe
-                    receivePipe.Enqueue(new Message(connectionId, EventType.Data, content));
+                    receivePipe.Enqueue(connectionId, EventType.Data, content);
 
                     // and show a warning if the pipe gets too big
                     // -> we don't want to show a warning every single time,
@@ -183,7 +183,7 @@ namespace Telepathy
                 //    where Disconnected -> Reconnect wouldn't work because
                 //    Connected is still true for a short moment before the stream
                 //    would be closed.
-                receivePipe.Enqueue(new Message(connectionId, EventType.Disconnected, null));
+                receivePipe.Enqueue(connectionId, EventType.Disconnected, null);
             }
         }
 

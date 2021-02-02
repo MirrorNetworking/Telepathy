@@ -15,29 +15,30 @@ namespace Telepathy.Tests
         [Test]
         public void Enqueue()
         {
-            pipe.Enqueue(new Message());
+            pipe.Enqueue(0, EventType.Connected, null);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            pipe.Enqueue(new Message());
+            pipe.Enqueue(0, EventType.Connected, null);
             Assert.That(pipe.Count, Is.EqualTo(2));
         }
 
         [Test]
         public void TryDequeue()
         {
-            Message message = new Message(42, EventType.Connected, null);
-            pipe.Enqueue(message);
+            pipe.Enqueue(42, EventType.Connected, null);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            bool result = pipe.TryDequeue(out Message dequeued);
+            bool result = pipe.TryDequeue(out int connectionId, out EventType eventType, out byte[] data);
             Assert.That(result, Is.True);
-            Assert.That(dequeued, Is.EqualTo(message));
+            Assert.That(connectionId, Is.EqualTo(42));
+            Assert.That(eventType, Is.EqualTo(EventType.Connected));
+            Assert.That(data, Is.EqualTo(null));
         }
 
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(new Message());
+            pipe.Enqueue(0, EventType.Connected, null);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             pipe.Clear();
