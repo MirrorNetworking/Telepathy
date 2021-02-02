@@ -1,6 +1,5 @@
 ﻿// common code used by server and client
 using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -48,11 +47,6 @@ namespace Telepathy
         // needed for batching.
         byte[] payload;
 
-        // avoid sendQueue.TryDequeueAll allocations. allocate a list only once.
-        // -> we use a List because it automatically grows internally as needed
-        // -> won't allocate in hot path except when occasionally growing it
-        List<byte[]> dequeueList = new List<byte[]>();
-
         // constructor /////////////////////////////////////////////////////////
         protected Common(int MaxMessageSize)
         {
@@ -63,41 +57,13 @@ namespace Telepathy
         // send message (via stream) with the <size,content> message structure
         // this function is blocking sometimes!
         // (e.g. if someone has high latency or wire was cut off)
-        protected bool SendMessagesBlocking(NetworkStream stream, List<byte[]> messages)
+        // -> payload is of multiple <<size, content, size, content, ...> parts
+        protected static bool SendMessagesBlocking(NetworkStream stream, byte[] payload, int packetSize)
         {
             // stream.Write throws exceptions if client sends with high
             // frequency and the server stops
             try
             {
-                // we might have multiple pending messages. merge into one
-                // packet to avoid TCP overheads and improve performance.
-                //
-                // IMPORTANT: Mirror & DOTSNET already batch into MaxMessageSize
-                //            chunks, but we STILL pack all pending messages
-                //            into one large payload so we only give it to TCP
-                //            ONCE. This is HUGE for performance so we keep it!
-                int packetSize = 0;
-                for (int i = 0; i < messages.Count; ++i)
-                    packetSize += 4 + messages[i].Length; // header + content
-
-                // create payload buffer if not created yet or previous one is
-                // too small
-                // IMPORTANT: payload.Length might be > packetSize! don't use it!
-                if (payload == null || payload.Length < packetSize)
-                    payload = new byte[packetSize];
-
-                // create the packet
-                int position = 0;
-                for (int i = 0; i < messages.Count; ++i)
-                {
-                    // write header (size) into buffer at position
-                    Utils.IntToBytesBigEndianNonAlloc(messages[i].Length, payload, position);
-                    position += 4;
-
-                    // copy message into buffer
-                    Buffer.BlockCopy(messages[i], 0, payload, position, messages[i].Length);
-                    position += messages[i].Length;
-                }
 
                 // write the whole thing
                 stream.Write(payload, 0, packetSize);
@@ -241,19 +207,16 @@ namespace Telepathy
                     //    the next Send call.
                     sendPending.Reset(); // WaitOne() blocks until .Set() again
 
-                    // dequeue all
+                    // dequeue & serialize all
                     // a locked{} TryDequeueAll is twice as fast as
                     // ConcurrentQueue, see SafeQueue.cs!
-                    if (sendPipe.DequeueAll(dequeueList))
+                    if (sendPipe.DequeueAndSerializeAll(ref payload, out int packetSize))
                     {
-                        // send message (blocking) or stop if stream is closed
-                        if (!SendMessagesBlocking(stream, dequeueList))
+                        // send messages (blocking) or stop if stream is closed
+                        if (!SendMessagesBlocking(stream, payload, packetSize))
                             // break instead of return so stream close still happens!
                             break;
                     }
-
-                    // clear list for next time
-                    dequeueList.Clear();
 
                     // don't choke up the CPU: wait until queue not empty anymore
                     sendPending.WaitOne();

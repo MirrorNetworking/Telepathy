@@ -40,45 +40,74 @@ namespace Telepathy
             lock (this) { queue.Enqueue(data); }
         }
 
-        // for when we want to dequeue and remove all of them at once without
-        // locking every single TryDequeue.
-        // -> COPIES all into a List, so we don't need to allocate via .ToArray
-        // -> list passed as parameter to avoid allocations
+        // send threads need to dequeue each byte[] and write it into the socket
+        // -> dequeueing one byte[] after another works, but it's WAY slower
+        //    than dequeueing all immediately (locks only once)
+        //    lock{} & DequeueAll is WAY faster than ConcurrentQueue & dequeue
+        //    one after another:
         //
-        // Net 4.X has ConcurrentQueue, but ConcurrentQueue has no TryDequeueAll
-        // method, which makes SafeQueue twice as fast for the send thread.
+        //      uMMORPG 450 CCU
+        //        SafeQueue:       900-1440ms latency
+        //        ConcurrentQueue:     2000ms latency
         //
-        // uMMORPG 450 CCU
-        //   SafeQueue:       900-1440ms latency
-        //   ConcurrentQueue:     2000ms latency
+        // -> the most obvious solution is to just return a list with all byte[]
+        //    (which allocates) and then write each one into the socket
+        // -> a faster solution is to serialize each one into one payload buffer
+        //    and pass that to the socket only once. fewer socket calls always
+        //    give WAY better CPU performance(!)
+        // -> to avoid allocating a new list of entries each time, we simply
+        //    serialize all entries into the payload here already
+        // => having all this complexity built into the pipe makes testing and
+        //    modifying the algorithm super easy!
         //
-        // It's also noticeable in the LoadTest project, which hardly handles
-        // 300 CCU with ConcurrentQueue!
-        public bool DequeueAll(List<byte[]> result)
+        // IMPORTANT: serializing in here will allow us to return the byte[]
+        //            entries back to a pool later to completely avoid
+        //            allocations!
+        public bool DequeueAndSerializeAll(ref byte[] payload, out int packetSize)
         {
-            // clear first, don't need to do that inside the lock.
-            result.Clear();
-
             lock (this)
             {
-                // IMPORTANT: this transfers ownership of the internal array to
-                //            whoever calls this function.
-                //            the out array can safely be used from the caller,
-                //            while nobody else will use it anymore since we
-                //            clear it here.
+                // do nothing if empty
+                packetSize = 0;
+                if (queue.Count == 0)
+                    return false;
 
-                // Linq.ToList allocates a new list, which we don't want.
-                // Note: this COULD be way faster if we make our own queue where
-                //       we can Array.Copy the internal array to the new list.
-                while (queue.Count > 0)
+                // we might have multiple pending messages. merge into one
+                // packet to avoid TCP overheads and improve performance.
+                //
+                // IMPORTANT: Mirror & DOTSNET already batch into MaxMessageSize
+                //            chunks, but we STILL pack all pending messages
+                //            into one large payload so we only give it to TCP
+                //            ONCE. This is HUGE for performance so we keep it!
+                packetSize = 0;
+                foreach (byte[] entry in queue)
+                    packetSize += 4 + entry.Length; // header + content
+
+                // create payload buffer if not created yet or previous one is
+                // too small
+                // IMPORTANT: payload.Length might be > packetSize! don't use it!
+                if (payload == null || payload.Length < packetSize)
+                    payload = new byte[packetSize];
+
+                // create the packet
+                int position = 0;
+                foreach (byte[] entry in queue)
                 {
-                    result.Add(queue.Dequeue());
-                }
-                queue.Clear();
-            }
+                    // write header (size) into buffer at position
+                    Utils.IntToBytesBigEndianNonAlloc(entry.Length, payload, position);
+                    position += 4;
 
-            // return amount copied. don't need to do that inside the lock.
-            return result.Count > 0;
+                    // copy message into payload at position
+                    Buffer.BlockCopy(entry, 0, payload, position, entry.Length);
+                    position += entry.Length;
+                }
+
+                // we are supposed to dequeue all. so clear the queue now.
+                queue.Clear();
+
+                // we did serialize something
+                return true;
+            }
         }
 
         public void Clear()
