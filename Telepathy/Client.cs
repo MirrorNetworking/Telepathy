@@ -38,7 +38,7 @@ namespace Telepathy
         public bool Connecting => _Connecting;
 
         // thread safe pipe to send messages from main thread to send thread
-        MagnificentSendPipe sendPipe = new MagnificentSendPipe();
+        readonly MagnificentSendPipe sendPipe;
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
         // -> call Set() if everything was sent
@@ -47,7 +47,11 @@ namespace Telepathy
         ManualResetEvent sendPending = new ManualResetEvent(false);
 
         // constructor
-        public Client(int MaxMessageSize) : base(MaxMessageSize) {}
+        public Client(int MaxMessageSize) : base(MaxMessageSize)
+        {
+            // create send pipe with max message size for pooling
+            sendPipe = new MagnificentSendPipe(MaxMessageSize);
+        }
 
         // the thread function
         void ReceiveThreadFunction(string ip, int port)

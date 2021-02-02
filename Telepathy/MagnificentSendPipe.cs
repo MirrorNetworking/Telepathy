@@ -16,7 +16,26 @@ namespace Telepathy
     {
         // message queue
         // ConcurrentQueue allocates. lock{} instead.
-        readonly Queue<byte[]> queue = new Queue<byte[]>();
+        // -> byte arrays are always of MaxMessageSize
+        // -> ArraySegment indicates the actual message content
+        //
+        // IMPORTANT: lock{} all usages!
+        readonly Queue<ArraySegment<byte>> queue = new Queue<ArraySegment<byte>>();
+
+        // byte[] pool to avoid allocations
+        // Take & Return is beautifully encapsulated in the pipe.
+        // the outside does not need to worry about anything.
+        // and it can be tested easily.
+        //
+        // IMPORTANT: lock{} all usages!
+        Pool<byte[]> pool;
+
+        // constructor
+        public MagnificentSendPipe(int MaxMessageSize)
+        {
+            // initialize pool to create max message sized byte[]s each time
+            pool = new Pool<byte[]>(() => new byte[MaxMessageSize]);
+        }
 
         // for statistics. don't call Count and assume that it's the same after
         // the call.
@@ -25,19 +44,35 @@ namespace Telepathy
             get { lock (this) { return queue.Count; } }
         }
 
+        // pool count for testing
+        public int PoolCount
+        {
+            get { lock (this) { return pool.Count(); } }
+        }
+
         // enqueue a message
         // arraysegment for allocation free sends later.
         // -> the segment's array is only used until Enqueue() returns!
         public void Enqueue(ArraySegment<byte> message)
         {
-            // ArraySegment array is only valid until returning, so copy
-            // it into a byte[] that we can queue safely.
-            // TODO byte[] pool later!
-            byte[] data = new byte[message.Count];
-            Buffer.BlockCopy(message.Array, message.Offset, data, 0, message.Count);
+            // pool & queue usage always needs to be locked
+            lock (this)
+            {
+                // ArraySegment array is only valid until returning, so copy
+                // it into a byte[] that we can queue safely.
 
-            // safely enqueue
-            lock (this) { queue.Enqueue(data); }
+                // get one from the pool first to avoid allocations
+                byte[] bytes = pool.Take();
+
+                // copy into it
+                Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
+
+                // indicate which part is the message
+                ArraySegment<byte> segment = new ArraySegment<byte>(bytes, 0, message.Count);
+
+                // now enqueue it
+                queue.Enqueue(segment);
+            }
         }
 
         // send threads need to dequeue each byte[] and write it into the socket
@@ -65,6 +100,7 @@ namespace Telepathy
         //            allocations!
         public bool DequeueAndSerializeAll(ref byte[] payload, out int packetSize)
         {
+            // pool & queue usage always needs to be locked
             lock (this)
             {
                 // do nothing if empty
@@ -80,8 +116,8 @@ namespace Telepathy
                 //            into one large payload so we only give it to TCP
                 //            ONCE. This is HUGE for performance so we keep it!
                 packetSize = 0;
-                foreach (byte[] message in queue)
-                    packetSize += 4 + message.Length; // header + content
+                foreach (ArraySegment<byte> message in queue)
+                    packetSize += 4 + message.Count; // header + content
 
                 // create payload buffer if not created yet or previous one is
                 // too small
@@ -89,20 +125,23 @@ namespace Telepathy
                 if (payload == null || payload.Length < packetSize)
                     payload = new byte[packetSize];
 
-                // dequeue all byte arrays and serialize into the packet
+                // dequeue all byte[] messages and serialize into the packet
                 int position = 0;
                 while (queue.Count > 0)
                 {
                     // dequeue
-                    byte[] message = queue.Dequeue();
+                    ArraySegment<byte> message = queue.Dequeue();
 
                     // write header (size) into buffer at position
-                    Utils.IntToBytesBigEndianNonAlloc(message.Length, payload, position);
+                    Utils.IntToBytesBigEndianNonAlloc(message.Count, payload, position);
                     position += 4;
 
                     // copy message into payload at position
-                    Buffer.BlockCopy(message, 0, payload, position, message.Length);
-                    position += message.Length;
+                    Buffer.BlockCopy(message.Array, message.Offset, payload, position, message.Count);
+                    position += message.Count;
+
+                    // return to pool so it can be reused (avoids allocations!)
+                    pool.Return(message.Array);
                 }
 
                 // we did serialize something
@@ -112,7 +151,15 @@ namespace Telepathy
 
         public void Clear()
         {
-            lock (this) { queue.Clear(); }
+            // pool & queue usage always needs to be locked
+            lock (this)
+            {
+                // clear queue, but via dequeue to return each byte[] to pool
+                while (queue.Count > 0)
+                {
+                    pool.Return(queue.Dequeue().Array);
+                }
+            }
         }
     }
 }

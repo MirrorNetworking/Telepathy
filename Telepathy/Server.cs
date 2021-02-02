@@ -25,7 +25,7 @@ namespace Telepathy
             public TcpClient client;
 
             // thread safe pipe to send messages from main thread to send thread
-            public MagnificentSendPipe sendPipe = new MagnificentSendPipe();
+            public readonly MagnificentSendPipe sendPipe;
 
             // ManualResetEvent to wake up the send thread. better than Thread.Sleep
             // -> call Set() if everything was sent
@@ -33,9 +33,12 @@ namespace Telepathy
             // -> call WaitOne() to block until Reset was called
             public ManualResetEvent sendPending = new ManualResetEvent(false);
 
-            public ClientToken(TcpClient client)
+            public ClientToken(TcpClient client, int MaxMessageSize)
             {
                 this.client = client;
+
+                // create send pipe with max message size for pooling
+                sendPipe = new MagnificentSendPipe(MaxMessageSize);
             }
         }
 
@@ -105,7 +108,7 @@ namespace Telepathy
                     int connectionId = NextConnectionId();
 
                     // add to dict immediately
-                    ClientToken token = new ClientToken(client);
+                    ClientToken token = new ClientToken(client, MaxMessageSize);
                     clients[connectionId] = token;
 
                     // spawn a send thread for each client
