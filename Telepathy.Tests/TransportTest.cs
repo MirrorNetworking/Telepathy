@@ -365,7 +365,13 @@ namespace Telepathy.Tests
             //     up before calling Tick)
             Message message = default;
             server.OnConnected = connectionId => { message = new Message(connectionId, EventType.Connected, null); };
-            server.OnData = (connectionId, data) => { message = new Message(connectionId, EventType.Data, data); };
+            server.OnData = (connectionId, data) => {
+                // ArraySegment.Array is only available until returning. copy it
+                // so we can return the content for tests.
+                byte[] copy = new byte[data.Count];
+                Buffer.BlockCopy(data.Array, data.Offset, copy, 0, data.Count);
+                message = new Message(connectionId, EventType.Data, copy);
+            };
             server.OnDisconnected = connectionId => { message = new Message(connectionId, EventType.Disconnected, null); };
 
             // try tick for 10s until we receive a new message
@@ -395,7 +401,13 @@ namespace Telepathy.Tests
             //     up before calling Tick)
             Message message = default;
             client.OnConnected = () => { message = new Message(0, EventType.Connected, null); };
-            client.OnData = (data) => { message = new Message(0, EventType.Data, data); };
+            client.OnData = (data) => {
+                // ArraySegment.Array is only available until returning. copy it
+                // so we can return the content for tests.
+                byte[] copy = new byte[data.Count];
+                Buffer.BlockCopy(data.Array, data.Offset, copy, 0, data.Count);
+                message = new Message(0, EventType.Data, copy);
+            };
             client.OnDisconnected = () => { message = new Message(0, EventType.Disconnected, null); };
 
             // try tick for 10s until we receive a new message

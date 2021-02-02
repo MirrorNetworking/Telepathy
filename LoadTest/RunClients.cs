@@ -29,7 +29,7 @@ namespace Telepathy.LoadTest
                 // setup hook to add to statistics
                 client.OnData = data => {
                     messagesReceived++;
-                    dataReceived += data.Length;
+                    dataReceived += data.Count;
                 };
                 client.Connect(host, port);
                 clients.Add(client);

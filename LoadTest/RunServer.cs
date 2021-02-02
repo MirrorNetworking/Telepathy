@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading;
 
 namespace Telepathy.LoadTest
@@ -18,9 +17,9 @@ namespace Telepathy.LoadTest
 
             // OnData replies and updates statistics
             server.OnData = (connectionId, data) => {
-                server.Send(connectionId, new ArraySegment<byte>(data));
+                server.Send(connectionId, data);
                 messagesReceived++;
-                dataReceived += data.Length;
+                dataReceived += data.Count;
             };
 
             server.Start(port);

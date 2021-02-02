@@ -7,8 +7,9 @@ namespace Telepathy
     public class Client : Common
     {
         // events to hook into
+        // => OnData uses ArraySegment for allocation free receives later
         public Action OnConnected;
-        public Action<byte[]> OnData;
+        public Action<ArraySegment<byte>> OnData;
         public Action OnDisconnected;
 
         public TcpClient client;
@@ -232,7 +233,7 @@ namespace Telepathy
                         OnConnected?.Invoke();
                         break;
                     case EventType.Data:
-                        OnData?.Invoke(message.data);
+                        OnData?.Invoke(new ArraySegment<byte>(message.data));
                         break;
                     case EventType.Disconnected:
                         OnDisconnected?.Invoke();
