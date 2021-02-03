@@ -13,25 +13,17 @@ namespace Telepathy
 {
     public class MagnificentReceivePipe
     {
-        // queue entry message. only used in here.
-        // -> byte arrays are always of 4 + MaxMessageSize
-        // -> ArraySegment indicates the actual message content
-        struct Entry
-        {
-            public EventType eventType;
-            public ArraySegment<byte> data;
-            public Entry(EventType eventType, ArraySegment<byte> data)
-            {
-                this.eventType = eventType;
-                this.data = data;
-            }
-        }
-
         // message queue
         // ConcurrentQueue allocates. lock{} instead.
         //
         // IMPORTANT: lock{} all usages!
-        readonly Queue<Entry> queue = new Queue<Entry>();
+        readonly Queue<ArraySegment<byte>> queue = new Queue<ArraySegment<byte>>();
+
+        // connect/disconnect messages can be simple flags
+        // no need have a Message<EventType, data> queue if connect & disconnect
+        // only happen once.
+        bool connectReceived;
+        bool disconnectReceived;
 
         // byte[] pool to avoid allocations
         // Take & Return is beautifully encapsulated in the pipe.
@@ -52,7 +44,16 @@ namespace Telepathy
         // the call.
         public int Count
         {
-            get { lock (this) { return queue.Count; } }
+            // connect and disconnect count as messages too
+            get
+            {
+                lock (this)
+                {
+                    return queue.Count +
+                           (connectReceived ? 1 : 0) +
+                           (disconnectReceived ? 1 : 0);
+                }
+            }
         }
 
         // pool count for testing
@@ -71,30 +72,41 @@ namespace Telepathy
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                // does this message have a data array content?
-                ArraySegment<byte> segment = default;
-                if (message != default)
+                switch (eventType)
                 {
-                    // ArraySegment is only valid until returning.
-                    // copy it into a byte[] that we can store.
-                    // ArraySegment array is only valid until returning, so copy
-                    // it into a byte[] that we can queue safely.
+                    case EventType.Connected:
+                    {
+                        connectReceived = true;
+                        break;
+                    }
+                    case EventType.Data:
+                    {
+                        // ArraySegment is only valid until returning.
+                        // copy it into a byte[] that we can store.
+                        // ArraySegment array is only valid until returning, so copy
+                        // it into a byte[] that we can queue safely.
 
-                    // get one from the pool first to avoid allocations
-                    byte[] bytes = pool.Take();
+                        // get one from the pool first to avoid allocations
+                        byte[] bytes = pool.Take();
 
-                    // copy into it
-                    Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
+                        // copy into it
+                        Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
 
-                    // indicate which part is the message
-                    segment = new ArraySegment<byte>(bytes, 0, message.Count);
+                        // indicate which part is the message
+                        ArraySegment<byte> segment = new ArraySegment<byte>(bytes, 0, message.Count);
+
+                        // enqueue it
+                        // IMPORTANT: pass the segment around pool byte[],
+                        // NOT the 'message' that is only valid until returning!
+                        queue.Enqueue(segment);
+                        break;
+                    }
+                    case EventType.Disconnected:
+                    {
+                        disconnectReceived = true;
+                        break;
+                    }
                 }
-
-                // enqueue it
-                // IMPORTANT: pass the segment around pool byte[],
-                //            NOT the 'message' that is only valid until returning!
-                Entry entry = new Entry(eventType, segment);
-                queue.Enqueue(entry);
             }
         }
 
@@ -112,11 +124,31 @@ namespace Telepathy
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                if (queue.Count > 0)
+                // IMPORTANT: need to Peek the same order as Dequeue!
+
+                // always process connect message first (if any), then reset
+                if (connectReceived)
                 {
-                    Entry entry = queue.Peek();
-                    eventType = entry.eventType;
-                    data = entry.data;
+                    eventType = EventType.Connected;
+                    data = default;
+                    // DO NOT RESET THE FLAG. peek simply peeks.
+                    return true;
+                }
+                // process any data message after
+                else if (queue.Count > 0)
+                {
+                    eventType = EventType.Data;
+                    data = queue.Peek();
+                    return true;
+                }
+                // always process disconnect last, then reset
+                // => AFTER everything else. disconnect is always last. don't
+                //    want to process any data messages after disconnect.
+                else if (disconnectReceived)
+                {
+                    eventType = EventType.Disconnected;
+                    data = default;
+                    // DO NOT RESET THE FLAG. peek simply peeks.
                     return true;
                 }
                 return false;
@@ -137,17 +169,27 @@ namespace Telepathy
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                if (queue.Count > 0)
-                {
-                    // dequeue from queue
-                    Entry entry = queue.Dequeue();
+                // IMPORTANT: need to Dequeue same order as Peek!
 
-                    // return byte[] to pool (if any).
-                    // not all message types have byte[] contents.
-                    if (entry.data != default)
-                    {
-                        pool.Return(entry.data.Array);
-                    }
+                // always process connect message first (if any)
+                if (connectReceived)
+                {
+                    connectReceived = false;
+                    return true;
+                }
+                // process any data message after
+                else if (queue.Count > 0)
+                {
+                    // dequeue and return byte[] to pool
+                    pool.Return(queue.Dequeue().Array);
+                    return true;
+                }
+                // always process disconnect last, then reset
+                // => AFTER everything else. disconnect is always last. don't
+                //    want to process any data messages after disconnect.
+                else if (disconnectReceived)
+                {
+                    disconnectReceived = false;
                     return true;
                 }
                 return false;
@@ -159,18 +201,15 @@ namespace Telepathy
             // pool & queue usage always needs to be locked
             lock (this)
             {
+                // clear flags
+                connectReceived = false;
+                disconnectReceived = false;
+
                 // clear queue, but via dequeue to return each byte[] to pool
                 while (queue.Count > 0)
                 {
-                    // dequeue
-                    Entry entry = queue.Dequeue();
-
-                    // return byte[] to pool (if any).
-                    // not all message types have byte[] contents.
-                    if (entry.data != default)
-                    {
-                        pool.Return(entry.data.Array);
-                    }
+                    // dequeue and return byte[] to pool (if any).
+                    pool.Return(queue.Dequeue().Array);
                 }
             }
         }
