@@ -38,6 +38,9 @@ namespace Telepathy
         volatile bool _Connecting;
         public bool Connecting => _Connecting;
 
+        // thread safe pipe for received messages
+        readonly MagnificentReceivePipe receivePipe;
+
         // thread safe pipe to send messages from main thread to send thread
         readonly MagnificentSendPipe sendPipe;
 
@@ -50,7 +53,8 @@ namespace Telepathy
         // constructor
         public Client(int MaxMessageSize) : base(MaxMessageSize)
         {
-            // create send pipe with max message size for pooling
+            // create pipes with max message size for pooling
+            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
             sendPipe = new MagnificentSendPipe(MaxMessageSize);
         }
 
@@ -224,8 +228,9 @@ namespace Telepathy
         }
 
         // tick once, processes the next message (if any)
-        // -> tick it while returning true (or up to a limit to avoid deadlocks)
-        public bool Tick()
+        // => returns amount of remaining messages to process, so the caller
+        //    can call tick again as many times as needed (or up to a limit)
+        public int Tick()
         {
             // peek first. allows us to process the first queued entry while
             // still keeping the pooled byte[] alive by not removing anything.
@@ -247,9 +252,9 @@ namespace Telepathy
                 // IMPORTANT: now dequeue and return it to pool AFTER we are
                 //            done processing the event.
                 receivePipe.TryDequeue();
-                return true;
+                return receivePipe.Count;
             }
-            return false;
+            return 0;
         }
     }
 }

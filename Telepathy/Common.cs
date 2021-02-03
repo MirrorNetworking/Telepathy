@@ -4,14 +4,6 @@ namespace Telepathy
     public abstract class Common
     {
         // IMPORTANT: DO NOT SHARE STATE ACROSS SEND/RECV LOOPS (DATA RACES)
-        // (except receive pipe which is used for all threads)
-
-        // thread safe pipe for received messages
-        // (not a HashSet because one connection can have multiple new messages)
-        protected readonly MagnificentReceivePipe receivePipe;
-
-        // pipe count, useful for debugging / benchmarks
-        public int ReceivePipeCount => receivePipe.Count;
 
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
@@ -42,9 +34,6 @@ namespace Telepathy
         protected Common(int MaxMessageSize)
         {
             this.MaxMessageSize = MaxMessageSize;
-
-            // create receive pipe with max message size for pooling
-            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
         }
     }
 }

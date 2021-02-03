@@ -76,12 +76,11 @@ namespace Telepathy.LoadTest
                     long bandwithIn = dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
                     long bandwithOut = messagesSent * messageBytes.Length * 1000 / (stopwatch.ElapsedMilliseconds * 1024);
 
-                    Log.Info(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Client in={0} ({1} KB/s)  out={2} ({3} KB/s), ReceiveQueueAvg={4}",
+                    Log.Info(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Client in={0} ({1} KB/s)  out={2} ({3} KB/s)",
                                              messagesReceived,
                                              bandwithIn,
                                              messagesSent,
-                                             bandwithOut,
-                                             (clients.Sum(cl => cl.ReceivePipeCount) / clients.Count)));
+                                             bandwithOut));
                     stopwatch.Stop();
                     stopwatch = Stopwatch.StartNew();
                     messagesSent = 0;

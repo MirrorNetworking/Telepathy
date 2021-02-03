@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using System.Text;
 using System.Threading;
@@ -39,6 +40,8 @@ namespace Telepathy.Tests
         public void TearDown()
         {
             server.Stop();
+            serverMessages.Clear();
+            clientMessages.Clear();
         }
 
         [Test]
@@ -368,76 +371,88 @@ namespace Telepathy.Tests
             }
         }
 
+        // Tick() might process more than one message, so we need to keep a list
+        // and always return the next one in NextMessage. don't want to skip any.
+        static Queue<Message> serverMessages = new Queue<Message>();
         static Message NextMessage(Server server)
         {
-            // GetNextMessage was changed to Tick()
-            // but for testing, NextMessage is still extremely useful.
-            // let's wrap it.
+            // any remaining messages from last tick?
+            if (serverMessages.Count > 0)
+                return serverMessages.Dequeue();
 
-            // -> setup the events before we call tick
-            //    (they are only used in Tick, so it's fine if we just set them
-            //     up before calling Tick)
-            Message message = default;
-            server.OnConnected = connectionId => { message = new Message(connectionId, EventType.Connected, null); };
+            // otherwise tick for up to 10s
+
+            // setup the events before we call tick
+            // (they are only used in Tick, so it's fine if we just set them
+            //  up before calling Tick)
+            server.OnConnected = connectionId => { serverMessages.Enqueue(new Message(connectionId, EventType.Connected, null)); };
             server.OnData = (connectionId, data) => {
                 // ArraySegment.Array is only available until returning. copy it
                 // so we can return the content for tests.
                 byte[] copy = new byte[data.Count];
                 Buffer.BlockCopy(data.Array, data.Offset, copy, 0, data.Count);
-                message = new Message(connectionId, EventType.Data, copy);
+                serverMessages.Enqueue(new Message(connectionId, EventType.Data, copy));
             };
-            server.OnDisconnected = connectionId => { message = new Message(connectionId, EventType.Disconnected, null); };
+            server.OnDisconnected = connectionId => { serverMessages.Enqueue(new Message(connectionId, EventType.Disconnected, null)); };
 
             // try tick for 10s until we receive a new message
             int count = 0;
-            while (!server.Tick())
+            while (count < 100)
             {
-                count++;
-                Thread.Sleep(100);
-
-                if (count >= 100)
+                server.Tick();
+                if (serverMessages.Count > 0)
                 {
-                    Assert.Fail("The message did not get to the server");
+                    return serverMessages.Dequeue();
+                }
+                else
+                {
+                    count++;
+                    Thread.Sleep(100);
                 }
             }
-
-            return message;
+            Assert.Fail("The message did not get to the server");
+            return default;
         }
 
+        // Tick() might process more than one message, so we need to keep a list
+        // and always return the next one in NextMessage. don't want to skip any.
+        static Queue<Message> clientMessages = new Queue<Message>();
         static Message NextMessage(Client client)
         {
-            // GetNextMessage was changed to Tick()
-            // but for testing, NextMessage is still extremely useful.
-            // let's wrap it.
+            // any remaining messages from last tick?
+            if (clientMessages.Count > 0)
+                return clientMessages.Dequeue();
 
-            // -> setup the events before we call tick
-            //    (they are only used in Tick, so it's fine if we just set them
-            //     up before calling Tick)
-            Message message = default;
-            client.OnConnected = () => { message = new Message(0, EventType.Connected, null); };
+            // setup the events before we call tick
+            // (they are only used in Tick, so it's fine if we just set them
+            //  up before calling Tick)
+            client.OnConnected = () => { clientMessages.Enqueue(new Message(0, EventType.Connected, null)); };
             client.OnData = (data) => {
                 // ArraySegment.Array is only available until returning. copy it
                 // so we can return the content for tests.
                 byte[] copy = new byte[data.Count];
                 Buffer.BlockCopy(data.Array, data.Offset, copy, 0, data.Count);
-                message = new Message(0, EventType.Data, copy);
+                clientMessages.Enqueue(new Message(0, EventType.Data, copy));
             };
-            client.OnDisconnected = () => { message = new Message(0, EventType.Disconnected, null); };
+            client.OnDisconnected = () => { clientMessages.Enqueue(new Message(0, EventType.Disconnected, null)); };
 
             // try tick for 10s until we receive a new message
             int count = 0;
-            while (!client.Tick())
+            while (count < 100)
             {
-                count++;
-                Thread.Sleep(100);
-
-                if (count >= 100)
+                client.Tick();
+                if (clientMessages.Count > 0)
                 {
-                    Assert.Fail("The message did not get to the server");
+                    return clientMessages.Dequeue();
+                }
+                else
+                {
+                    count++;
+                    Thread.Sleep(100);
                 }
             }
-
-            return message;
+            Assert.Fail("The message did not get to the client");
+            return default;
         }
 
     }

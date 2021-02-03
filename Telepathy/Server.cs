@@ -25,6 +25,19 @@ namespace Telepathy
         {
             public TcpClient client;
 
+            // thread safe pipe for received messages from recv thread to main thread
+            //
+            // IMPORTANT: every connection needs its own receive pipe.
+            //            previously we had one for all connections:
+            //            - all would have to share one lock{}
+            //            - no way to limit one connection's queue
+            //            - one spamming connection would slow down everyone
+            //              else because Tick() only ever processed the next
+            //              message in the pipe
+            //              (could be thousands of messages from connection A
+            //               before connection B's message is ever processed)
+            public readonly MagnificentReceivePipe receivePipe;
+
             // thread safe pipe to send messages from main thread to send thread
             public readonly MagnificentSendPipe sendPipe;
 
@@ -39,6 +52,7 @@ namespace Telepathy
                 this.client = client;
 
                 // create send pipe with max message size for pooling
+                receivePipe = new MagnificentReceivePipe(MaxMessageSize);
                 sendPipe = new MagnificentSendPipe(MaxMessageSize);
             }
         }
@@ -146,11 +160,15 @@ namespace Telepathy
                         try
                         {
                             // run the receive loop
-                            // (receive pipe is shared across all loops)
-                            ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, receivePipe, messageQueueSizeWarning);
+                            // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
+                            ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, token.receivePipe, messageQueueSizeWarning);
 
-                            // remove client from clients dict afterwards
-                            clients.TryRemove(connectionId, out ClientToken _);
+                            // IMPORTANT: do NOT remove from clients after the
+                            // thread ends. need to do it in Tick() so that the
+                            // disconnect event in the pipe is still processed.
+                            // (removing client immediately would mean that the
+                            //  pipe is lost and the disconnect event is never
+                            //  processed)
 
                             // sendthread might be waiting on ManualResetEvent,
                             // so let's make sure to end it if the connection
@@ -194,12 +212,6 @@ namespace Telepathy
         {
             // not if already started
             if (Active) return false;
-
-            // clear old messages in pipe, just to be sure that the caller
-            // doesn't receive data from last time and gets out of sync.
-            // -> calling this in Stop isn't smart because the caller may
-            //    still want to process all the latest messages afterwards
-            receivePipe.Clear();
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
@@ -308,33 +320,58 @@ namespace Telepathy
             return false;
         }
 
-        // tick once, processes the next message (if any)
-        // -> tick it while returning true (or up to a limit to avoid deadlocks)
-        public bool Tick()
+        // tick every connection once, processes the next message (if any)
+        // => returns amount of remaining messages to process, so the caller
+        //    can call tick again as many times as needed (or up to a limit)
+        //
+        // ticking every connection once is way better for server stability.
+        // previously we had one receive pipe for all.
+        // so if one connection would spam the pipe, everyone else would be
+        // delayed.
+        // => one connection per pipe is way more stable and allows us to limit
+        //    each connection's pipe
+        List<int> connectionsToRemove = new List<int>();
+        public int Tick()
         {
-            // peek first. allows us to process the first queued entry while
-            // still keeping the pooled byte[] alive by not removing anything.
-            if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))
-            {
-                switch (eventType)
-                {
-                    case EventType.Connected:
-                        OnConnected?.Invoke(connectionId);
-                        break;
-                    case EventType.Data:
-                        OnData?.Invoke(connectionId, message);
-                        break;
-                    case EventType.Disconnected:
-                        OnDisconnected?.Invoke(connectionId);
-                        break;
-                }
+            int remaining = 0;
 
-                // IMPORTANT: now dequeue and return it to pool AFTER we are
-                //            done processing the event.
-                receivePipe.TryDequeue();
-                return true;
+            foreach (KeyValuePair<int, ClientToken> kvp in clients)
+            {
+                // peek first. allows us to process the first queued entry while
+                // still keeping the pooled byte[] alive by not removing anything.
+                MagnificentReceivePipe receivePipe = kvp.Value.receivePipe;
+                if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))
+                {
+                    switch (eventType)
+                    {
+                        case EventType.Connected:
+                            OnConnected?.Invoke(connectionId);
+                            break;
+                        case EventType.Data:
+                            OnData?.Invoke(connectionId, message);
+                            break;
+                        case EventType.Disconnected:
+                            OnDisconnected?.Invoke(connectionId);
+                            connectionsToRemove.Add(connectionId);
+                            break;
+                    }
+
+                    // IMPORTANT: now dequeue and return it to pool AFTER we are
+                    //            done processing the event.
+                    receivePipe.TryDequeue();
+
+                    // add to remaining
+                    remaining += receivePipe.Count;
+                }
             }
-            return false;
+
+            // remove all disconnected connections now that we processed the
+            // final disconnect message.
+            foreach (int connectionId in connectionsToRemove)
+                clients.TryRemove(connectionId, out ClientToken _);
+            connectionsToRemove.Clear();
+
+            return remaining;
         }
     }
 }
