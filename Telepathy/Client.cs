@@ -92,7 +92,7 @@ namespace Telepathy
 
                 // add 'Disconnected' event to receive pipe so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                receivePipe.Enqueue(0, EventType.Disconnected, default);
+                receivePipe.Enqueue(EventType.Disconnected, default);
             }
             catch (ThreadInterruptedException)
             {
@@ -234,7 +234,7 @@ namespace Telepathy
         {
             // peek first. allows us to process the first queued entry while
             // still keeping the pooled byte[] alive by not removing anything.
-            if (receivePipe.TryPeek(out int _, out EventType eventType, out ArraySegment<byte> message))
+            if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
             {
                 switch (eventType)
                 {

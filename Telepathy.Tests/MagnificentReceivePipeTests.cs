@@ -17,10 +17,10 @@ namespace Telepathy.Tests
         [Test]
         public void Enqueue()
         {
-            pipe.Enqueue(0, EventType.Connected, default);
+            pipe.Enqueue(EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            pipe.Enqueue(0, EventType.Connected, default);
+            pipe.Enqueue(EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(2));
         }
 
@@ -28,12 +28,11 @@ namespace Telepathy.Tests
         public void TryPeek()
         {
             ArraySegment<byte> message = new ArraySegment<byte>(new byte[]{0x42});
-            pipe.Enqueue(42, EventType.Connected, message);
+            pipe.Enqueue(EventType.Connected, message);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            bool result = pipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> peeked);
+            bool result = pipe.TryPeek(out EventType eventType, out ArraySegment<byte> peeked);
             Assert.That(result, Is.True);
-            Assert.That(connectionId, Is.EqualTo(42));
             Assert.That(eventType, Is.EqualTo(EventType.Connected));
             Assert.That(peeked.Offset, Is.EqualTo(message.Offset));
             Assert.That(peeked.Count, Is.EqualTo(message.Count));
@@ -47,7 +46,7 @@ namespace Telepathy.Tests
         [Test]
         public void TryDequeue()
         {
-            pipe.Enqueue(42, EventType.Connected, default);
+            pipe.Enqueue(EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             bool result = pipe.TryDequeue();
@@ -58,7 +57,7 @@ namespace Telepathy.Tests
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(0, EventType.Connected, default);
+            pipe.Enqueue(EventType.Connected, default);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             pipe.Clear();
@@ -73,7 +72,7 @@ namespace Telepathy.Tests
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // enqueue one. pool is empty so it should allocate a new byte[]
-            pipe.Enqueue(42, EventType.Data, new ArraySegment<byte>(new byte[]{0x1}));
+            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x1}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // dequeue. should return the byte[] to the pool
@@ -81,11 +80,11 @@ namespace Telepathy.Tests
             Assert.That(pipe.PoolCount, Is.EqualTo(1));
 
             // enqueue one. should use the pooled entry
-            pipe.Enqueue(42, EventType.Data, new ArraySegment<byte>(new byte[]{0x2}));
+            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x2}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // enqueue another one. pool is empty so it should allocate a new byte[]
-            pipe.Enqueue(42, EventType.Data, new ArraySegment<byte>(new byte[]{0x3}));
+            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x3}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // clear. should return both to pool.

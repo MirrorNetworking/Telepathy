@@ -340,19 +340,19 @@ namespace Telepathy
                 // peek first. allows us to process the first queued entry while
                 // still keeping the pooled byte[] alive by not removing anything.
                 MagnificentReceivePipe receivePipe = kvp.Value.receivePipe;
-                if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))
+                if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
                 {
                     switch (eventType)
                     {
                         case EventType.Connected:
-                            OnConnected?.Invoke(connectionId);
+                            OnConnected?.Invoke(kvp.Key);
                             break;
                         case EventType.Data:
-                            OnData?.Invoke(connectionId, message);
+                            OnData?.Invoke(kvp.Key, message);
                             break;
                         case EventType.Disconnected:
-                            OnDisconnected?.Invoke(connectionId);
-                            connectionsToRemove.Add(connectionId);
+                            OnDisconnected?.Invoke(kvp.Key);
+                            connectionsToRemove.Add(kvp.Key);
                             break;
                     }
 
