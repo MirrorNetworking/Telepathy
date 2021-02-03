@@ -7,6 +7,12 @@ using System.Threading;
 namespace Telepathy.Tests
 {
     // message struct to queue and test events more easily
+    public enum EventType
+    {
+        Connected,
+        Data,
+        Disconnected
+    }
     struct Message
     {
         public int connectionId;

@@ -22,8 +22,8 @@ namespace Telepathy
         // connect/disconnect messages can be simple flags
         // no need have a Message<EventType, data> queue if connect & disconnect
         // only happen once.
-        bool connectReceived;
-        bool disconnectReceived;
+        bool connectedFlag;
+        bool disconnectedFlag;
 
         // byte[] pool to avoid allocations
         // Take & Return is beautifully encapsulated in the pipe.
@@ -40,73 +40,69 @@ namespace Telepathy
             pool = new Pool<byte[]>(() => new byte[MaxMessageSize]);
         }
 
-        // for statistics. don't call Count and assume that it's the same after
-        // the call.
-        public int Count
+        // set connected/disconnected flags
+        public void SetConnected() { lock (this) { connectedFlag = true; } }
+        public void SetDisconnected() { lock (this) { disconnectedFlag = true; } }
+
+        // check & reset connected/disconnected flags
+        // => immediately resets them so Tick() doesn't process (dis)connected
+        //    multiple times!
+        public bool CheckConnected()
         {
-            // connect and disconnect count as messages too
-            get
+            lock (this)
             {
-                lock (this)
-                {
-                    return queue.Count +
-                           (connectReceived ? 1 : 0) +
-                           (disconnectReceived ? 1 : 0);
-                }
+                bool result = connectedFlag;
+                connectedFlag = false;
+                return result;
             }
         }
 
-        // pool count for testing
+        public bool CheckDisconnected()
+        {
+            lock (this)
+            {
+                bool result = disconnectedFlag;
+                disconnectedFlag = false;
+                return result;
+            }
+        }
+
+        // for statistics. don't call Count and assume that it's the same after
+        // the call.
+        // NOTE: only counts data messages. doesn't count connected/disconnected
+        public int Count
+        {
+            get { lock (this) { return queue.Count; } }
+        }
+
+        // byte[] pool count for testing
         public int PoolCount
         {
             get { lock (this) { return pool.Count(); } }
         }
 
         // enqueue a message
-        // -> ArraySegment to avoid allocations later
-        // -> parameters passed directly so it's more obvious that we don't just
-        //    queue a passed 'Message', instead we copy the ArraySegment into
-        //    a byte[] and store it internally, etc.)
-        public void Enqueue(EventType eventType, ArraySegment<byte> message)
+        // arraysegment for allocation free sends later.
+        // -> the segment's array is only used until Enqueue() returns!
+        public void Enqueue(ArraySegment<byte> message)
         {
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                switch (eventType)
-                {
-                    case EventType.Connected:
-                    {
-                        connectReceived = true;
-                        break;
-                    }
-                    case EventType.Data:
-                    {
-                        // ArraySegment is only valid until returning.
-                        // copy it into a byte[] that we can store.
-                        // ArraySegment array is only valid until returning, so copy
-                        // it into a byte[] that we can queue safely.
+                // ArraySegment array is only valid until returning, so copy
+                // it into a byte[] that we can queue safely.
 
-                        // get one from the pool first to avoid allocations
-                        byte[] bytes = pool.Take();
+                // get one from the pool first to avoid allocations
+                byte[] bytes = pool.Take();
 
-                        // copy into it
-                        Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
+                // copy into it
+                Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
 
-                        // indicate which part is the message
-                        ArraySegment<byte> segment = new ArraySegment<byte>(bytes, 0, message.Count);
+                // indicate which part is the message
+                ArraySegment<byte> segment = new ArraySegment<byte>(bytes, 0, message.Count);
 
-                        // enqueue it
-                        // IMPORTANT: pass the segment around pool byte[],
-                        // NOT the 'message' that is only valid until returning!
-                        queue.Enqueue(segment);
-                        break;
-                    }
-                    case EventType.Disconnected:
-                    {
-                        disconnectReceived = true;
-                        break;
-                    }
-                }
+                // now enqueue it
+                queue.Enqueue(segment);
             }
         }
 
@@ -116,39 +112,16 @@ namespace Telepathy
         // -> TryDequeue should be called after processing, so that the message
         //    is actually dequeued and the byte[] is returned to pool!
         // => see TryDequeue comments!
-        public bool TryPeek(out EventType eventType, out ArraySegment<byte> data)
+        public bool TryPeek(out ArraySegment<byte> data)
         {
-            eventType = EventType.Disconnected;
             data = default;
 
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                // IMPORTANT: need to Peek the same order as Dequeue!
-
-                // always process connect message first (if any), then reset
-                if (connectReceived)
+                if (queue.Count > 0)
                 {
-                    eventType = EventType.Connected;
-                    data = default;
-                    // DO NOT RESET THE FLAG. peek simply peeks.
-                    return true;
-                }
-                // process any data message after
-                else if (queue.Count > 0)
-                {
-                    eventType = EventType.Data;
                     data = queue.Peek();
-                    return true;
-                }
-                // always process disconnect last, then reset
-                // => AFTER everything else. disconnect is always last. don't
-                //    want to process any data messages after disconnect.
-                else if (disconnectReceived)
-                {
-                    eventType = EventType.Disconnected;
-                    data = default;
-                    // DO NOT RESET THE FLAG. peek simply peeks.
                     return true;
                 }
                 return false;
@@ -169,27 +142,10 @@ namespace Telepathy
             // pool & queue usage always needs to be locked
             lock (this)
             {
-                // IMPORTANT: need to Dequeue same order as Peek!
-
-                // always process connect message first (if any)
-                if (connectReceived)
-                {
-                    connectReceived = false;
-                    return true;
-                }
-                // process any data message after
-                else if (queue.Count > 0)
+                if (queue.Count > 0)
                 {
                     // dequeue and return byte[] to pool
                     pool.Return(queue.Dequeue().Array);
-                    return true;
-                }
-                // always process disconnect last, then reset
-                // => AFTER everything else. disconnect is always last. don't
-                //    want to process any data messages after disconnect.
-                else if (disconnectReceived)
-                {
-                    disconnectReceived = false;
                     return true;
                 }
                 return false;
@@ -202,8 +158,8 @@ namespace Telepathy
             lock (this)
             {
                 // clear flags
-                connectReceived = false;
-                disconnectReceived = false;
+                connectedFlag = false;
+                disconnectedFlag = false;
 
                 // clear queue, but via dequeue to return each byte[] to pool
                 while (queue.Count > 0)

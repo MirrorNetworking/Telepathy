@@ -378,9 +378,26 @@ namespace Telepathy
             {
                 MagnificentReceivePipe receivePipe = kvp.Value.receivePipe;
 
+                // need a processLimit copy just for this connection so that
+                // we can count the Connected message as a processed one.
+                // => otherwise decreasing the limit in Connected event would
+                //    decrease the limit for everyone!
+                int connectionProcessLimit = processLimit;
+
+                // always process connect FIRST before anything else
+                if (connectionProcessLimit > 0)
+                {
+                    if (receivePipe.CheckConnected())
+                    {
+                        OnConnected?.Invoke(kvp.Key);
+                        // it counts as a processed message
+                        --connectionProcessLimit;
+                    }
+                }
+
                 // process up to 'processLimit' messages for this connection
                 // checks enabled in case a Mirror scene message arrived
-                for (int i = 0; i < processLimit; ++i)
+                for (int i = 0; i < connectionProcessLimit; ++i)
                 {
                     // check enabled in case a Mirror scene message arrived
                     if (checkEnabled != null && !checkEnabled())
@@ -388,21 +405,9 @@ namespace Telepathy
 
                     // peek first. allows us to process the first queued entry while
                     // still keeping the pooled byte[] alive by not removing anything.
-                    if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
+                    if (receivePipe.TryPeek(out ArraySegment<byte> message))
                     {
-                        switch (eventType)
-                        {
-                            case EventType.Connected:
-                                OnConnected?.Invoke(kvp.Key);
-                                break;
-                            case EventType.Data:
-                                OnData?.Invoke(kvp.Key, message);
-                                break;
-                            case EventType.Disconnected:
-                                OnDisconnected?.Invoke(kvp.Key);
-                                connectionsToRemove.Add(kvp.Key);
-                                break;
-                        }
+                        OnData?.Invoke(kvp.Key, message);
 
                         // IMPORTANT: now dequeue and return it to pool AFTER we are
                         //            done processing the event.
@@ -411,6 +416,17 @@ namespace Telepathy
 
                     // AFTER PROCESSING, add remaining ones to our counter
                     remaining += receivePipe.Count;
+                }
+
+                // always process disconnect AFTER anything else
+                // (should never process data messages after disconnect message)
+                if (connectionProcessLimit > 0)
+                {
+                    if (receivePipe.CheckDisconnected())
+                    {
+                        OnDisconnected?.Invoke(kvp.Key);
+                        connectionsToRemove.Add(kvp.Key);
+                    }
                 }
             }
 

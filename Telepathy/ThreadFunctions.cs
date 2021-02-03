@@ -96,8 +96,8 @@ namespace Telepathy
             // are silent
             try
             {
-                // add connected event to pipe
-                receivePipe.Enqueue(EventType.Connected, default);
+                // set connected event in pipe
+                receivePipe.SetConnected();
 
                 // let's talk about reading data.
                 // -> normally we would read as much as possible and then
@@ -128,7 +128,7 @@ namespace Telepathy
                     // send to main thread via pipe
                     // -> it'll copy the message internally so we can reuse the
                     //    receive buffer for next read!
-                    receivePipe.Enqueue(EventType.Data, message);
+                    receivePipe.Enqueue(message);
 
                     // disconnect if receive pipe gets too big.
                     // -> avoids ever growing queue memory if network is slower
@@ -165,12 +165,12 @@ namespace Telepathy
                 stream.Close();
                 client.Close();
 
-                // add 'Disconnected' message after disconnecting properly.
+                // set 'Disconnected' event in pipe after disconnecting properly
                 // -> always AFTER closing the streams to avoid a race condition
                 //    where Disconnected -> Reconnect wouldn't work because
                 //    Connected is still true for a short moment before the stream
                 //    would be closed.
-                receivePipe.Enqueue(EventType.Disconnected, default);
+                receivePipe.SetDisconnected();
             }
         }
         // thread send function

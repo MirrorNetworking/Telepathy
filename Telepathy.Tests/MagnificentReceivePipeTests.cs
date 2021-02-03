@@ -15,28 +15,40 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ConnectedFlag_SetCheckReset()
+        {
+            pipe.SetConnected();
+            Assert.That(pipe.CheckConnected(), Is.True);
+            Assert.That(pipe.CheckConnected(), Is.False);
+        }
+
+        [Test]
+        public void DisconnectedFlag_SetCheckReset()
+        {
+            pipe.SetDisconnected();
+            Assert.That(pipe.CheckDisconnected(), Is.True);
+            Assert.That(pipe.CheckDisconnected(), Is.False);
+        }
+
+        [Test]
         public void Enqueue()
         {
-            pipe.Enqueue(EventType.Connected, default);
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x42}));
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x42}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x43}));
             Assert.That(pipe.Count, Is.EqualTo(2));
-
-            pipe.Enqueue(EventType.Disconnected, default);
-            Assert.That(pipe.Count, Is.EqualTo(3));
         }
 
         [Test]
         public void TryPeek()
         {
             ArraySegment<byte> message = new ArraySegment<byte>(new byte[]{0x42});
-            pipe.Enqueue(EventType.Data, message);
+            pipe.Enqueue(message);
             Assert.That(pipe.Count, Is.EqualTo(1));
 
-            bool result = pipe.TryPeek(out EventType eventType, out ArraySegment<byte> peeked);
+            bool result = pipe.TryPeek(out ArraySegment<byte> peeked);
             Assert.That(result, Is.True);
-            Assert.That(eventType, Is.EqualTo(EventType.Data));
             Assert.That(peeked.Offset, Is.EqualTo(message.Offset));
             Assert.That(peeked.Count, Is.EqualTo(message.Count));
             for (int i = 0; i < message.Count; ++i)
@@ -49,7 +61,7 @@ namespace Telepathy.Tests
         [Test]
         public void TryDequeue()
         {
-            pipe.Enqueue(EventType.Connected, default);
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x42}));
             Assert.That(pipe.Count, Is.EqualTo(1));
 
             bool result = pipe.TryDequeue();
@@ -57,44 +69,42 @@ namespace Telepathy.Tests
             Assert.That(pipe.Count, Is.EqualTo(0));
         }
 
-        // ReceivePipe only sets flags for connected/disconnected messages
-        // make sure the order is still respected
-        // -> connect should always happen first
-        // -> data inbetween
-        // -> disconnect last
+        // messages should always be processed in the order they were received
         [Test]
         public void EnqueueDequeueRespectsOrder()
         {
-            pipe.Enqueue(EventType.Connected, default);
-            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x42}));
-            pipe.Enqueue(EventType.Disconnected, default);
+            // enqueue
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x42}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x43}));
 
             // peek and dequeue first
-            bool result = pipe.TryPeek(out EventType eventType, out ArraySegment<byte> message);
+            bool result = pipe.TryPeek(out ArraySegment<byte> message);
             Assert.That(result, Is.True);
-            Assert.That(eventType, Is.EqualTo(EventType.Connected));
+            Assert.That(message.Count, Is.EqualTo(1));
+            Assert.That(message.Array[0], Is.EqualTo(0x42));
             pipe.TryDequeue();
 
             // peek and dequeue second
-            result = pipe.TryPeek(out eventType, out message);
+            result = pipe.TryPeek(out message);
             Assert.That(result, Is.True);
-            Assert.That(eventType, Is.EqualTo(EventType.Data));
-            pipe.TryDequeue();
-
-            // peek and dequeue third
-            result = pipe.TryPeek(out eventType, out message);
-            Assert.That(result, Is.True);
-            Assert.That(eventType, Is.EqualTo(EventType.Disconnected));
+            Assert.That(message.Count, Is.EqualTo(1));
+            Assert.That(message.Array[0], Is.EqualTo(0x43));
             pipe.TryDequeue();
         }
 
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(EventType.Connected, default);
+            // set flags and enqueue an element
+            pipe.SetConnected();
+            pipe.SetDisconnected();
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x42}));
             Assert.That(pipe.Count, Is.EqualTo(1));
 
+            // all should be reset
             pipe.Clear();
+            Assert.That(pipe.CheckConnected, Is.False);
+            Assert.That(pipe.CheckDisconnected, Is.False);
             Assert.That(pipe.Count, Is.EqualTo(0));
         }
 
@@ -106,7 +116,7 @@ namespace Telepathy.Tests
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // enqueue one. pool is empty so it should allocate a new byte[]
-            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x1}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x1}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // dequeue. should return the byte[] to the pool
@@ -114,11 +124,11 @@ namespace Telepathy.Tests
             Assert.That(pipe.PoolCount, Is.EqualTo(1));
 
             // enqueue one. should use the pooled entry
-            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x2}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x2}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // enqueue another one. pool is empty so it should allocate a new byte[]
-            pipe.Enqueue(EventType.Data, new ArraySegment<byte>(new byte[]{0x3}));
+            pipe.Enqueue(new ArraySegment<byte>(new byte[]{0x3}));
             Assert.That(pipe.PoolCount, Is.EqualTo(0));
 
             // clear. should return both to pool.

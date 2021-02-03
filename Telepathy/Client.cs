@@ -90,9 +90,9 @@ namespace Telepathy
                 // but there is no server running on that ip/port
                 Log.Info("Client Recv: failed to connect to ip=" + ip + " port=" + port + " reason=" + exception);
 
-                // add 'Disconnected' event to receive pipe so that the caller
+                // set 'Disconnected' event to receive pipe so that the caller
                 // knows that the Connect failed. otherwise they will never know
-                receivePipe.Enqueue(EventType.Disconnected, default);
+                receivePipe.SetDisconnected();
             }
             catch (ThreadInterruptedException)
             {
@@ -264,6 +264,17 @@ namespace Telepathy
         // => make sure to allocate the lambda only once in transports
         public int Tick(int processLimit, Func<bool> checkEnabled = null)
         {
+            // always process connect FIRST before anything else
+            if (processLimit > 0)
+            {
+                if (receivePipe.CheckConnected())
+                {
+                    OnConnected?.Invoke();
+                    // it counts as a processed message
+                    --processLimit;
+                }
+            }
+
             // process up to 'processLimit' messages
             for (int i = 0; i < processLimit; ++i)
             {
@@ -273,20 +284,9 @@ namespace Telepathy
 
                 // peek first. allows us to process the first queued entry while
                 // still keeping the pooled byte[] alive by not removing anything.
-                if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
+                if (receivePipe.TryPeek(out ArraySegment<byte> message))
                 {
-                    switch (eventType)
-                    {
-                        case EventType.Connected:
-                            OnConnected?.Invoke();
-                            break;
-                        case EventType.Data:
-                            OnData?.Invoke(message);
-                            break;
-                        case EventType.Disconnected:
-                            OnDisconnected?.Invoke();
-                            break;
-                    }
+                    OnData?.Invoke(message);
 
                     // IMPORTANT: now dequeue and return it to pool AFTER we are
                     //            done processing the event.
@@ -294,6 +294,16 @@ namespace Telepathy
                 }
                 // no more messages. stop the loop.
                 else break;
+            }
+
+            // always process disconnect AFTER anything else
+            // (should never process data messages after disconnect message)
+            if (processLimit > 0)
+            {
+                if (receivePipe.CheckDisconnected())
+                {
+                    OnDisconnected?.Invoke();
+                }
             }
 
             // return what's left to process for next time
