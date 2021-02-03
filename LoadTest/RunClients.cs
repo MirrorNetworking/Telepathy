@@ -66,7 +66,7 @@ namespace Telepathy.LoadTest
                         messagesSent += 2;
 
                         // tick client to receive and update statistics in OnData
-                        client.Tick();
+                        client.Tick(1);
                     }
                 }
 

@@ -371,6 +371,48 @@ namespace Telepathy.Tests
             }
         }
 
+        [Test]
+        public void ClientTickRespectsLimit()
+        {
+            // create & connect client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // eat server connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // eat client connected message
+            Message clientConnectMsg = NextMessage(client);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // send 3 messages to the client
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x01}));
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x02}));
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x03}));
+
+            // give it enough time to go over the thread -> network -> thread
+            // until all 3 have DEFINITELY arrived
+            Thread.Sleep(1000);
+
+            // hook up to OnData
+            // (need to do it before calling Tick because NextMessage(client)
+            //  always overwrites it)
+            int processed = 0;
+            client.OnData = segment => ++processed;
+
+            // process up to two messages
+            client.Tick(2);
+            Assert.That(processed, Is.EqualTo(2));
+
+            // process the last one (pass a high limit just to see what happens)
+            client.Tick(999);
+            Assert.That(processed, Is.EqualTo(3));
+
+            // cleanup
+            client.Disconnect();
+        }
+
         // Tick() might process more than one message, so we need to keep a list
         // and always return the next one in NextMessage. don't want to skip any.
         static Queue<Message> serverMessages = new Queue<Message>();
@@ -440,7 +482,7 @@ namespace Telepathy.Tests
             int count = 0;
             while (count < 100)
             {
-                client.Tick();
+                client.Tick(1);
                 if (clientMessages.Count > 0)
                 {
                     return clientMessages.Dequeue();
