@@ -73,7 +73,7 @@ namespace Telepathy
                     position += message.Count;
 
                     // return to pool so it can be reused (avoids allocations!)
-                    pool.Return(message.Array);
+                    pool.Push(message.Array);
                 }
 
                 // we did serialize something

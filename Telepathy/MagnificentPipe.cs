@@ -19,19 +19,21 @@ namespace Telepathy
         // IMPORTANT: lock{} all usages!
         protected readonly Queue<ArraySegment<byte>> queue = new Queue<ArraySegment<byte>>();
 
+        // max message size for pooling
+        readonly int MaxMessageSize;
+
         // byte[] pool to avoid allocations
         // Take & Return is beautifully encapsulated in the pipe.
         // the outside does not need to worry about anything.
         // and it can be tested easily.
         //
         // IMPORTANT: lock{} all usages!
-        protected readonly Pool<byte[]> pool;
+        protected readonly Stack<byte[]> pool = new Stack<byte[]>();
 
         // constructor
         protected MagnificentPipe(int MaxMessageSize)
         {
-            // initialize pool to create max message sized byte[]s each time
-            pool = new Pool<byte[]>(() => new byte[MaxMessageSize]);
+            this.MaxMessageSize = MaxMessageSize;
         }
 
         // for statistics. don't call Count and assume that it's the same after
@@ -44,7 +46,7 @@ namespace Telepathy
         // pool count for testing
         public int PoolCount
         {
-            get { lock (this) { return pool.Count(); } }
+            get { lock (this) { return pool.Count; } }
         }
 
         // enqueue a message
@@ -58,8 +60,10 @@ namespace Telepathy
                 // ArraySegment array is only valid until returning, so copy
                 // it into a byte[] that we can queue safely.
 
-                // get one from the pool first to avoid allocations
-                byte[] bytes = pool.Take();
+                // to avoid allocations, try to get a byte[] from the pool first
+                byte[] bytes = pool.Count > 0
+                               ? pool.Pop()
+                               : new byte[MaxMessageSize];
 
                 // copy into it
                 Buffer.BlockCopy(message.Array, message.Offset, bytes, 0, message.Count);
@@ -111,7 +115,7 @@ namespace Telepathy
                 if (queue.Count > 0)
                 {
                     // dequeue and return byte[] to pool
-                    pool.Return(queue.Dequeue().Array);
+                    pool.Push(queue.Dequeue().Array);
                     return true;
                 }
                 return false;
@@ -126,7 +130,7 @@ namespace Telepathy
                 // clear queue, but via dequeue to return each byte[] to pool
                 while (queue.Count > 0)
                 {
-                    pool.Return(queue.Dequeue().Array);
+                    pool.Push(queue.Dequeue().Array);
                 }
             }
         }
