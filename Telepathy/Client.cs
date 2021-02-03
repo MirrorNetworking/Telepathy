@@ -82,7 +82,7 @@ namespace Telepathy
 
                 // run the receive loop
                 // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
-                ThreadFunctions.ReceiveLoop(0, client, MaxMessageSize, receivePipe, messageQueueSizeWarning);
+                ThreadFunctions.ReceiveLoop(0, client, MaxMessageSize, receivePipe, QueueLimit);
             }
             catch (SocketException exception)
             {

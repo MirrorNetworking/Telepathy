@@ -161,7 +161,7 @@ namespace Telepathy
                         {
                             // run the receive loop
                             // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
-                            ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, token.receivePipe, messageQueueSizeWarning);
+                            ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, token.receivePipe, QueueLimit);
 
                             // IMPORTANT: do NOT remove from clients after the
                             // thread ends. need to do it in Tick() so that the
