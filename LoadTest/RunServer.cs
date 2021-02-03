@@ -30,8 +30,9 @@ namespace Telepathy.LoadTest
 
             while (true)
             {
-                // tick while receiving. will auto reply.
-                while (server.Tick() > 0) {}
+                // tick and process as many as we can. will auto reply.
+                // (100k limit to avoid deadlocks)
+                server.Tick(100000);
 
                 // sleep
                 Thread.Sleep(1000 / serverFrequency);

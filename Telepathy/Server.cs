@@ -320,47 +320,60 @@ namespace Telepathy
             return false;
         }
 
-        // tick every connection once, processes the next message (if any)
+        // tick: processes up to 'limit' messages for each connection
+        // => limit parameter to avoid deadlocks / too long freezes if server or
+        //    client is too slow to process network load
+        // => Mirror & DOTSNET need to have a process limit anyway.
+        //    might as well do it here and make life easier.
         // => returns amount of remaining messages to process, so the caller
         //    can call tick again as many times as needed (or up to a limit)
         //
-        // ticking every connection once is way better for server stability.
-        // previously we had one receive pipe for all.
-        // so if one connection would spam the pipe, everyone else would be
-        // delayed.
-        // => one connection per pipe is way more stable and allows us to limit
-        //    each connection's pipe
+        // ticking EVERY CONNECTION up to 'limit is way better for stability.
+        // previously we had one receive pipe for all, so if one connection
+        // would spam the pipe, everyone else would be delayed.
+        //
+        // IMPORTANT: Mirror & DOTSNET call tick multiple times up to limit.
+        //            doing the limit IN HERE IS FASTER because we don't need to
+        //            iterate all connections each limit. instead we iterate
+        //            ONLY ONCE and process 'limit' messages for each connection
+        //            => THIS IS EXTREMELY IMPORTANT FOR PERFORMANCE!
         List<int> connectionsToRemove = new List<int>();
-        public int Tick()
+        public int Tick(int processLimit)
         {
             int remaining = 0;
 
+            // for each connection
             foreach (KeyValuePair<int, ClientToken> kvp in clients)
             {
-                // peek first. allows us to process the first queued entry while
-                // still keeping the pooled byte[] alive by not removing anything.
                 MagnificentReceivePipe receivePipe = kvp.Value.receivePipe;
-                if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
+
+                // process up to 'processLimit' messages for this connection
+                for (int i = 0; i < processLimit; ++i)
                 {
-                    switch (eventType)
+                    // peek first. allows us to process the first queued entry while
+                    // still keeping the pooled byte[] alive by not removing anything.
+                    if (receivePipe.TryPeek(out EventType eventType, out ArraySegment<byte> message))
                     {
-                        case EventType.Connected:
-                            OnConnected?.Invoke(kvp.Key);
-                            break;
-                        case EventType.Data:
-                            OnData?.Invoke(kvp.Key, message);
-                            break;
-                        case EventType.Disconnected:
-                            OnDisconnected?.Invoke(kvp.Key);
-                            connectionsToRemove.Add(kvp.Key);
-                            break;
+                        switch (eventType)
+                        {
+                            case EventType.Connected:
+                                OnConnected?.Invoke(kvp.Key);
+                                break;
+                            case EventType.Data:
+                                OnData?.Invoke(kvp.Key, message);
+                                break;
+                            case EventType.Disconnected:
+                                OnDisconnected?.Invoke(kvp.Key);
+                                connectionsToRemove.Add(kvp.Key);
+                                break;
+                        }
+
+                        // IMPORTANT: now dequeue and return it to pool AFTER we are
+                        //            done processing the event.
+                        receivePipe.TryDequeue();
                     }
 
-                    // IMPORTANT: now dequeue and return it to pool AFTER we are
-                    //            done processing the event.
-                    receivePipe.TryDequeue();
-
-                    // add to remaining
+                    // AFTER PROCESSING, add remaining ones to our counter
                     remaining += receivePipe.Count;
                 }
             }
