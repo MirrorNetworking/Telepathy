@@ -213,12 +213,34 @@ namespace Telepathy
                 // respect max message size to avoid allocation attacks.
                 if (message.Count <= MaxMessageSize)
                 {
-                    // add to thread safe send pipe and return immediately.
-                    // calling Send here would be blocking (sometimes for long
-                    // times if other side lags or wire was disconnected)
-                    sendPipe.Enqueue(message);
-                    sendPending.Set(); // interrupt SendThread WaitOne()
-                    return true;
+                    // check send pipe limit
+                    if (sendPipe.Count < QueueLimit)
+                    {
+                        // add to thread safe send pipe and return immediately.
+                        // calling Send here would be blocking (sometimes for long
+                        // times if other side lags or wire was disconnected)
+                        sendPipe.Enqueue(message);
+                        sendPending.Set(); // interrupt SendThread WaitOne()
+                        return true;
+                    }
+                    // disconnect if send queue gets too big.
+                    // -> avoids ever growing queue memory if network is slower
+                    //    than input
+                    // -> avoids ever growing latency as well
+                    //
+                    // note: while SendThread always grabs the WHOLE send queue
+                    //       immediately, it's still possible that the sending
+                    //       blocks for so long that the send queue just gets
+                    //       way too big. have a limit - better safe than sorry.
+                    else
+                    {
+                        // log the reason
+                        Log.Warning($"Client.Send: sendPipe reached limit of {QueueLimit}. This can happen if we call send faster than the network can process messages. Disconnecting to avoid ever growing memory & latency.");
+
+                        // just close it. send thread will take care of the rest.
+                        client.Close();
+                        return false;
+                    }
                 }
                 Log.Error("Client.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
                 return false;
