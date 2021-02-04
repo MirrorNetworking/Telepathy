@@ -109,6 +109,11 @@ namespace Telepathy
             {
                 // expected if Disconnect() aborts it
             }
+            catch (ObjectDisposedException)
+            {
+                // expected if Disconnect() aborts it and disposed the client
+                // while ReceiveThread is in a blocking Connect() call
+            }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
