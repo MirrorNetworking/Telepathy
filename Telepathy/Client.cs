@@ -4,6 +4,26 @@ using System.Threading;
 
 namespace Telepathy
 {
+    // need a thread safe helper class for connecting state
+    // (can't pass a 'volatile bool' as ref into the ReceiveThread)
+    class SafeBool
+    {
+        bool _Value;
+        public bool Value
+        {
+            get
+            {
+                lock (this) { return _Value; }
+            }
+            set
+            {
+                lock (this) { _Value = value; }
+            }
+        }
+
+        public SafeBool(bool value) { _Value = value; }
+    }
+
     public class Client : Common
     {
         // events to hook into
@@ -14,7 +34,6 @@ namespace Telepathy
 
         public TcpClient client;
         Thread receiveThread;
-        Thread sendThread;
 
         // disconnect if send queue gets too big.
         // -> avoids ever growing queue memory if network is slower than input
@@ -46,8 +65,14 @@ namespace Telepathy
         // => bools are atomic according to
         //    https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables
         //    made volatile so the compiler does not reorder access to it
-        volatile bool _Connecting;
-        public bool Connecting => _Connecting;
+        //
+        // IMPORTANT: we use an THREAD SAFE OBJECT so that we can pass the
+        //            reference to ReceiveThread, and so that we can CREATE A
+        //            NEW ONE each time we connect, and never mess with an old
+        //            thread's connecting field.
+        //            => fixes flaky ReconnectTest and SpamConnectTest!
+        SafeBool _Connecting = new SafeBool(false);
+        public bool Connecting => _Connecting.Value;
 
         // thread safe pipe to send messages from main thread to send thread
         MagnificentSendPipe sendPipe;
@@ -62,16 +87,27 @@ namespace Telepathy
         public Client(int MaxMessageSize) : base(MaxMessageSize) {}
 
         // the thread function
-        // TODO should make this static to avoid sharing state!
-        void ReceiveThreadFunction(string ip, int port)
+        // STATIC to avoid sharing state!
+        // => ReconnectTest() previously had a bug where 'client' could be null
+        //    since we the member variable between threads. that was terrible.
+        //    passing it as parameter means it will never be null!
+        static void ReceiveThreadFunction(TcpClient client,
+                                          string ip, int port,
+                                          int MaxMessageSize, bool NoDelay, int SendTimeout,
+                                          MagnificentSendPipe sendPipe,
+                                          MagnificentReceivePipe receivePipe,
+                                          ManualResetEvent sendPending,
+                                          SafeBool Connecting)
         {
+            Thread sendThread = null;
+
             // absolutely must wrap with try/catch, otherwise thread
             // exceptions are silent
             try
             {
                 // connect (blocking)
                 client.Connect(ip, port);
-                _Connecting = false;
+                Connecting.Value = false;
 
                 // set socket options after the socket was created in Connect()
                 // (not after the constructor because we clear the socket there)
@@ -127,7 +163,7 @@ namespace Telepathy
 
             // Connect might have failed. thread might have been closed.
             // let's reset connecting state no matter what.
-            _Connecting = false;
+            Connecting.Value = false;
 
             // if we got here then we are done. ReceiveLoop cleans up already,
             // but we may never get there if connect fails. so let's clean up
@@ -145,7 +181,10 @@ namespace Telepathy
             }
 
             // We are connecting from now until Connect succeeds or fails
-            _Connecting = true;
+            // => create a new connecting field each time.
+            //    we pass it to ReceiveThread and DO NOT EVER want to mess with
+            //    an old thread's value
+            _Connecting = new SafeBool(true);
 
             // create a TcpClient with perfect IPv4, IPv6 and hostname resolving
             // support.
@@ -183,7 +222,9 @@ namespace Telepathy
             //    too long, which is especially good in games
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
-            receiveThread = new Thread(() => { ReceiveThreadFunction(ip, port); });
+            receiveThread = new Thread(() => {
+                ReceiveThreadFunction(client, ip, port, MaxMessageSize, NoDelay, SendTimeout, sendPipe, receivePipe, sendPending, _Connecting);
+            });
             receiveThread.IsBackground = true;
             receiveThread.Start();
         }
@@ -204,7 +245,7 @@ namespace Telepathy
 
                 // we interrupted the receive Thread, so we can't guarantee that
                 // connecting was reset. let's do it manually.
-                _Connecting = false;
+                _Connecting.Value = false;
 
                 // clear send pipe. no need to hold on to elements.
                 // (unlike receiveQueue, which is still needed to process the
