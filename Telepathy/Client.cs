@@ -12,9 +12,8 @@ namespace Telepathy
     //    while attempting to use it for a new connection attempt etc.
     // => creating a fresh client state each time is the best solution against
     //    data races here!
-    class ClientState
+    class ClientState : ConnectionState
     {
-        public TcpClient client = new TcpClient();
         public Thread receiveThread;
 
         // TcpClient.Connected doesn't check if socket != null, which
@@ -38,24 +37,8 @@ namespace Telepathy
         //    made volatile so the compiler does not reorder access to it
         public volatile bool Connecting;
 
-        // thread safe pipe for received messages
-        public readonly MagnificentReceivePipe receivePipe;
-
-        // thread safe pipe to send messages from main thread to send thread
-        public readonly MagnificentSendPipe sendPipe;
-
-        // ManualResetEvent to wake up the send thread. better than Thread.Sleep
-        // -> call Set() if everything was sent
-        // -> call Reset() if there is something to send again
-        // -> call WaitOne() to block until Reset was called
-        public readonly ManualResetEvent sendPending = new ManualResetEvent(false);
-
-        public ClientState(int MaxMessageSize)
-        {
-            // create pipes with max message size for pooling
-            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
-            sendPipe = new MagnificentSendPipe(MaxMessageSize);
-        }
+        // constructor always creates new TcpClient for client connection!
+        public ClientState(int MaxMessageSize) : base(new TcpClient(), MaxMessageSize) {}
 
         // dispose all the state safely
         public void Dispose()
