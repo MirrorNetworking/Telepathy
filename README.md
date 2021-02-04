@@ -25,7 +25,7 @@ We needed a library that is:
 
 MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.<br>
 
-See also: [SyncThing about KCP vs. TCP](https://forum.syncthing.net/t/connections-over-udp/9382).
+See also: [SyncThing article on KCP vs. TCP](https://forum.syncthing.net/t/connections-over-udp/9382).
 
 # What about...
 * Async Sockets: perform great in regular C# projects, but poorly when used in Unity.
