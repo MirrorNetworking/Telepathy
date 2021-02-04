@@ -1,4 +1,4 @@
-![Telepathy Logo](https://i.imgur.com/CWfzmVh.png)
+![Telepathy Logo](https://i.imgur.com/2Dw1zx6.png)
 
 [![Build status](https://img.shields.io/appveyor/ci/vis2k73562/telepathy.svg)](https://ci.appveyor.com/project/vis2k73562/telepathy/)
 [![AppVeyor tests branch](https://img.shields.io/appveyor/tests/vis2k73562/telepathy.svg)](https://ci.appveyor.com/project/vis2k73562/telepathy/branch/master/tests)
