@@ -48,7 +48,7 @@ namespace Telepathy
         // -> call Set() if everything was sent
         // -> call Reset() if there is something to send again
         // -> call WaitOne() to block until Reset was called
-        ManualResetEvent sendPending = new ManualResetEvent(false);
+        ManualResetEvent sendPending;
 
         // constructor
         public Client(int MaxMessageSize) : base(MaxMessageSize) {}
@@ -165,6 +165,10 @@ namespace Telepathy
             //    still want to process all the latest messages afterwards
             receivePipe = new MagnificentReceivePipe(MaxMessageSize);
             sendPipe = new MagnificentSendPipe(MaxMessageSize);
+
+            // create a new ManualResetEvent each time too.
+            // do not ever want to mess with an old thread's event
+            sendPending = new ManualResetEvent(false);
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
