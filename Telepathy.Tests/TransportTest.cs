@@ -73,7 +73,7 @@ namespace Telepathy.Tests
             Assert.That(client.Connecting, Is.False);
         }
 
-        [Test, Ignore("flaky")]
+        [Test]
         public void SpamConnectTest()
         {
             Client client = new Client(MaxMessageSize);
@@ -111,7 +111,7 @@ namespace Telepathy.Tests
             Assert.That(client.Connecting, Is.False);
         }
 
-        [Test, Ignore("flaky")]
+        [Test]
         public void ReconnectTest()
         {
             Client client = new Client(MaxMessageSize);
@@ -370,7 +370,7 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
-        [Test, Ignore("flaky")]
+        [Test]
         public void AllocationAttackTest()
         {
             // connect a client
