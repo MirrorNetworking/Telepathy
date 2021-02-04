@@ -20,7 +20,7 @@ We needed a library that is:
 * **High performance:** Telepathy can handle thousands of connections and packages.
 * **Concurrent:** Telepathy uses two threads per connection. It can make heavy use of multi core processors.
 * **Allocation Free:** Telepathy has no allocations in hot path. Avoids GC spikes in Games.
-* **Simple:** Telepathy takes care of everything. All you need to do is call Connect/GetNextMessage/Disconnect.
+* **Simple:** Telepathy wraps all the insanity behind Connect/Send/Disconnect/Tick.
 * **Message based:** if we send 10 and then 2 bytes, then the other end receives 10 and then 2 bytes, never 12 at once.
 
 MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.<br>
