@@ -62,6 +62,7 @@ namespace Telepathy
         public Client(int MaxMessageSize) : base(MaxMessageSize) {}
 
         // the thread function
+        // TODO should make this static to avoid sharing state!
         void ReceiveThreadFunction(string ip, int port)
         {
             // absolutely must wrap with try/catch, otherwise thread
