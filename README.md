@@ -5,24 +5,27 @@
 [![Discord](https://img.shields.io/discord/343440455738064897.svg)](https://discordapp.com/invite/N9QVxbM)
 [![Codecov](https://codecov.io/gh/vis2k/telepathy/graph/badge.svg)](https://codecov.io/gh/vis2k/telepathy)
 
-Simple, message based, MMO Scale TCP networking in C#. And no magic.
+Simple, message based, allocation free MMO Scale TCP networking in C#. And no magic.
 
 Telepathy was designed with the [KISS Principle](https://en.wikipedia.org/wiki/KISS_principle) in mind.<br/>
 Telepathy is fast and extremely reliable, designed for [MMO](https://www.assetstore.unity3d.com/#!/content/51212) scale Networking.<br/>
 Telepathy uses framing, so anything sent will be received the same way.<br/>
-Telepathy is raw C# and can be used in Unity3D too.<br/>
+Telepathy is raw C# and made for Unity & [Mirror](https://github.com/vis2k/Mirror).<br/>
 
 # What makes Telepathy special?
-Telepathy was originally designed for [uMMORPG](https://www.assetstore.unity3d.com/#!/content/51212) after 3 years in UDP hell.
+Telepathy was originally designed for [uMMORPG](https://assetstore.unity.com/packages/templates/systems/ummorpg-remastered-159401) after 3 years in UDP hell.
 
 We needed a library that is:
-* **Stable & Bug free:** Telepathy uses only 500 lines of code. There is no magic.
+* **Stable & Bug free:** Telepathy uses only 700 lines of code. There is no magic.
 * **High performance:** Telepathy can handle thousands of connections and packages.
 * **Concurrent:** Telepathy uses two threads per connection. It can make heavy use of multi core processors.
+* **Allocation Free:** Telepathy has no allocations in hot path. Avoids GC spikes in Games.
 * **Simple:** Telepathy takes care of everything. All you need to do is call Connect/GetNextMessage/Disconnect.
 * **Message based:** if we send 10 and then 2 bytes, then the other end receives 10 and then 2 bytes, never 12 at once.
 
-MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.
+MMORPGs are insanely difficult to make and we created Telepathy so that we would never have to worry about low level Networking again.<br>
+
+See also: [SyncThing about KCP vs. TCP](https://forum.syncthing.net/t/connections-over-udp/9382).
 
 # What about...
 * Async Sockets: perform great in regular C# projects, but poorly when used in Unity.
@@ -30,30 +33,23 @@ MMORPGs are insanely difficult to make and we created Telepathy so that we would
 
 # Using the Telepathy Server
 ```C#
-// create and start the server
+// create server & hook up events
+// note that the message ArraySegment<byte> is only valid until returning (allocation free)
 Telepathy.Server server = new Telepathy.Server();
+server.OnConnected = (connectionId) => Console.WriteLine(msg.connectionId + " Connected");
+server.OnData = (connectionId, message) => Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+server.OnDisconnected = (connectionId) => Console.WriteLine(msg.connectionId + " Disconnected");
+
+// start
 server.Start(1337);
 
-// grab all new messages. do this in your Update loop.
-Telepathy.Message msg;
-while (server.GetNextMessage(out msg))
-{
-    switch (msg.eventType)
-    {
-        case Telepathy.EventType.Connected:
-            Console.WriteLine(msg.connectionId + " Connected");
-            break;
-        case Telepathy.EventType.Data:
-            Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));
-            break;
-        case Telepathy.EventType.Disconnected:
-            Console.WriteLine(msg.connectionId + " Disconnected");
-            break;
-    }
-}
+// tick to process incoming messages (do this in your update loop)
+// => limit parameter to avoid deadlocks!
+server.Tick(100);
 
 // send a message to client with connectionId = 0 (first one)
-server.Send(0, new byte[]{0x42, 0x13, 0x37});
+byte[] message = new byte[]{0x42, 0x13, 0x37}
+server.Send(0, new ArraySegment<byte>(message));
 
 // stop the server when you don't need it anymore
 server.Stop();
@@ -61,30 +57,23 @@ server.Stop();
 
 # Using the Telepathy Client
 ```C#
-// create and connect the client
+// create client & hook up events
+// note that the message ArraySegment<byte> is only valid until returning (allocation free)
 Telepathy.Client client = new Telepathy.Client();
+client.OnConnected = () => Console.WriteLine("Client Connected");
+client.OnData = (message) => Console.WriteLine("Client Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+client.OnDisconnected = () => Console.WriteLine("Client Disconnected");
+
+// connect
 client.Connect("localhost", 1337);
 
-// grab all new messages. do this in your Update loop.
-Telepathy.Message msg;
-while (client.GetNextMessage(out msg))
-{
-    switch (msg.eventType)
-    {
-        case Telepathy.EventType.Connected:
-            Console.WriteLine("Connected");
-            break;
-        case Telepathy.EventType.Data:
-            Console.WriteLine("Data: " + BitConverter.ToString(msg.data));
-            break;
-        case Telepathy.EventType.Disconnected:
-            Console.WriteLine("Disconnected");
-            break;
-    }
-}
+// tick to process incoming messages (do this in your update loop)
+// => limit parameter to avoid deadlocks!
+client.Tick(100);
 
 // send a message to server
-client.Send(new byte[]{0xFF});
+byte[] message = new byte[]{0xFF}
+client.Send(new ArraySegment<byte>(message));
 
 // disconnect from the server when we are done
 client.Disconnect();
@@ -110,6 +99,15 @@ public class SimpleExample : MonoBehaviour
         Telepathy.Logger.Log = Debug.Log;
         Telepathy.Logger.LogWarning = Debug.LogWarning;
         Telepathy.Logger.LogError = Debug.LogError;
+
+        // hook up events
+        client.OnConnected = () => Debug.Log("Client Connected");
+        client.OnData = (message) => Debug.Log("Client Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+        client.OnDisconnected = () => Debug.Log("Client Disconnected");
+
+        server.OnConnected = (connectionId) => Debug.Log(msg.connectionId + " Connected");
+        server.OnData = (connectionId, message) => Debug.Log(msg.connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+        server.OnDisconnected = (connectionId) => Debug.Log(msg.connectionId + " Disconnected");
     }
 
     void Update()
@@ -117,51 +115,22 @@ public class SimpleExample : MonoBehaviour
         // client
         if (client.Connected)
         {
+            // send message on key press
             if (Input.GetKeyDown(KeyCode.Space))
-                client.Send(new byte[]{0x1});
+                client.Send(new ArraySegment<byte>(new byte[]{0x1}));
 
-            // show all new messages
-            Telepathy.Message msg;
-            while (client.GetNextMessage(out msg))
-            {
-                switch (msg.eventType)
-                {
-                    case Telepathy.EventType.Connected:
-                        Debug.Log("Connected");
-                        break;
-                    case Telepathy.EventType.Data:
-                        Debug.Log("Data: " + BitConverter.ToString(msg.data));
-                        break;
-                    case Telepathy.EventType.Disconnected:
-                        Debug.Log("Disconnected");
-                        break;
-                }
-            }
+            // tick to process messages
+            client.Tick(100);
         }
 
         // server
         if (server.Active)
         {
             if (Input.GetKeyDown(KeyCode.Space))
-                server.Send(0, new byte[]{0x2});
+                server.Send(0, new ArraySegment<byte>(new byte[]{0x2}));
 
-            // show all new messages
-            Telepathy.Message msg;
-            while (server.GetNextMessage(out msg))
-            {
-                switch (msg.eventType)
-                {
-                    case Telepathy.EventType.Connected:
-                        Debug.Log(msg.connectionId + " Connected");
-                        break;
-                    case Telepathy.EventType.Data:
-                        Debug.Log(msg.connectionId + " Data: " + BitConverter.ToString(msg.data));
-                        break;
-                    case Telepathy.EventType.Disconnected:
-                        Debug.Log(msg.connectionId + " Disconnected");
-                        break;
-                }
-            }
+            // tick to process messages
+            server.Tick(100);
         }
     }
 
@@ -219,7 +188,5 @@ Test Results:<br/>
 |   128   |        7% |     26 MB |         1-2 MB/s         | Passed |
 |   500   |       28% |     51 MB |         3-4 MB/s         | Passed |
 |  1000   |       42% |     75 MB |         3-5 MB/s         | Passed |
-
-_Note: results will be significantly better on a really powerful server. Tests will follow._
 
 You can run this test yourself by running the provided [LoadTest](LoadTest)
