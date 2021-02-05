@@ -32,53 +32,46 @@ namespace Telepathy
         //            allocations!
         public bool DequeueAndSerializeAll(ref byte[] payload, out int packetSize)
         {
-            // pool & queue usage always needs to be locked
-            lock (this)
+            // do nothing if empty
+            packetSize = 0;
+            if (queue.Count == 0)
+                return false;
+
+            // we might have multiple pending messages. merge into one
+            // packet to avoid TCP overheads and improve performance.
+            //
+            // IMPORTANT: Mirror & DOTSNET already batch into MaxMessageSize
+            //            chunks, but we STILL pack all pending messages
+            //            into one large payload so we only give it to TCP
+            //            ONCE. This is HUGE for performance so we keep it!
+            packetSize = 0;
+            foreach (ArraySegment<byte> message in queue)
+                packetSize += 4 + message.Count; // header + content
+
+            // create payload buffer if not created yet or previous one is
+            // too small
+            // IMPORTANT: payload.Length might be > packetSize! don't use it!
+            if (payload == null || payload.Length < packetSize)
+                payload = new byte[packetSize];
+
+            // dequeue all byte[] messages and serialize into the packet
+            int position = 0;
+            while (queue.TryDequeue(out ArraySegment<byte> message))
             {
-                // do nothing if empty
-                packetSize = 0;
-                if (queue.Count == 0)
-                    return false;
+                // write header (size) into buffer at position
+                Utils.IntToBytesBigEndianNonAlloc(message.Count, payload, position);
+                position += 4;
 
-                // we might have multiple pending messages. merge into one
-                // packet to avoid TCP overheads and improve performance.
-                //
-                // IMPORTANT: Mirror & DOTSNET already batch into MaxMessageSize
-                //            chunks, but we STILL pack all pending messages
-                //            into one large payload so we only give it to TCP
-                //            ONCE. This is HUGE for performance so we keep it!
-                packetSize = 0;
-                foreach (ArraySegment<byte> message in queue)
-                    packetSize += 4 + message.Count; // header + content
+                // copy message into payload at position
+                Buffer.BlockCopy(message.Array, message.Offset, payload, position, message.Count);
+                position += message.Count;
 
-                // create payload buffer if not created yet or previous one is
-                // too small
-                // IMPORTANT: payload.Length might be > packetSize! don't use it!
-                if (payload == null || payload.Length < packetSize)
-                    payload = new byte[packetSize];
-
-                // dequeue all byte[] messages and serialize into the packet
-                int position = 0;
-                while (queue.Count > 0)
-                {
-                    // dequeue
-                    ArraySegment<byte> message = queue.Dequeue();
-
-                    // write header (size) into buffer at position
-                    Utils.IntToBytesBigEndianNonAlloc(message.Count, payload, position);
-                    position += 4;
-
-                    // copy message into payload at position
-                    Buffer.BlockCopy(message.Array, message.Offset, payload, position, message.Count);
-                    position += message.Count;
-
-                    // return to pool so it can be reused (avoids allocations!)
-                    pool.Push(message.Array);
-                }
-
-                // we did serialize something
-                return true;
+                // return to pool so it can be reused (avoids allocations!)
+                pool.Push(message.Array);
             }
+
+            // we did serialize something
+            return true;
         }
     }
 }
