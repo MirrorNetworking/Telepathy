@@ -115,10 +115,11 @@ public class SimpleExample : MonoBehaviour
             // send message on key press
             if (Input.GetKeyDown(KeyCode.Space))
                 client.Send(new ArraySegment<byte>(new byte[]{0x1}));
-
-            // tick to process messages
-            client.Tick(100);
         }
+
+        // tick to process messages
+        // (even if not connected so we still process disconnect messages)
+        client.Tick(100);
 
         // server
         if (server.Active)
@@ -126,9 +127,11 @@ public class SimpleExample : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
                 server.Send(0, new ArraySegment<byte>(new byte[]{0x2}));
 
-            // tick to process messages
-            server.Tick(100);
         }
+
+        // tick to process messages
+        // (even if not active so we still process disconnect messages)
+        server.Tick(100);
     }
 
     void OnGUI()
