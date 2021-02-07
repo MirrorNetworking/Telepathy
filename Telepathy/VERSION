@@ -1,3 +1,10 @@
+V1.4 [2021-02-03]
+- Server/Client.Tick: limit parameter added to process up to 'limit' messages.
+  makes Mirror & DOTSNET transports easier to implement
+- stability: Server/Client send queue limit disconnects instead of showing a
+  warning. allows for load balancing. better to kick one connection and keep
+  the server running than slowing everything down for everyone.
+
 V1.3 [2021-02-02]
 - perf: ReceivePipe: byte[] pool for allocation free receives (╯°□°)╯︵ ┻━┻
 - fix: header buffer, payload buffer data races because they were made non
