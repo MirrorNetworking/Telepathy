@@ -19,6 +19,17 @@ namespace Telepathy
         public TcpListener listener;
         Thread listenerThread;
 
+        // disconnect if send queue gets too big.
+        // -> avoids ever growing queue memory if network is slower than input
+        // -> disconnecting is great for load balancing. better to disconnect
+        //    one connection than risking every connection / the whole server
+        // -> huge queue would introduce multiple seconds of latency anyway
+        //
+        // Mirror/DOTSNET use MaxMessageSize batching, so for a 16kb max size:
+        //   limit =  1,000 means  16 MB of memory/connection
+        //   limit = 10,000 means 160 MB of memory/connection
+        public int SendQueueLimit = 10000;
+
         // class with all the client's data. let's call it Token for consistency
         // with the async socket methods.
         class ClientToken
@@ -265,12 +276,36 @@ namespace Telepathy
                 ClientToken token;
                 if (clients.TryGetValue(connectionId, out token))
                 {
-                    // add to thread safe send pipe and return immediately.
-                    // calling Send here would be blocking (sometimes for long
-                    // times if other side lags or wire was disconnected)
-                    token.sendPipe.Enqueue(message);
-                    token.sendPending.Set(); // interrupt SendThread WaitOne()
-                    return true;
+                    // check send pipe limit
+                    if (token.sendPipe.Count < SendQueueLimit)
+                    {
+                        // add to thread safe send pipe and return immediately.
+                        // calling Send here would be blocking (sometimes for long
+                        // times if other side lags or wire was disconnected)
+                        token.sendPipe.Enqueue(message);
+                        token.sendPending.Set(); // interrupt SendThread WaitOne()
+                        return true;
+                    }
+                    // disconnect if send queue gets too big.
+                    // -> avoids ever growing queue memory if network is slower
+                    //    than input
+                    // -> disconnecting is great for load balancing. better to
+                    //    disconnect one connection than risking every
+                    //    connection / the whole server
+                    //
+                    // note: while SendThread always grabs the WHOLE send queue
+                    //       immediately, it's still possible that the sending
+                    //       blocks for so long that the send queue just gets
+                    //       way too big. have a limit - better safe than sorry.
+                    else
+                    {
+                        // log the reason
+                        Log.Warning($"Server.Send: sendPipe for connection {connectionId} reached limit of {SendQueueLimit}. This can happen if we call send faster than the network can process messages. Disconnecting this connection for load balancing.");
+
+                        // just close it. send thread will take care of the rest.
+                        token.client.Close();
+                        return false;
+                    }
                 }
 
                 // sending to an invalid connectionId is expected sometimes.

@@ -495,6 +495,41 @@ namespace Telepathy.Tests
             Assert.Fail("The message did not get to the server");
             return default;
         }
+        [Test]
+        public void ServerSendQueueLimitDisconnects()
+        {
+            // let's use an extremely small limit
+            int queueLimit = 2;
+
+            // configure server with limit
+            server.SendQueueLimit = queueLimit;
+            server.Start(port);
+
+            // connect a client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // we should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // need to send WAY more than limit messages because send thread
+            // runs in the background and processes immediately.
+            // => can't assume that we can freely send 'limit' messages without
+            //    the send thread even taking one of them from the queue
+            byte[] bytes = {0x01, 0x02};
+            for (int i = 0; i < queueLimit * 1000; ++i)
+                server.Send(id, new ArraySegment<byte>(bytes));
+
+            // now receive on server.
+            // when hitting the limit, the connection disconnect.
+            // => so the next message should be a disconnect message.
+            Message dataMsg = NextMessage(server);
+            Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Disconnected));
+
+            // done
+            client.Disconnect();
+        }
 
         // Tick() might process more than one message, so we need to keep a list
         // and always return the next one in NextMessage. don't want to skip any.
