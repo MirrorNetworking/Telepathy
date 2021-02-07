@@ -1,3 +1,12 @@
+V1.5 [2021-02-05]
+- fix: client data races & flaky tests fixed by creating a new client state
+  object every time we connect. fixes data race where an old dieing thread
+  might still try to modify the current state
+- fix: Client.ReceiveThreadFunction catches and ignores ObjectDisposedException
+  which can happen if Disconnect() closes and disposes the client, while the
+  ReceiveThread just starts up and still uses the client.
+- Server/Client Tick() optional enabled check for Mirror scene changing
+
 V1.4 [2021-02-03]
 - Server/Client.Tick: limit parameter added to process up to 'limit' messages.
   makes Mirror & DOTSNET transports easier to implement
