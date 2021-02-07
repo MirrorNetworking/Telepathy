@@ -106,6 +106,8 @@ namespace Telepathy
         // -> TryDequeue should be called after processing, so that the message
         //    is actually dequeued and the byte[] is returned to pool!
         // => see TryDequeue comments!
+        //
+        // IMPORTANT: TryPeek & Dequeue need to be called from the SAME THREAD!
         public bool TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> data)
         {
             connectionId = 0;
@@ -136,6 +138,8 @@ namespace Telepathy
         //    byte[] that is already returned to pool.
         // => Peek & Dequeue is the most simple, clean solution for receive
         //    pipe pooling to avoid allocations!
+        //
+        // IMPORTANT: TryPeek & Dequeue need to be called from the SAME THREAD!
         public bool TryDequeue()
         {
             // pool & queue usage always needs to be locked
