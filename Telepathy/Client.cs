@@ -12,9 +12,8 @@ namespace Telepathy
     //    while attempting to use it for a new connection attempt etc.
     // => creating a fresh client state each time is the best solution against
     //    data races here!
-    class ClientState
+    class ClientConnectionState : ConnectionState
     {
-        public TcpClient client = new TcpClient();
         public Thread receiveThread;
 
         // TcpClient.Connected doesn't check if socket != null, which
@@ -39,22 +38,16 @@ namespace Telepathy
         public volatile bool Connecting;
 
         // thread safe pipe for received messages
+        // => inside client connection state so that we can create a new state
+        //    each time we connect
+        //    (unlike server which has one receive pipe for all connections)
         public readonly MagnificentReceivePipe receivePipe;
 
-        // thread safe pipe to send messages from main thread to send thread
-        public readonly MagnificentSendPipe sendPipe;
-
-        // ManualResetEvent to wake up the send thread. better than Thread.Sleep
-        // -> call Set() if everything was sent
-        // -> call Reset() if there is something to send again
-        // -> call WaitOne() to block until Reset was called
-        public readonly ManualResetEvent sendPending = new ManualResetEvent(false);
-
-        public ClientState(int MaxMessageSize)
+        // constructor always creates new TcpClient for client connection!
+        public ClientConnectionState(int MaxMessageSize) : base(new TcpClient(), MaxMessageSize)
         {
-            // create pipes with max message size for pooling
+            // create receive pipe with max message size for pooling
             receivePipe = new MagnificentReceivePipe(MaxMessageSize);
-            sendPipe = new MagnificentSendPipe(MaxMessageSize);
         }
 
         // dispose all the state safely
@@ -109,7 +102,7 @@ namespace Telepathy
         // all client state wrapped into an object that is passed to ReceiveThread
         // => we create a new one each time we connect to avoid data races with
         //    old dieing threads still using the previous object!
-        ClientState state;
+        ClientConnectionState state;
 
         // Connected & Connecting
         public bool Connected => state != null && state.Connected;
@@ -126,7 +119,7 @@ namespace Telepathy
         // => pass ClientState object. a new one is created for each new thread!
         // => avoids data races where an old dieing thread might still modify
         //    the current thread's state :/
-        static void ReceiveThreadFunction(ClientState state, string ip, int port, int MaxMessageSize, bool NoDelay, int SendTimeout)
+        static void ReceiveThreadFunction(ClientConnectionState state, string ip, int port, int MaxMessageSize, bool NoDelay, int SendTimeout)
 
         {
             Thread sendThread = null;
@@ -213,7 +206,7 @@ namespace Telepathy
             // overwrite old thread's state object. create a new one to avoid
             // data races where an old dieing thread might still modify the
             // current state! fixes all the flaky tests!
-            state = new ClientState(MaxMessageSize);
+            state = new ClientConnectionState(MaxMessageSize);
 
             // We are connecting from now until Connect succeeds or fails
             state.Connecting = true;

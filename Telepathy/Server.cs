@@ -36,32 +36,8 @@ namespace Telepathy
         // pipe count, useful for debugging / benchmarks
         public int ReceivePipeCount => receivePipe.Count;
 
-        // class with all the client's data. let's call it Token for consistency
-        // with the async socket methods.
-        class ClientToken
-        {
-            public TcpClient client;
-
-            // thread safe pipe to send messages from main thread to send thread
-            public readonly MagnificentSendPipe sendPipe;
-
-            // ManualResetEvent to wake up the send thread. better than Thread.Sleep
-            // -> call Set() if everything was sent
-            // -> call Reset() if there is something to send again
-            // -> call WaitOne() to block until Reset was called
-            public ManualResetEvent sendPending = new ManualResetEvent(false);
-
-            public ClientToken(TcpClient client, int MaxMessageSize)
-            {
-                this.client = client;
-
-                // create send pipe with max message size for pooling
-                sendPipe = new MagnificentSendPipe(MaxMessageSize);
-            }
-        }
-
-        // clients with <connectionId, ClientData>
-        readonly ConcurrentDictionary<int, ClientToken> clients = new ConcurrentDictionary<int, ClientToken>();
+        // clients with <connectionId, ConnectionState>
+        readonly ConcurrentDictionary<int, ConnectionState> clients = new ConcurrentDictionary<int, ConnectionState>();
 
         // connectionId counter
         int counter;
@@ -126,8 +102,8 @@ namespace Telepathy
                     int connectionId = NextConnectionId();
 
                     // add to dict immediately
-                    ClientToken token = new ClientToken(client, MaxMessageSize);
-                    clients[connectionId] = token;
+                    ConnectionState connection = new ConnectionState(client, MaxMessageSize);
+                    clients[connectionId] = connection;
 
                     // spawn a send thread for each client
                     Thread sendThread = new Thread(() =>
@@ -138,7 +114,7 @@ namespace Telepathy
                         {
                             // run the send loop
                             // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
-                            ThreadFunctions.SendLoop(connectionId, client, token.sendPipe, token.sendPending);
+                            ThreadFunctions.SendLoop(connectionId, client, connection.sendPipe, connection.sendPending);
                         }
                         catch (ThreadAbortException)
                         {
@@ -254,7 +230,7 @@ namespace Telepathy
             listenerThread = null;
 
             // close all client connections
-            foreach (KeyValuePair<int, ClientToken> kvp in clients)
+            foreach (KeyValuePair<int, ConnectionState> kvp in clients)
             {
                 TcpClient client = kvp.Value.client;
                 // close the stream if not closed yet. it may have been closed
@@ -280,17 +256,16 @@ namespace Telepathy
             if (message.Count <= MaxMessageSize)
             {
                 // find the connection
-                ClientToken token;
-                if (clients.TryGetValue(connectionId, out token))
+                if (clients.TryGetValue(connectionId, out ConnectionState connection))
                 {
                     // check send pipe limit
-                    if (token.sendPipe.Count < SendQueueLimit)
+                    if (connection.sendPipe.Count < SendQueueLimit)
                     {
                         // add to thread safe send pipe and return immediately.
                         // calling Send here would be blocking (sometimes for long
                         // times if other side lags or wire was disconnected)
-                        token.sendPipe.Enqueue(message);
-                        token.sendPending.Set(); // interrupt SendThread WaitOne()
+                        connection.sendPipe.Enqueue(message);
+                        connection.sendPending.Set(); // interrupt SendThread WaitOne()
                         return true;
                     }
                     // disconnect if send queue gets too big.
@@ -310,7 +285,7 @@ namespace Telepathy
                         Log.Warning($"Server.Send: sendPipe for connection {connectionId} reached limit of {SendQueueLimit}. This can happen if we call send faster than the network can process messages. Disconnecting this connection for load balancing.");
 
                         // just close it. send thread will take care of the rest.
-                        token.client.Close();
+                        connection.client.Close();
                         return false;
                     }
                 }
@@ -331,10 +306,9 @@ namespace Telepathy
         public string GetClientAddress(int connectionId)
         {
             // find the connection
-            ClientToken token;
-            if (clients.TryGetValue(connectionId, out token))
+            if (clients.TryGetValue(connectionId, out ConnectionState connection))
             {
-                return ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
+                return ((IPEndPoint)connection.client.Client.RemoteEndPoint).Address.ToString();
             }
             return "";
         }
@@ -343,11 +317,10 @@ namespace Telepathy
         public bool Disconnect(int connectionId)
         {
             // find the connection
-            ClientToken token;
-            if (clients.TryGetValue(connectionId, out token))
+            if (clients.TryGetValue(connectionId, out ConnectionState connection))
             {
                 // just close it. send thread will take care of the rest.
-                token.client.Close();
+                connection.client.Close();
                 Log.Info("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
@@ -396,7 +369,7 @@ namespace Telepathy
                             OnDisconnected?.Invoke(connectionId);
                             // remove disconnected connection now that the final
                             // disconnected message was processed.
-                            clients.TryRemove(connectionId, out ClientToken _);
+                            clients.TryRemove(connectionId, out ConnectionState _);
                             break;
                     }
 
