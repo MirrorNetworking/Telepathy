@@ -6,13 +6,6 @@ namespace Telepathy
         // IMPORTANT: DO NOT SHARE STATE ACROSS SEND/RECV LOOPS (DATA RACES)
         // (except receive pipe which is used for all threads)
 
-        // thread safe pipe for received messages
-        // (not a HashSet because one connection can have multiple new messages)
-        protected MagnificentReceivePipe receivePipe;
-
-        // pipe count, useful for debugging / benchmarks
-        public int ReceivePipeCount => receivePipe.Count;
-
         // warning if message queue gets too big
         // if the average message is about 20 bytes then:
         // -   1k messages are   20KB

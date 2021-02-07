@@ -30,6 +30,12 @@ namespace Telepathy
         //   limit = 10,000 means 160 MB of memory/connection
         public int SendQueueLimit = 10000;
 
+        // thread safe pipe for received messages
+        protected MagnificentReceivePipe receivePipe;
+
+        // pipe count, useful for debugging / benchmarks
+        public int ReceivePipeCount => receivePipe.Count;
+
         // class with all the client's data. let's call it Token for consistency
         // with the async socket methods.
         class ClientToken
