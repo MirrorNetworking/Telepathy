@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using System.Text;
 using System.Threading;
@@ -368,6 +369,48 @@ namespace Telepathy.Tests
             }
         }
 
+        [Test]
+        public void ClientTickRespectsLimit()
+        {
+            // create & connect client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // eat server connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // eat client connected message
+            Message clientConnectMsg = NextMessage(client);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // send 3 messages to the client
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x01}));
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x02}));
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x03}));
+
+            // give it enough time to go over the thread -> network -> thread
+            // until all 3 have DEFINITELY arrived
+            Thread.Sleep(1000);
+
+            // hook up to OnData
+            // (need to do it before calling Tick because NextMessage(client)
+            //  always overwrites it)
+            int processed = 0;
+            client.OnData = segment => ++processed;
+
+            // process up to two messages
+            client.Tick(2);
+            Assert.That(processed, Is.EqualTo(2));
+
+            // process the last one (pass a high limit just to see what happens)
+            client.Tick(999);
+            Assert.That(processed, Is.EqualTo(3));
+
+            // cleanup
+            client.Disconnect();
+        }
+
         static Message NextMessage(Server server)
         {
             // GetNextMessage was changed to Tick()
@@ -404,41 +447,45 @@ namespace Telepathy.Tests
             return message;
         }
 
+        // Tick() might process more than one message, so we need to keep a list
+        // and always return the next one in NextMessage. don't want to skip any.
+        static Queue<Message> clientMessages = new Queue<Message>();
         static Message NextMessage(Client client)
         {
-            // GetNextMessage was changed to Tick()
-            // but for testing, NextMessage is still extremely useful.
-            // let's wrap it.
+            // any remaining messages from last tick?
+            if (clientMessages.Count > 0)
+                return clientMessages.Dequeue();
 
-            // -> setup the events before we call tick
-            //    (they are only used in Tick, so it's fine if we just set them
-            //     up before calling Tick)
-            Message message = default;
-            client.OnConnected = () => { message = new Message(0, EventType.Connected, null); };
+            // setup the events before we call tick
+            // (they are only used in Tick, so it's fine if we just set them
+            //  up before calling Tick)
+            client.OnConnected = () => { clientMessages.Enqueue(new Message(0, EventType.Connected, null)); };
             client.OnData = (data) => {
                 // ArraySegment.Array is only available until returning. copy it
                 // so we can return the content for tests.
                 byte[] copy = new byte[data.Count];
                 Buffer.BlockCopy(data.Array, data.Offset, copy, 0, data.Count);
-                message = new Message(0, EventType.Data, copy);
+                clientMessages.Enqueue(new Message(0, EventType.Data, copy));
             };
-            client.OnDisconnected = () => { message = new Message(0, EventType.Disconnected, null); };
+            client.OnDisconnected = () => { clientMessages.Enqueue(new Message(0, EventType.Disconnected, null)); };
 
             // try tick for 10s until we receive a new message
             int count = 0;
-            while (!client.Tick())
+            while (count < 100)
             {
-                count++;
-                Thread.Sleep(100);
-
-                if (count >= 100)
+                client.Tick(1);
+                if (clientMessages.Count > 0)
                 {
-                    Assert.Fail("The message did not get to the server");
+                    return clientMessages.Dequeue();
+                }
+                else
+                {
+                    count++;
+                    Thread.Sleep(100);
                 }
             }
-
-            return message;
+            Assert.Fail("The message did not get to the client");
+            return default;
         }
-
     }
 }
