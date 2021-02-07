@@ -149,8 +149,12 @@ namespace Telepathy
                             // (receive pipe is shared across all loops)
                             ThreadFunctions.ReceiveLoop(connectionId, client, MaxMessageSize, receivePipe, messageQueueSizeWarning);
 
-                            // remove client from clients dict afterwards
-                            clients.TryRemove(connectionId, out ClientToken _);
+                            // IMPORTANT: do NOT remove from clients after the
+                            // thread ends. need to do it in Tick() so that the
+                            // disconnect event in the pipe is still processed.
+                            // (removing client immediately would mean that the
+                            //  pipe is lost and the disconnect event is never
+                            //  processed)
 
                             // sendthread might be waiting on ManualResetEvent,
                             // so let's make sure to end it if the connection
@@ -326,6 +330,9 @@ namespace Telepathy
                         break;
                     case EventType.Disconnected:
                         OnDisconnected?.Invoke(connectionId);
+                        // remove disconnected connection now that the final
+                        // disconnected message was processed.
+                        clients.TryRemove(connectionId, out ClientToken _);
                         break;
                 }
 
