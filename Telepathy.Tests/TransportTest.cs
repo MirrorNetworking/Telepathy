@@ -635,6 +635,51 @@ namespace Telepathy.Tests
             client.Disconnect();
         }
 
+        // test a server with multiple connections too, just to be sure
+        [Test]
+        public void MultipleConnections()
+        {
+            // create and connect all clients
+            List<Client> clients = new List<Client>();
+            for (int i = 0; i < 10; ++i)
+            {
+                Client client = new Client(MaxMessageSize);
+                client.Connect("127.0.0.1", port);
+                clients.Add(client);
+            }
+
+            // wait until all are connected
+            foreach (Client client in clients)
+            {
+                // eat this client's connect message
+                Message clientConnectMsg = NextMessage(client);
+                Assert.That(clientConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+                // eat A server connnect message. could be from any client.
+                Message serverConnectMsg = NextMessage(server);
+                Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+            }
+
+            // for each client, send data to the server and wait until the server
+            // received it
+            for (int i = 0; i < clients.Count; ++i)
+            {
+                // client->server send
+                Client client = clients[i];
+                client.Send(new ArraySegment<byte>(new byte[]{(byte)i}));
+
+                // server receive
+                Message serverMessage = NextMessage(server);
+                Assert.That(serverMessage.eventType, Is.EqualTo(EventType.Data));
+                Assert.That(serverMessage.data.Length, Is.EqualTo(1));
+                Assert.That(serverMessage.data[0], Is.EqualTo((byte)i));
+            }
+
+            // disconnect all clients
+            foreach (Client client in clients)
+                client.Disconnect();
+        }
+
         // Tick() might process more than one message, so we need to keep a list
         // and always return the next one in NextMessage. don't want to skip any.
         static Queue<Message> clientMessages = new Queue<Message>();
