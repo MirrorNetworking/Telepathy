@@ -354,11 +354,21 @@ namespace Telepathy
         //    might as well do it here and make life easier.
         // => returns amount of remaining messages to process, so the caller
         //    can call tick again as many times as needed (or up to a limit)
-        public int Tick(int processLimit)
+        //
+        // Tick() may process multiple messages, but Mirror needs a way to stop
+        // processing immediately if a scene change messages arrives. Mirror
+        // can't process any other messages during a scene change.
+        // (could be useful for others too)
+        // => make sure to allocate the lambda only once in transports
+        public int Tick(int processLimit, Func<bool> checkEnabled = null)
         {
             // process up to 'processLimit' messages for this connection
             for (int i = 0; i < processLimit; ++i)
             {
+                // check enabled in case a Mirror scene message arrived
+                if (checkEnabled != null && !checkEnabled())
+                    break;
+
                 // peek first. allows us to process the first queued entry while
                 // still keeping the pooled byte[] alive by not removing anything.
                 if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))

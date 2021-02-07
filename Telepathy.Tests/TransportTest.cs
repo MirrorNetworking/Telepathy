@@ -561,6 +561,80 @@ namespace Telepathy.Tests
             Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Disconnected));
         }
 
+        [Test]
+        public void ClientTickRespectsEnabledCheck()
+        {
+            // create & connect client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // eat server connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // eat client connected message
+            Message clientConnectMsg = NextMessage(client);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // send 2 messages to the client
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x01}));
+            server.Send(id, new ArraySegment<byte>(new byte[]{0x02}));
+
+            // give it enough time to go over the thread -> network -> thread
+            // until all 3 have DEFINITELY arrived
+            Thread.Sleep(1000);
+
+            // hook up to OnData
+            // (need to do it before calling Tick because NextMessage(client)
+            //  always overwrites it)
+            int processed = 0;
+            client.OnData = segment => ++processed;
+
+            // tick with enabled check returning true only for first element
+            client.Tick(999, () => processed == 0);
+            Assert.That(processed, Is.EqualTo(1));
+
+            // cleanup
+            client.Disconnect();
+        }
+
+        [Test]
+        public void ServerTickRespectsEnabledCheck()
+        {
+            // create & connect client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // eat server connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // eat client connected message
+            Message clientConnectMsg = NextMessage(client);
+            Assert.That(serverConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // send 2 messages to the server
+            client.Send(new ArraySegment<byte>(new byte[]{0x01}));
+            client.Send(new ArraySegment<byte>(new byte[]{0x02}));
+
+            // give it enough time to go over the thread -> network -> thread
+            // until all 3 have DEFINITELY arrived
+            Thread.Sleep(1000);
+
+            // hook up to OnData
+            // (need to do it before calling Tick because NextMessage(server)
+            //  always overwrites it)
+            int processed = 0;
+            server.OnData = (connectionId, segment) => ++processed;
+
+            // tick with enabled check returning true only for first element
+            server.Tick(999, () => processed == 0);
+            Assert.That(processed, Is.EqualTo(1));
+
+            // cleanup
+            client.Disconnect();
+        }
+
         // Tick() might process more than one message, so we need to keep a list
         // and always return the next one in NextMessage. don't want to skip any.
         static Queue<Message> clientMessages = new Queue<Message>();
