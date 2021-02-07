@@ -210,11 +210,12 @@ namespace Telepathy
             // not if already started
             if (Active) return false;
 
-            // clear old messages in pipe, just to be sure that the caller
-            // doesn't receive data from last time and gets out of sync.
-            // -> calling this in Stop isn't smart because the caller may
-            //    still want to process all the latest messages afterwards
-            receivePipe.Clear();
+            // create receive pipe with max message size for pooling
+            // => create new pipes every time!
+            //    if an old receive thread is still finishing up, it might still
+            //    be using the old pipes. we don't want to risk any old data for
+            //    our new start here.
+            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
 
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
@@ -362,6 +363,10 @@ namespace Telepathy
         // => make sure to allocate the lambda only once in transports
         public int Tick(int processLimit, Func<bool> checkEnabled = null)
         {
+            // only if pipe was created yet (after start())
+            if (receivePipe == null)
+                return 0;
+
             // process up to 'processLimit' messages for this connection
             for (int i = 0; i < processLimit; ++i)
             {

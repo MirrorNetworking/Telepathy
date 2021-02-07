@@ -8,7 +8,7 @@ namespace Telepathy
 
         // thread safe pipe for received messages
         // (not a HashSet because one connection can have multiple new messages)
-        protected readonly MagnificentReceivePipe receivePipe;
+        protected MagnificentReceivePipe receivePipe;
 
         // pipe count, useful for debugging / benchmarks
         public int ReceivePipeCount => receivePipe.Count;
@@ -42,9 +42,6 @@ namespace Telepathy
         protected Common(int MaxMessageSize)
         {
             this.MaxMessageSize = MaxMessageSize;
-
-            // create receive pipe with max message size for pooling
-            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
         }
     }
 }

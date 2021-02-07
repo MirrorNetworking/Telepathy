@@ -50,7 +50,7 @@ namespace Telepathy
         public bool Connecting => _Connecting;
 
         // thread safe pipe to send messages from main thread to send thread
-        readonly MagnificentSendPipe sendPipe;
+        MagnificentSendPipe sendPipe;
 
         // ManualResetEvent to wake up the send thread. better than Thread.Sleep
         // -> call Set() if everything was sent
@@ -59,11 +59,7 @@ namespace Telepathy
         ManualResetEvent sendPending = new ManualResetEvent(false);
 
         // constructor
-        public Client(int MaxMessageSize) : base(MaxMessageSize)
-        {
-            // create send pipe with max message size for pooling
-            sendPipe = new MagnificentSendPipe(MaxMessageSize);
-        }
+        public Client(int MaxMessageSize) : base(MaxMessageSize) {}
 
         // the thread function
         void ReceiveThreadFunction(string ip, int port)
@@ -168,12 +164,13 @@ namespace Telepathy
             client = new TcpClient(); // creates IPv4 socket
             client.Client = null; // clear internal IPv4 socket until Connect()
 
-            // clear old messages in pipe, just to be sure that the caller
-            // doesn't receive data from last time and gets out of sync.
-            // -> calling this in Disconnect isn't smart because the caller may
-            //    still want to process all the latest messages afterwards
-            receivePipe.Clear();
-            sendPipe.Clear();
+            // create pipes with max message size for pooling
+            // => create new pipes every time!
+            //    if an old receive thread is still finishing up, it might still
+            //    be using the old pipes. we don't want to risk any old data for
+            //    our new connect here.
+            receivePipe = new MagnificentReceivePipe(MaxMessageSize);
+            sendPipe = new MagnificentSendPipe(MaxMessageSize);
 
             // client.Connect(ip, port) is blocking. let's call it in the thread
             // and return immediately.
@@ -276,6 +273,10 @@ namespace Telepathy
         // => make sure to allocate the lambda only once in transports
         public int Tick(int processLimit, Func<bool> checkEnabled = null)
         {
+            // only if pipes were created yet (after connect())
+            if (receivePipe == null || sendPipe == null)
+                return 0;
+
             // process up to 'processLimit' messages
             for (int i = 0; i < processLimit; ++i)
             {
