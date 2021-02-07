@@ -312,36 +312,48 @@ namespace Telepathy
             return false;
         }
 
-        // tick once, processes the next message (if any)
-        // -> tick it while returning true (or up to a limit to avoid deadlocks)
-        public bool Tick()
+        // tick: processes up to 'limit' messages for each connection
+        // => limit parameter to avoid deadlocks / too long freezes if server or
+        //    client is too slow to process network load
+        // => Mirror & DOTSNET need to have a process limit anyway.
+        //    might as well do it here and make life easier.
+        // => returns amount of remaining messages to process, so the caller
+        //    can call tick again as many times as needed (or up to a limit)
+        public int Tick(int processLimit)
         {
-            // peek first. allows us to process the first queued entry while
-            // still keeping the pooled byte[] alive by not removing anything.
-            if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))
+            // process up to 'processLimit' messages for this connection
+            for (int i = 0; i < processLimit; ++i)
             {
-                switch (eventType)
+                // peek first. allows us to process the first queued entry while
+                // still keeping the pooled byte[] alive by not removing anything.
+                if (receivePipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> message))
                 {
-                    case EventType.Connected:
-                        OnConnected?.Invoke(connectionId);
-                        break;
-                    case EventType.Data:
-                        OnData?.Invoke(connectionId, message);
-                        break;
-                    case EventType.Disconnected:
-                        OnDisconnected?.Invoke(connectionId);
-                        // remove disconnected connection now that the final
-                        // disconnected message was processed.
-                        clients.TryRemove(connectionId, out ClientToken _);
-                        break;
-                }
+                    switch (eventType)
+                    {
+                        case EventType.Connected:
+                            OnConnected?.Invoke(connectionId);
+                            break;
+                        case EventType.Data:
+                            OnData?.Invoke(connectionId, message);
+                            break;
+                        case EventType.Disconnected:
+                            OnDisconnected?.Invoke(connectionId);
+                            // remove disconnected connection now that the final
+                            // disconnected message was processed.
+                            clients.TryRemove(connectionId, out ClientToken _);
+                            break;
+                    }
 
-                // IMPORTANT: now dequeue and return it to pool AFTER we are
-                //            done processing the event.
-                receivePipe.TryDequeue();
-                return true;
+                    // IMPORTANT: now dequeue and return it to pool AFTER we are
+                    //            done processing the event.
+                    receivePipe.TryDequeue();
+                }
+                // no more messages. stop the loop.
+                else break;
             }
-            return false;
+
+            // return what's left to process for next time
+            return receivePipe.Count;
         }
     }
 }
