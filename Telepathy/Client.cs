@@ -119,7 +119,7 @@ namespace Telepathy
         // => pass ClientState object. a new one is created for each new thread!
         // => avoids data races where an old dieing thread might still modify
         //    the current thread's state :/
-        static void ReceiveThreadFunction(ClientConnectionState state, string ip, int port, int MaxMessageSize, bool NoDelay, int SendTimeout)
+        static void ReceiveThreadFunction(ClientConnectionState state, string ip, int port, int MaxMessageSize, bool NoDelay, int SendTimeout, int ReceiveTimeout)
 
         {
             Thread sendThread = null;
@@ -136,6 +136,7 @@ namespace Telepathy
                 // (not after the constructor because we clear the socket there)
                 state.client.NoDelay = NoDelay;
                 state.client.SendTimeout = SendTimeout;
+                state.client.ReceiveTimeout = ReceiveTimeout;
 
                 // start send thread only after connected
                 // IMPORTANT: DO NOT SHARE STATE ACROSS MULTIPLE THREADS!
@@ -235,7 +236,7 @@ namespace Telepathy
             // -> this way we don't async client.BeginConnect, which seems to
             //    fail sometimes if we connect too many clients too fast
             state.receiveThread = new Thread(() => {
-                ReceiveThreadFunction(state, ip, port, MaxMessageSize, NoDelay, SendTimeout);
+                ReceiveThreadFunction(state, ip, port, MaxMessageSize, NoDelay, SendTimeout, ReceiveTimeout);
             });
             state.receiveThread.IsBackground = true;
             state.receiveThread.Start();

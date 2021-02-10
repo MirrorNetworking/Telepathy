@@ -31,6 +31,11 @@ namespace Telepathy
         // we need a timeout (in milliseconds)
         public int SendTimeout = 5000;
 
+        // Default TCP receive time out can be huge (minutes).
+        // That's way too much for games, let's make it configurable.
+        // we need a timeout (in milliseconds)
+        public int ReceiveTimeout = 5000;
+
         // constructor
         protected Common(int MaxMessageSize)
         {

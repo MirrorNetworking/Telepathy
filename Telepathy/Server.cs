@@ -82,6 +82,7 @@ namespace Telepathy
                 listener = TcpListener.Create(port);
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
+                listener.Server.ReceiveTimeout = ReceiveTimeout;
                 listener.Start();
                 Log.Info("Server: listening port=" + port);
 
@@ -97,6 +98,7 @@ namespace Telepathy
                     // set socket options
                     client.NoDelay = NoDelay;
                     client.SendTimeout = SendTimeout;
+                    client.ReceiveTimeout = ReceiveTimeout;
 
                     // generate the next connection id (thread safely)
                     int connectionId = NextConnectionId();
