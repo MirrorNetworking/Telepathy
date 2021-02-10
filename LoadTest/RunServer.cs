@@ -40,7 +40,7 @@ namespace Telepathy.LoadTest
                 // report every 10 seconds
                 if (stopwatch.ElapsedMilliseconds > 1000 * 2)
                 {
-                    Log.Info(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Server in={0} ({1} KB/s)  out={0} ({1} KB/s) ReceiveQueue={2}", messagesReceived, (dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024)), server.ReceivePipeCount.ToString()));
+                    Log.Info(string.Format("Thread[" + Thread.CurrentThread.ManagedThreadId + "]: Server in={0} ({1} KB/s)  out={0} ({1} KB/s) ReceiveQueue={2}", messagesReceived, (dataReceived * 1000 / (stopwatch.ElapsedMilliseconds * 1024)), server.ReceivePipeTotalCount.ToString()));
                     stopwatch.Stop();
                     stopwatch = Stopwatch.StartNew();
                     messagesReceived = 0;

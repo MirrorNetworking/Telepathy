@@ -6,15 +6,6 @@ namespace Telepathy
         // IMPORTANT: DO NOT SHARE STATE ACROSS SEND/RECV LOOPS (DATA RACES)
         // (except receive pipe which is used for all threads)
 
-        // warning if message queue gets too big
-        // if the average message is about 20 bytes then:
-        // -   1k messages are   20KB
-        // -  10k messages are  200KB
-        // - 100k messages are 1.95MB
-        // 2MB are not that much, but it is a bad sign if the caller process
-        // can't call GetNextMessage faster than the incoming messages.
-        public static int messageQueueSizeWarning = 100000;
-
         // NoDelay disables nagle algorithm. lowers CPU% and latency but
         // increases bandwidth
         public bool NoDelay = true;

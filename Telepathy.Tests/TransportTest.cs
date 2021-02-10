@@ -562,6 +562,81 @@ namespace Telepathy.Tests
         }
 
         [Test]
+        public void ClientReceiveQueueLimitDisconnects()
+        {
+            // let's use an extremely small limit:
+            // barely enough for Connect + Data
+            int queueLimit = 2;
+
+            // connect a client with limit
+            Client client = new Client(MaxMessageSize);
+            client.ReceiveQueueLimit = queueLimit;
+            client.Connect("127.0.0.1", port);
+
+            // eat client connect message
+            Message clientConnectMsg = NextMessage(client);
+            Assert.That(clientConnectMsg.eventType, Is.EqualTo(EventType.Connected));
+
+            // we should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // send exactly 'limit' messages to fill client's receive queue
+            byte[] bytes = {0x01, 0x02};
+            for (int i = 0; i < queueLimit; ++i)
+                server.Send(id, new ArraySegment<byte>(bytes));
+
+            // client should receive all data messages
+            for (int i = 0; i < queueLimit; ++i)
+            {
+                Message dataMsg = NextMessage(client);
+                Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
+            }
+
+            // and then the disconnect message
+            Message disconnectMsg = NextMessage(client);
+            Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
+        }
+
+        [Test]
+        public void ServerReceivePipeLimitDisconnects()
+        {
+            // let's use an extremely small limit:
+            // barely enough for Connect + Data
+            const int queueLimit = 2;
+
+            // configure server limit
+            server.ReceiveQueueLimit = queueLimit;
+
+            // connect a client
+            Client client = new Client(MaxMessageSize);
+            client.Connect("127.0.0.1", port);
+
+            // we should first receive a connected message
+            Message serverConnectMsg = NextMessage(server);
+            int id = serverConnectMsg.connectionId;
+
+            // send exactly 'limit' messages to fill server's receive queue
+            byte[] bytes = {0x01, 0x02};
+            for (int i = 0; i < queueLimit; ++i)
+                client.Send(new ArraySegment<byte>(bytes));
+
+            // server should receive all data messages
+            for (int i = 0; i < queueLimit; ++i)
+            {
+                Message dataMsg = NextMessage(server);
+                Assert.That(dataMsg.eventType, Is.EqualTo(EventType.Data));
+            }
+
+            // and then the disconnect message
+            Message disconnectMsg = NextMessage(server);
+            Assert.That(disconnectMsg.eventType, Is.EqualTo(EventType.Disconnected));
+
+            // done
+            client.Disconnect();
+        }
+
+        [Test]
         public void ClientTickRespectsEnabledCheck()
         {
             // create & connect client

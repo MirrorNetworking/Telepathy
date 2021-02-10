@@ -18,10 +18,52 @@ namespace Telepathy.Tests
         public void Enqueue()
         {
             pipe.Enqueue(0, EventType.Connected, default);
-            Assert.That(pipe.Count, Is.EqualTo(1));
+            Assert.That(pipe.Count(0), Is.EqualTo(1));
 
             pipe.Enqueue(0, EventType.Connected, default);
-            Assert.That(pipe.Count, Is.EqualTo(2));
+            Assert.That(pipe.Count(0), Is.EqualTo(2));
+        }
+
+        // count should be per-connectionId
+        [Test]
+        public void Count()
+        {
+            // enqueue for 42
+            pipe.Enqueue(42, EventType.Connected, default);
+            Assert.That(pipe.Count(42), Is.EqualTo(1));
+
+            // enqueue for 1337
+            pipe.Enqueue(1337, EventType.Connected, default);
+            Assert.That(pipe.Count(1337), Is.EqualTo(1));
+
+            // dequeue first one (42)
+            pipe.TryDequeue();
+            Assert.That(pipe.Count(42), Is.EqualTo(0));
+
+            // dequeue second one (1337)
+            pipe.TryDequeue();
+            Assert.That(pipe.Count(1337), Is.EqualTo(0));
+        }
+
+        // total count should be for all connections
+        [Test]
+        public void TotalCount()
+        {
+            // enqueue for 42
+            pipe.Enqueue(42, EventType.Connected, default);
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
+
+            // enqueue for 1337
+            pipe.Enqueue(1337, EventType.Connected, default);
+            Assert.That(pipe.TotalCount, Is.EqualTo(2));
+
+            // dequeue first one (42)
+            pipe.TryDequeue();
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
+
+            // dequeue second one (1337)
+            pipe.TryDequeue();
+            Assert.That(pipe.TotalCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -29,7 +71,7 @@ namespace Telepathy.Tests
         {
             ArraySegment<byte> message = new ArraySegment<byte>(new byte[]{0x42});
             pipe.Enqueue(42, EventType.Connected, message);
-            Assert.That(pipe.Count, Is.EqualTo(1));
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
 
             bool result = pipe.TryPeek(out int connectionId, out EventType eventType, out ArraySegment<byte> peeked);
             Assert.That(result, Is.True);
@@ -41,28 +83,29 @@ namespace Telepathy.Tests
                 Assert.That(peeked.Array[peeked.Offset + i], Is.EqualTo(message.Array[message.Offset + i]));
 
             // peek shouldn't remove anything
-            Assert.That(pipe.Count, Is.EqualTo(1));
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
         }
 
         [Test]
         public void TryDequeue()
         {
             pipe.Enqueue(42, EventType.Connected, default);
-            Assert.That(pipe.Count, Is.EqualTo(1));
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
 
             bool result = pipe.TryDequeue();
             Assert.That(result, Is.True);
-            Assert.That(pipe.Count, Is.EqualTo(0));
+            Assert.That(pipe.TotalCount, Is.EqualTo(0));
         }
 
         [Test]
         public void Clear()
         {
-            pipe.Enqueue(0, EventType.Connected, default);
-            Assert.That(pipe.Count, Is.EqualTo(1));
+            pipe.Enqueue(42, EventType.Connected, default);
+            Assert.That(pipe.TotalCount, Is.EqualTo(1));
 
             pipe.Clear();
-            Assert.That(pipe.Count, Is.EqualTo(0));
+            Assert.That(pipe.Count(42), Is.EqualTo(0));
+            Assert.That(pipe.TotalCount, Is.EqualTo(0));
         }
 
         // make sure pooling works as intended
