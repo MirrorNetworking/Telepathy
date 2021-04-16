@@ -16,7 +16,7 @@ namespace Telepathy
             {
                 return stream.Read(buffer, offset, size);
             }
-            catch (IOException)
+            catch (System.Exception e) when (e is IOException || e is System.ObjectDisposedException)
             {
                 return 0;
             }
