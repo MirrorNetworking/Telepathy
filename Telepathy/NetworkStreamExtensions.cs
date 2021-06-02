@@ -16,6 +16,7 @@ namespace Telepathy
             {
                 return stream.Read(buffer, offset, size);
             }
+            // IOException happens if we voluntarily closed our own connection.
             catch (IOException)
             {
                 return 0;
