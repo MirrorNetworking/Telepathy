@@ -84,8 +84,16 @@ namespace Telepathy
             {
                 // start listener on all IPv4 and IPv6 address via .Create
                 listener = TcpListener.Create(port);
-                // no need to set any timeouts on the listener, they are set on accepted sockets below
-                // setting a recv timeout will actually cause linux to throw EAGAIN/EWOULDBLOCK during the blocking Accept()
+                listener.Server.NoDelay = NoDelay;
+                // IMPORTANT: do not set send/receive timeouts on listener.
+                // On linux setting the recv timeout will cause the blocking 
+                // Accept call to timeout with EACCEPT (which mono interprets 
+                // as EWOULDBLOCK). 
+                // https://stackoverflow.com/questions/1917814/eagain-error-for-accept-on-blocking-socket/1918118#1918118
+                // => fixes https://github.com/vis2k/Mirror/issues/2695
+                //
+                //listener.Server.SendTimeout = SendTimeout;
+                //listener.Server.ReceiveTimeout = ReceiveTimeout;
                 listener.Start();
                 Log.Info("Server: listening port=" + port);
 
