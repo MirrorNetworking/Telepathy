@@ -84,9 +84,8 @@ namespace Telepathy
             {
                 // start listener on all IPv4 and IPv6 address via .Create
                 listener = TcpListener.Create(port);
-                listener.Server.NoDelay = NoDelay;
-                listener.Server.SendTimeout = SendTimeout;
-                listener.Server.ReceiveTimeout = ReceiveTimeout;
+                // no need to set any timeouts on the listener, they are set on accepted sockets below
+                // setting a recv timeout will actually cause linux to throw EAGAIN/EWOULDBLOCK during the blocking Accept()
                 listener.Start();
                 Log.Info("Server: listening port=" + port);
 
