@@ -21,7 +21,7 @@ namespace Telepathy.LoadTest
             }
             else if (args[0] == "timed")
             {
-                Both(args)
+                Both(args);
             }
             else
             {
