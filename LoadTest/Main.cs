@@ -19,6 +19,10 @@ namespace Telepathy.LoadTest
             {
                 Client(args);
             }
+            else if (args[0] == "timed")
+            {
+                Both(args)
+            }
             else
             {
                 Console.WriteLine("Usage:");
@@ -28,20 +32,30 @@ namespace Telepathy.LoadTest
             }
         }
 
-        public static void Both()
+        public static void Both(string[] args = null)
         {
+            int port = 1337;
+            int seconds = null;
+            
+            if(args != null)
+            {
+                port = Int.Parse(args[1]);
+                seconds = Int.Parse(args[2]);
+            }
 
             Thread serverThread = new Thread(() =>
             {
 
-                RunServer.StartServer(1337);
+                RunServer.StartServer(port);
             });
             serverThread.IsBackground = false;
             serverThread.Start();
 
             // test 500 clients, which means 500+500 = 1000 connections total.
             // this should be enough for any server or MMO.
-            RunClients.StartClients("127.0.0.1", 1337, 500);
+            RunClients.StartClients("127.0.0.1", port, 500, seconds);
+            
+            Thread.sleep
 
         }
 
