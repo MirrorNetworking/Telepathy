@@ -30,5 +30,13 @@ jobs:
           #build-configuration: # optional, default is Release
           # The path to the project or solution to build (defaults to the current directory).
           path: Telepathy.sln # optional, default is .
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          # Artifact name
+          name: Telapathy # optional, default is artifact
+          # A file, directory or wildcard pattern that describes what to upload
+          path: Telepathy\bin\Release\
+          # The desired behavior if no files are found using the provided path.
       
       
