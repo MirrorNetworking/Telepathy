@@ -42,14 +42,6 @@ namespace Telepathy
 
         // clients with <connectionId, ConnectionState>
         readonly ConcurrentDictionary<int, ConnectionState> clients = new ConcurrentDictionary<int, ConnectionState>();
-        
-        public IEnumerable<int> GetClientIds()
-        {
-            foreach (var key in clients.Keys)
-            {
-                yield return key;
-            }
-        }
 
         // connectionId counter
         int counter;
