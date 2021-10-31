@@ -29,7 +29,7 @@ artifacts:
 cache:
   - '%USERPROFILE%\.nuget\packages -> **\*.csproj'
 
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 test_script:
   - '%USERPROFILE%\.nuget\packages\opencover\4.7.906-rc\tools\OpenCover.Console.exe -returntargetcode -register:user -target:"nunit3-console.exe" -targetargs:Telepathy.Tests\bin\%CONFIGURATION%\net471\Telepathy.Tests.dll -output:"coverage.xml" -filter:"+[Telepathy*]* -[Telepathy.Tests*]* "'
