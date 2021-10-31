@@ -34,8 +34,7 @@ jobs:
         run: |
           cd LoadTest\bin\Release\net471
           LoadTest.exe timed 6565 60
-          powershell Start-Sleep -s 60
-          powershell taskkill /IM LoadTest.exe /F
+          echo "Ended Load Test"
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
