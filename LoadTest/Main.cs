@@ -54,9 +54,6 @@ namespace Telepathy.LoadTest
             // test 500 clients, which means 500+500 = 1000 connections total.
             // this should be enough for any server or MMO.
             RunClients.StartClients("127.0.0.1", port, 500, seconds);
-            
-            Thread.sleep
-
         }
 
         public static void Server(string [] args)
