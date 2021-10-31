@@ -33,7 +33,7 @@ jobs:
         shell: cmd
         run: |
           cd LoadTest\bin\Release\net471
-          LoadTest.exe
+          LoadTest.exe timed 6565 60
           powershell Start-Sleep -s 60
           powershell taskkill /IM LoadTest.exe /F
       - name: Upload a Build Artifact
