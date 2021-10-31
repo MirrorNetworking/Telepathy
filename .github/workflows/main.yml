@@ -30,12 +30,12 @@ jobs:
       #- name: Test with dotnet
       #  run: dotnet test Telepathy.sln
       - name: Run a one-line script
-        shell: powershell
+        #shell: powershell
         run: |
           cd LoadTest\bin\Release\net471
-          start .\LoadTest.exe
-          Start-Sleep -s 60
-          taskkill /IM LoadTest.exe /F
+          LoadTest.exe
+        #  Start-Sleep -s 60
+        #  taskkill /IM LoadTest.exe /F
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
