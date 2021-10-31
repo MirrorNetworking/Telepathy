@@ -30,7 +30,7 @@ jobs:
       #- name: Test with dotnet
       #  run: dotnet test Telepathy.sln
       - name: Run a one-line script
-        #shell: powershell
+        shell: cmd
         run: |
           cd LoadTest\bin\Release\net471
           LoadTest.exe
