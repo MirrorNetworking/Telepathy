@@ -32,6 +32,7 @@ jobs:
       - name: Run a one-line script
         shell: powershell
         run: |
+          dir
           start LoadTest\bin\Release\LoadTest.exe
           Start-Sleep -s 60
           taskkill /IM LoadTest.exe /F
