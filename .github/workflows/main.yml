@@ -19,17 +19,16 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: .Net Build
-        # You may pin to the exact commit or the version.
-        # uses: EasyDesk/action-dotnet-build@d2c47d8701e3ea8db03dcabaacb37204fe123a22
-        uses: EasyDesk/action-dotnet-build@v1.0.0
-        with:  
-          # Additional build arguments to pass to 'dotnet build'.
-          #build-args: # optional
-          # The build configuration to use (defaults to 'Release').
-          #build-configuration: # optional, default is Release
-          # The path to the project or solution to build (defaults to the current directory).
-          path: Telepathy.sln # optional, default is .
+      #- name: .Net Build
+      #  uses: EasyDesk/action-dotnet-build@v1.0.0
+      #  with:  
+      #    #build-configuration: # optional, default is Release
+      #    path: Telepathy.sln # optional, default is .
+      - name: Build with dotnet
+        run: dotnet build
+              --configuration Release
+      - name: Test with dotnet
+        run: dotnet test Telepathy.sln
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
