@@ -32,10 +32,11 @@ jobs:
       - name: Run a one-line script
         shell: powershell
         run: |
+          cd LoadTest
           dir
-          start LoadTest\bin\Release\LoadTest.exe
-          Start-Sleep -s 60
-          taskkill /IM LoadTest.exe /F
+       #   start LoadTest\bin\Release\LoadTest.exe
+       #   Start-Sleep -s 60
+       #   taskkill /IM LoadTest.exe /F
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
