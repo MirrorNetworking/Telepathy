@@ -14,7 +14,7 @@ namespace Telepathy.LoadTest
         static long messagesReceived = 0;
         static long dataReceived = 0;
 
-        public static void StartClients(string host, int port, int clientAmount, int? seconds = null)
+        public static void StartClients(string host, int port, int clientAmount, int seconds = 0)
         {
             Log.Error("starting " + clientAmount + " clients...");
 
@@ -93,7 +93,7 @@ namespace Telepathy.LoadTest
             timer.AutoReset = true;
             timer.Enabled = true;
 
-            if(seconds == null)
+            if(seconds == 0)
             {
                 Console.ReadLine();
             }
