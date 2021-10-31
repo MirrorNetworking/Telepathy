@@ -32,7 +32,7 @@ jobs:
       - name: Run a one-line script
         shell: powershell
         run: |
-          cd LoadTest\bin\Release
+          cd LoadTest\bin\Release\net471
           dir
        #   start LoadTest\bin\Release\LoadTest.exe
        #   Start-Sleep -s 60
