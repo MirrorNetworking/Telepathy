@@ -67,7 +67,7 @@ namespace Telepathy.LoadTest
             }
             int port = int.Parse(args[1]);
 
-            RunServer.StartServer(port);
+            RunServer.StartServer(port, 0);
 
         }
 
@@ -83,7 +83,7 @@ namespace Telepathy.LoadTest
             int port = int.Parse(args[2]);
             int clients = int.Parse(args[3]);
 
-            RunClients.StartClients(ip, port, clients);
+            RunClients.StartClients(ip, port, clients, 0);
         }
     }
 }
