@@ -1,5 +1,5 @@
 name: Build
- 
+
 on:
   push:
     branches: master
@@ -18,7 +18,7 @@ jobs:
         dotnet-version: 3.0.101
     - name: .NET Core SxS
       run: |
-                rsync -a ${DOTNET_ROOT/3.0.101}/* $DOTNET_ROOT/
+                rsync -a ${DOTNET_ROOT/3.0.101/2.1.607}/* $DOTNET_ROOT/
     - name: Build
       run: dotnet build --configuration Release
     - name: Test
