@@ -35,7 +35,7 @@ namespace Telepathy.LoadTest
         public static void Both(string[] args = null)
         {
             int port = 1337;
-            int seconds = null;
+            int seconds;
             
             if(args != null)
             {
