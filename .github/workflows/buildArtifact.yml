@@ -8,12 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-    - name: Dump GitHub context
-      env:
-        GITHUB_CONTEXT: ${{ toJson(github) }}
-      run: echo "$GITHUB_CONTEXT"
     - name: Checkout
       uses: actions/checkout@v1
     - name: Setup .NET Core 3.0
@@ -22,13 +18,13 @@ jobs:
         dotnet-version: 3.0.101
     - name: .NET Core SxS
       run: |
-                rsync -a ${DOTNET_ROOT/3.0.101/2.1.607}/* $DOTNET_ROOT/
+                rsync -a ${DOTNET_ROOT/3.0.101}/* $DOTNET_ROOT/
     - name: Build
       run: dotnet build --configuration Release
     - name: Test
       run: dotnet test --no-build --configuration Release
   pack:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
     if: github.event_name == 'push'
     steps:
