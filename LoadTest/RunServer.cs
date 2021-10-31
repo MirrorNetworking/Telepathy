@@ -9,7 +9,7 @@ namespace Telepathy.LoadTest
         static long messagesReceived = 0;
         static long dataReceived = 0;
 
-        public static void StartServer(int port, int seconds = 0)
+        public static void StartServer(int port, int seconds)
         {
 
             // create server

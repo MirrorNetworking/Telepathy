@@ -9,7 +9,7 @@ namespace Telepathy.LoadTest
         {
             if (args.Length == 0)
             {
-                Both();
+                Both(args);
             }
             else if (args[0] == "server")
             {
@@ -33,12 +33,12 @@ namespace Telepathy.LoadTest
             }
         }
 
-        public static void Both(string[] args = null)
+        public static void Both(string[] args)
         {
             int port = 1337;
             int seconds = 0;
             
-            if(args != null)
+            if(args.Length == 3)
             {
                 port = int.Parse(args[1]);
                 seconds = int.Parse(args[2]);
@@ -67,7 +67,7 @@ namespace Telepathy.LoadTest
             }
             int port = int.Parse(args[1]);
 
-            RunServer.StartServer(port);
+            RunServer.StartServer(port, 0);
 
         }
 
@@ -83,7 +83,7 @@ namespace Telepathy.LoadTest
             int port = int.Parse(args[2]);
             int clients = int.Parse(args[3]);
 
-            RunClients.StartClients(ip, port, clients);
+            RunClients.StartClients(ip, port, clients, 0);
         }
     }
 }
