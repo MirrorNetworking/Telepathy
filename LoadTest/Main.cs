@@ -27,8 +27,8 @@ namespace Telepathy.LoadTest
             {
                 Console.WriteLine("Usage:");
                 Console.WriteLine("   LoadTest");
-                Console.WriteLine("   LoadTest server <port>");
-                Console.WriteLine("   LoadTest client <host> <port> <clients>");
+                Console.WriteLine("   LoadTest server <port> (<seconds>)");
+                Console.WriteLine("   LoadTest client <host> <port> <clients> (<seconds>)");
                 Console.WriteLine("   LoadTest timed <port> <seconds>");
             }
         }
@@ -47,7 +47,7 @@ namespace Telepathy.LoadTest
             Thread serverThread = new Thread(() =>
             {
 
-                RunServer.StartServer(port);
+                RunServer.StartServer(port, seconds);
             });
             serverThread.IsBackground = false;
             serverThread.Start();
