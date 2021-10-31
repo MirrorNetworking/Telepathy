@@ -27,8 +27,14 @@ jobs:
       - name: Build with dotnet
         run: dotnet build
               --configuration Release
-      - name: Test with dotnet
-        run: dotnet test Telepathy.sln
+      #- name: Test with dotnet
+      #  run: dotnet test Telepathy.sln
+      - name: Run a one-line script
+        shell: powershell
+        run: |
+          .\LoadTest\bin\Release\LoadTest.exe
+          Start-Sleep -s 60
+          taskkill /IM LoadTest.exe /F
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
