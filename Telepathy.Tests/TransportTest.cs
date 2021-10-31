@@ -40,6 +40,7 @@ namespace Telepathy.Tests
         public void TearDown()
         {
             server.Stop();
+            Console.WriteLine(" - Test STDOUT will produce a lot of server side (caught) exceptions but the tests will still pass by design!");
         }
 
         [Test]
@@ -59,6 +60,7 @@ namespace Telepathy.Tests
 
             // I should be able to disconnect right away
             // if connection was pending,  it should just cancel
+            // this will cause some null references on the server side.
             client.Disconnect();
 
             Assert.That(client.Connected, Is.False);
@@ -284,7 +286,10 @@ namespace Telepathy.Tests
         {
             // connect a client
             Client client = new Client(MaxMessageSize);
-            client.Connect("::ffff:127.0.0.1", port);
+            
+            // Windows was not happy so referenced the full IPV6 LocalHost address
+            //client.Connect("::ffff:127.0.0.1", port);
+            client.Connect("0:0:0:0:0:0:0:1", port);
 
             // get server's connect message
             Message serverConnectMsg = NextMessage(server);
