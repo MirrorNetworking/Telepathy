@@ -29,18 +29,19 @@ namespace Telepathy.LoadTest
                 Console.WriteLine("   LoadTest");
                 Console.WriteLine("   LoadTest server <port>");
                 Console.WriteLine("   LoadTest client <host> <port> <clients>");
+                Console.WriteLine("   LoadTest timed <port> <seconds>");
             }
         }
 
         public static void Both(string[] args = null)
         {
             int port = 1337;
-            int seconds;
+            int seconds = 0;
             
             if(args != null)
             {
-                port = Int.Parse(args[1]);
-                seconds = Int.Parse(args[2]);
+                port = int.Parse(args[1]);
+                seconds = int.Parse(args[2]);
             }
 
             Thread serverThread = new Thread(() =>
