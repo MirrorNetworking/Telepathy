@@ -26,7 +26,7 @@ namespace Telepathy.Tests
         // just a random port that will hopefully not be taken
         const int port = 9587;
         const int MaxMessageSize = 16 * 1024;
-        const int TestCooldownMS = 50;
+        const int TestCooldownMS = 100;
 
         Server server;
 
