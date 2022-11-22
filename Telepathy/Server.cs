@@ -321,7 +321,11 @@ namespace Telepathy
             // find the connection
             if (clients.TryGetValue(connectionId, out ConnectionState connection))
             {
-                return ((IPEndPoint)connection.client.Client.RemoteEndPoint).Address.ToString();
+                TcpClient tcpClient = connection.client;
+                Socket clientSocket = tcpClient.Client;
+                IPEndPoint clientEndpoint = (IPEndPoint)clientSocket.RemoteEndPoint;
+                IPAddress ipAddress = clientEndpoint.Address;
+                return ipAddress.ToString();
             }
             return "";
         }
