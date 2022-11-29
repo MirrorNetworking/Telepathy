@@ -32,10 +32,10 @@ See also: [SyncThing article on KCP vs. TCP](https://forum.syncthing.net/t/conne
 ```C#
 // create server & hook up events
 // note that the message ArraySegment<byte> is only valid until returning (allocation free)
-Telepathy.Server server = new Telepathy.Server();
-server.OnConnected = (connectionId) => Console.WriteLine(msg.connectionId + " Connected");
-server.OnData = (connectionId, message) => Console.WriteLine(msg.connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
-server.OnDisconnected = (connectionId) => Console.WriteLine(msg.connectionId + " Disconnected");
+Telepathy.Server server = new Telepathy.Server(1024);
+server.OnConnected = (connectionId) => Console.WriteLine(connectionId + " Connected");
+server.OnData = (connectionId, message) => Console.WriteLine(connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+server.OnDisconnected = (connectionId) => Console.WriteLine(connectionId + " Disconnected");
 
 // start
 server.Start(1337);
@@ -45,7 +45,7 @@ server.Start(1337);
 server.Tick(100);
 
 // send a message to client with connectionId = 0 (first one)
-byte[] message = new byte[]{0x42, 0x13, 0x37}
+byte[] message = new byte[]{0x42, 0x13, 0x37};
 server.Send(0, new ArraySegment<byte>(message));
 
 // stop the server when you don't need it anymore
@@ -56,7 +56,7 @@ server.Stop();
 ```C#
 // create client & hook up events
 // note that the message ArraySegment<byte> is only valid until returning (allocation free)
-Telepathy.Client client = new Telepathy.Client();
+Telepathy.Client client = new Telepathy.Client(1024);
 client.OnConnected = () => Console.WriteLine("Client Connected");
 client.OnData = (message) => Console.WriteLine("Client Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
 client.OnDisconnected = () => Console.WriteLine("Client Disconnected");
@@ -69,7 +69,7 @@ client.Connect("localhost", 1337);
 client.Tick(100);
 
 // send a message to server
-byte[] message = new byte[]{0xFF}
+byte[] message = new byte[]{0xFF};
 client.Send(new ArraySegment<byte>(message));
 
 // disconnect from the server when we are done
@@ -84,8 +84,8 @@ using UnityEngine;
 
 public class SimpleExample : MonoBehaviour
 {
-    Telepathy.Client client = new Telepathy.Client();
-    Telepathy.Server server = new Telepathy.Server();
+    Telepathy.Client client = new Telepathy.Client(1024);
+    Telepathy.Server server = new Telepathy.Server(1024);
 
     void Awake()
     {
@@ -102,9 +102,9 @@ public class SimpleExample : MonoBehaviour
         client.OnData = (message) => Debug.Log("Client Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
         client.OnDisconnected = () => Debug.Log("Client Disconnected");
 
-        server.OnConnected = (connectionId) => Debug.Log(msg.connectionId + " Connected");
-        server.OnData = (connectionId, message) => Debug.Log(msg.connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
-        server.OnDisconnected = (connectionId) => Debug.Log(msg.connectionId + " Disconnected");
+        server.OnConnected = (connectionId) => Debug.Log(connectionId + " Connected");
+        server.OnData = (connectionId, message) => Debug.Log(connectionId + " Data: " + BitConverter.ToString(message.Array, message.Offset, message.Count));
+        server.OnDisconnected = (connectionId) => Debug.Log(connectionId + " Disconnected");
     }
 
     void Update()
