@@ -322,9 +322,13 @@ namespace Telepathy
             if (clients.TryGetValue(connectionId, out ConnectionState connection))
             {
                 TcpClient tcpClient = connection.client;
+                if (tcpClient == null) return "";
                 Socket clientSocket = tcpClient.Client;
+                if (clientSocket == null) return "";
                 IPEndPoint clientEndpoint = (IPEndPoint)clientSocket.RemoteEndPoint;
+                if (clientEndpoint == null) return "";
                 IPAddress ipAddress = clientEndpoint.Address;
+                if (ipAddress == null) return "";
                 return ipAddress.ToString();
             }
             return "";
