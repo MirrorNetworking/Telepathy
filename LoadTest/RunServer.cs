@@ -9,7 +9,7 @@ namespace Telepathy.LoadTest
         static long messagesReceived = 0;
         static long dataReceived = 0;
 
-        public static void StartServer(int port)
+        public static void StartServer(int port, int seconds)
         {
 
             // create server
@@ -28,7 +28,10 @@ namespace Telepathy.LoadTest
 
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            while (true)
+            var runTimer = Stopwatch.StartNew();
+            bool runServer = true;
+
+            while (runServer)
             {
                 // tick and process as many as we can. will auto reply.
                 // (100k limit to avoid deadlocks)
@@ -45,6 +48,11 @@ namespace Telepathy.LoadTest
                     stopwatch = Stopwatch.StartNew();
                     messagesReceived = 0;
                     dataReceived = 0;
+                }
+                
+                if (seconds != 0)
+                {
+                    runServer = (runTimer.ElapsedMilliseconds < (seconds * 1000));
                 }
             }
         }

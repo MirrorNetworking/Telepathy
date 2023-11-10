@@ -26,6 +26,7 @@ namespace Telepathy.Tests
         // just a random port that will hopefully not be taken
         const int port = 9587;
         const int MaxMessageSize = 16 * 1024;
+        const int TestCooldownMS = 100;
 
         Server server;
 
@@ -34,12 +35,15 @@ namespace Telepathy.Tests
         {
             server = new Server(MaxMessageSize);
             server.Start(port);
+
+            Thread.Sleep(TestCooldownMS);
         }
 
         [TearDown]
         public void TearDown()
         {
             server.Stop();
+            Console.WriteLine(" - Test STDOUT will produce a lot of server side (caught) exceptions but the tests will still pass by design!");
         }
 
         [Test]
@@ -54,11 +58,13 @@ namespace Telepathy.Tests
         [Test]
         public void DisconnectImmediateTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
 
             // I should be able to disconnect right away
             // if connection was pending,  it should just cancel
+            // this will cause some null references on the server side.
             client.Disconnect();
 
             Assert.That(client.Connected, Is.False);
@@ -68,6 +74,7 @@ namespace Telepathy.Tests
         [Test]
         public void SpamConnectTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Client client = new Client(MaxMessageSize);
             for (int i = 0; i < 1000; i++)
             {
@@ -82,6 +89,7 @@ namespace Telepathy.Tests
         [Test]
         public void SpamSendTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // BeginSend can't be called again after previous one finished. try
             // to trigger that case.
             Client client = new Client(MaxMessageSize);
@@ -106,6 +114,7 @@ namespace Telepathy.Tests
         [Test]
         public void ReconnectTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
 
@@ -130,6 +139,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client(MaxMessageSize);
 
@@ -156,6 +166,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Encoding utf8 = Encoding.UTF8;
             Client client = new Client(MaxMessageSize);
 
@@ -188,6 +199,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerDisconnectClientTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Client client = new Client(MaxMessageSize);
 
             client.Connect("127.0.0.1", port);
@@ -203,6 +215,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientKickedCleanupTest()
         {
+            Thread.Sleep(TestCooldownMS);
             Client client = new Client(MaxMessageSize);
 
             client.Connect("127.0.0.1", port);
@@ -233,6 +246,7 @@ namespace Telepathy.Tests
         [Test]
         public void GetConnectionInfoTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -252,6 +266,7 @@ namespace Telepathy.Tests
         [Test]
         public void ParseLocalHostTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             Client client = new Client(MaxMessageSize);
             client.Connect("localhost", port);
@@ -267,6 +282,7 @@ namespace Telepathy.Tests
         [Test]
         public void ConnectIPv4Test()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -282,9 +298,13 @@ namespace Telepathy.Tests
         [Test]
         public void ConnectIPv6Test()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             Client client = new Client(MaxMessageSize);
-            client.Connect("::ffff:127.0.0.1", port);
+            
+            // Windows was not happy so referenced the full IPV6 LocalHost address
+            //client.Connect("::ffff:127.0.0.1", port);
+            client.Connect("0:0:0:0:0:0:0:1", port);
 
             // get server's connect message
             Message serverConnectMsg = NextMessage(server);
@@ -296,6 +316,7 @@ namespace Telepathy.Tests
         [Test]
         public void LargeMessageTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -320,6 +341,7 @@ namespace Telepathy.Tests
         [Test]
         public void AllocationAttackTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // connect a client
             // and allow client to send large message
             int attackSize = MaxMessageSize * 2;
@@ -346,6 +368,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerStartStopTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // create a server that only starts and stops without ever accepting
             // a connection
             Server sv = new Server(MaxMessageSize);
@@ -358,6 +381,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerStartStopRepeatedTest()
         {
+            Thread.Sleep(TestCooldownMS);
             // can we start/stop on the same port repeatedly?
             Server sv = new Server(MaxMessageSize);
             for (int i = 0; i < 10; ++i)
@@ -372,6 +396,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientTickRespectsLimit()
         {
+            Thread.Sleep(TestCooldownMS);
             // create & connect client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -414,6 +439,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerTickRespectsLimit()
         {
+            Thread.Sleep(TestCooldownMS);
             // create & connect client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -458,6 +484,7 @@ namespace Telepathy.Tests
         static Queue<Message> serverMessages = new Queue<Message>();
         static Message NextMessage(Server server)
         {
+            Thread.Sleep(TestCooldownMS);
             // any remaining messages from last tick?
             if (serverMessages.Count > 0)
                 return serverMessages.Dequeue();
@@ -498,6 +525,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerSendQueueLimitDisconnects()
         {
+            Thread.Sleep(TestCooldownMS);
             // let's use an extremely small limit
             int queueLimit = 2;
 
@@ -534,6 +562,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientSendQueueLimitDisconnects()
         {
+            Thread.Sleep(TestCooldownMS);
             // let's use an extremely small limit
             int queueLimit = 2;
 
@@ -564,6 +593,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientReceiveQueueLimitDisconnects()
         {
+            Thread.Sleep(TestCooldownMS);
             // let's use an extremely small limit:
             // barely enough for Connect + Data
             int queueLimit = 2;
@@ -601,6 +631,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerReceivePipeLimitDisconnects()
         {
+            Thread.Sleep(TestCooldownMS);
             // let's use an extremely small limit:
             // barely enough for Connect + Data
             const int queueLimit = 2;
@@ -639,6 +670,7 @@ namespace Telepathy.Tests
         [Test]
         public void ClientTickRespectsEnabledCheck()
         {
+            Thread.Sleep(TestCooldownMS);
             // create & connect client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -676,6 +708,7 @@ namespace Telepathy.Tests
         [Test]
         public void ServerTickRespectsEnabledCheck()
         {
+            Thread.Sleep(TestCooldownMS);
             // create & connect client
             Client client = new Client(MaxMessageSize);
             client.Connect("127.0.0.1", port);
@@ -714,6 +747,7 @@ namespace Telepathy.Tests
         [Test]
         public void MultipleConnections()
         {
+            Thread.Sleep(TestCooldownMS);
             // create and connect all clients
             List<Client> clients = new List<Client>();
             for (int i = 0; i < 10; ++i)

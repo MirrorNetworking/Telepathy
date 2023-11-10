@@ -2,6 +2,8 @@
 
 [![Discord](https://img.shields.io/discord/343440455738064897.svg)](https://discordapp.com/invite/N9QVxbM)
 
+[![CI](https://github.com/vis2k/Telepathy/actions/workflows/main.yml/badge.svg)](https://github.com/vis2k/Telepathy/actions/workflows/main.yml)
+
 Simple, message based, allocation free MMO Scale TCP networking in C#. And no magic.
 
 Telepathy was designed with the [KISS Principle](https://en.wikipedia.org/wiki/KISS_principle) in mind.<br/>

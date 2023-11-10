@@ -9,7 +9,7 @@ namespace Telepathy.LoadTest
         {
             if (args.Length == 0)
             {
-                Both();
+                Both(args);
             }
             else if (args[0] == "server")
             {
@@ -19,30 +19,42 @@ namespace Telepathy.LoadTest
             {
                 Client(args);
             }
+            else if (args[0] == "timed")
+            {
+                Both(args);
+            }
             else
             {
                 Console.WriteLine("Usage:");
                 Console.WriteLine("   LoadTest");
                 Console.WriteLine("   LoadTest server <port>");
                 Console.WriteLine("   LoadTest client <host> <port> <clients>");
+                Console.WriteLine("   LoadTest timed <port> <seconds>");
             }
         }
 
-        public static void Both()
+        public static void Both(string[] args)
         {
+            int port = 1337;
+            int seconds = 0;
+            
+            if(args.Length == 3)
+            {
+                port = int.Parse(args[1]);
+                seconds = int.Parse(args[2]);
+            }
 
             Thread serverThread = new Thread(() =>
             {
 
-                RunServer.StartServer(1337);
+                RunServer.StartServer(port, seconds);
             });
             serverThread.IsBackground = false;
             serverThread.Start();
 
             // test 500 clients, which means 500+500 = 1000 connections total.
             // this should be enough for any server or MMO.
-            RunClients.StartClients("127.0.0.1", 1337, 500);
-
+            RunClients.StartClients("127.0.0.1", port, 500, seconds);
         }
 
         public static void Server(string [] args)
@@ -55,7 +67,7 @@ namespace Telepathy.LoadTest
             }
             int port = int.Parse(args[1]);
 
-            RunServer.StartServer(port);
+            RunServer.StartServer(port, 0);
 
         }
 
@@ -71,7 +83,7 @@ namespace Telepathy.LoadTest
             int port = int.Parse(args[2]);
             int clients = int.Parse(args[3]);
 
-            RunClients.StartClients(ip, port, clients);
+            RunClients.StartClients(ip, port, clients, 0);
         }
     }
 }
