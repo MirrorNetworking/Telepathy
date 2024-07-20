@@ -11,7 +11,7 @@ namespace Telepathy
     {
         // events to hook into
         // => OnData uses ArraySegment for allocation free receives later
-        public Action<int> OnConnected;
+        public Action<int, string> OnConnected;
         public Action<int, ArraySegment<byte>> OnData;
         public Action<int> OnDisconnected;
 
@@ -86,16 +86,16 @@ namespace Telepathy
                 listener = TcpListener.Create(port);
                 listener.Server.NoDelay = NoDelay;
                 // IMPORTANT: do not set send/receive timeouts on listener.
-                // On linux setting the recv timeout will cause the blocking 
-                // Accept call to timeout with EACCEPT (which mono interprets 
-                // as EWOULDBLOCK). 
+                // On linux setting the recv timeout will cause the blocking
+                // Accept call to timeout with EACCEPT (which mono interprets
+                // as EWOULDBLOCK).
                 // https://stackoverflow.com/questions/1917814/eagain-error-for-accept-on-blocking-socket/1918118#1918118
                 // => fixes https://github.com/vis2k/Mirror/issues/2695
                 //
                 //listener.Server.SendTimeout = SendTimeout;
                 //listener.Server.ReceiveTimeout = ReceiveTimeout;
                 listener.Start();
-                Log.Info("[Telepathy] Server: listening port=" + port);
+                Log.Info("Server: listening port=" + port);
 
                 // keep accepting new clients
                 while (true)
@@ -138,7 +138,7 @@ namespace Telepathy
                         }
                         catch (Exception exception)
                         {
-                            Log.Error("[Telepathy] Server send thread exception: " + exception);
+                            Log.Error("Server send thread exception: " + exception);
                         }
                     });
                     sendThread.IsBackground = true;
@@ -172,7 +172,7 @@ namespace Telepathy
                         }
                         catch (Exception exception)
                         {
-                            Log.Error("[Telepathy] Server client thread exception: " + exception);
+                            Log.Error("Server client thread exception: " + exception);
                         }
                     });
                     receiveThread.IsBackground = true;
@@ -183,18 +183,18 @@ namespace Telepathy
             {
                 // UnityEditor causes AbortException if thread is still
                 // running when we press Play again next time. that's okay.
-                Log.Info("[Telepathy] Server thread aborted. That's okay. " + exception);
+                Log.Info("Server thread aborted. That's okay. " + exception);
             }
             catch (SocketException exception)
             {
                 // calling StopServer will interrupt this thread with a
                 // 'SocketException: interrupted'. that's okay.
-                Log.Info("[Telepathy] Server Thread stopped. That's okay. " + exception);
+                Log.Info("Server Thread stopped. That's okay. " + exception);
             }
             catch (Exception exception)
             {
                 // something went wrong. probably important.
-                Log.Error("[Telepathy] Server Exception: " + exception);
+                Log.Error("Server Exception: " + exception);
             }
         }
 
@@ -215,7 +215,7 @@ namespace Telepathy
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
             //  much value in accepting even more clients)
-            Log.Info("[Telepathy] Server: Start port=" + port);
+            Log.Info("Server: Start port=" + port);
             listenerThread = new Thread(() => { Listen(port); });
             listenerThread.IsBackground = true;
             listenerThread.Priority = ThreadPriority.BelowNormal;
@@ -228,7 +228,7 @@ namespace Telepathy
             // only if started
             if (!Active) return;
 
-            Log.Info("[Telepathy] Server: stopping...");
+            Log.Info("Server: stopping...");
 
             // stop listening to connections so that no one can connect while we
             // close the client connections
@@ -295,7 +295,7 @@ namespace Telepathy
                     else
                     {
                         // log the reason
-                        Log.Warning($"[Telepathy] Server.Send: sendPipe for connection {connectionId} reached limit of {SendQueueLimit}. This can happen if we call send faster than the network can process messages. Disconnecting this connection for load balancing.");
+                        Log.Warning($"Server.Send: sendPipe for connection {connectionId} reached limit of {SendQueueLimit}. This can happen if we call send faster than the network can process messages. Disconnecting this connection for load balancing.");
 
                         // just close it. send thread will take care of the rest.
                         connection.client.Close();
@@ -311,19 +311,34 @@ namespace Telepathy
                 //Logger.Log("Server.Send: invalid connectionId: " + connectionId);
                 return false;
             }
-            Log.Error("[Telepathy] Server.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
+            Log.Error("Server.Send: message too big: " + message.Count + ". Limit: " + MaxMessageSize);
             return false;
         }
 
         // client's ip is sometimes needed by the server, e.g. for bans
         public string GetClientAddress(int connectionId)
         {
-            // find the connection
-            if (clients.TryGetValue(connectionId, out ConnectionState connection))
+            try
             {
-                return ((IPEndPoint)connection.client.Client.RemoteEndPoint).Address.ToString();
+                // find the connection
+                if (clients.TryGetValue(connectionId, out ConnectionState connection))
+                {
+                    return ((IPEndPoint)connection.client.Client.RemoteEndPoint).Address.ToString();
+                }
+                return "";
             }
-            return "";
+            catch (SocketException)
+            {
+                // using server.listener.LocalEndpoint causes an Exception
+                // in UWP + Unity 2019:
+                //   Exception thrown at 0x00007FF9755DA388 in UWF.exe:
+                //   Microsoft C++ exception: Il2CppExceptionWrapper at memory
+                //   location 0x000000E15A0FCDD0. SocketException: An address
+                //   incompatible with the requested protocol was used at
+                //   System.Net.Sockets.Socket.get_LocalEndPoint ()
+                // so let's at least catch it and recover
+                return "unknown";
+            }
         }
 
         // disconnect (kick) a client
@@ -334,7 +349,7 @@ namespace Telepathy
             {
                 // just close it. send thread will take care of the rest.
                 connection.client.Close();
-                Log.Info("[Telepathy] Server.Disconnect connectionId:" + connectionId);
+                Log.Info("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
             return false;
@@ -373,7 +388,7 @@ namespace Telepathy
                     switch (eventType)
                     {
                         case EventType.Connected:
-                            OnConnected?.Invoke(connectionId);
+                            OnConnected?.Invoke(connectionId, GetClientAddress(connectionId));
                             break;
                         case EventType.Data:
                             OnData?.Invoke(connectionId, message);
