@@ -494,7 +494,7 @@ namespace Telepathy.Tests
             // setup the events before we call tick
             // (they are only used in Tick, so it's fine if we just set them
             //  up before calling Tick)
-            server.OnConnected = connectionId => { serverMessages.Enqueue(new Message(connectionId, EventType.Connected, null)); };
+            server.OnConnected = (connectionId, remoteClientAddress) => { serverMessages.Enqueue(new Message(connectionId, EventType.Connected, null)); };
             server.OnData = (connectionId, data) => {
                 // ArraySegment.Array is only available until returning. copy it
                 // so we can return the content for tests.
