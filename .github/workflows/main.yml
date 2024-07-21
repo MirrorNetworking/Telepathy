@@ -17,7 +17,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Build with dotnet
         run: dotnet build
               --configuration Release
@@ -30,7 +30,7 @@ jobs:
           LoadTest.exe timed 6565 60
           echo Ended Load Test
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v4
         with:
           # Artifact name
           name: TelepathyRelease # optional, default is artifact
