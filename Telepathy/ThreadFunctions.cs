@@ -184,8 +184,9 @@ namespace Telepathy
             //
             // IMPORTANT: DO NOT make this a member, otherwise every connection
             //            on the server would use the same buffer simulatenously
-            byte[] payload = null;
-
+            var sendBufferSize = client.SendBufferSize;
+            var sendBuffer = new byte[sendBufferSize];
+            var headerBuffer = new byte[4];
             try
             {
                 while (client.Connected) // try this. client will get closed eventually.
@@ -201,13 +202,7 @@ namespace Telepathy
                     // dequeue & serialize all
                     // a locked{} TryDequeueAll is twice as fast as
                     // ConcurrentQueue, see SafeQueue.cs!
-                    if (sendPipe.DequeueAndSerializeAll(ref payload, out int packetSize))
-                    {
-                        // send messages (blocking) or stop if stream is closed
-                        if (!SendMessagesBlocking(stream, payload, packetSize))
-                            // break instead of return so stream close still happens!
-                            break;
-                    }
+                    stream.RawWrite(sendBufferSize, sendBuffer, headerBuffer, sendPipe.queue, sendPipe.pool);
 
                     // don't choke up the CPU: wait until queue not empty anymore
                     sendPending.WaitOne();
