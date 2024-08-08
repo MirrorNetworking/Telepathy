@@ -20,7 +20,7 @@ namespace Telepathy
         // -> ArraySegment indicates the actual message content
         //
         // IMPORTANT: lock{} all usages!
-        readonly Queue<ArraySegment<byte>> queue = new Queue<ArraySegment<byte>>();
+        internal readonly Queue<ArraySegment<byte>> queue = new Queue<ArraySegment<byte>>();
 
         // byte[] pool to avoid allocations
         // Take & Return is beautifully encapsulated in the pipe.
@@ -28,7 +28,7 @@ namespace Telepathy
         // and it can be tested easily.
         //
         // IMPORTANT: lock{} all usages!
-        Pool<byte[]> pool;
+        internal Pool<byte[]> pool;
 
         // constructor
         public MagnificentSendPipe(int MaxMessageSize)
