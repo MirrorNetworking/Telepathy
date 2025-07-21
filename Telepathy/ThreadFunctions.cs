@@ -68,6 +68,17 @@ namespace Telepathy
                 // read exactly 'size' bytes for content (blocking)
                 return stream.ReadExactly(payloadBuffer, size);
             }
+
+			//PATCH — Aggressive disconnect, close stream immediately to prevent attacker from sending more data before it closes in ReceiveLoop
+			try
+			{
+				stream.Close(); // drop connection before returning 
+			}
+			catch (Exception ex)
+			{
+				Log.Info("Exception while closing stream after header attack: " + ex);
+			}
+            
             Log.Warning("[Telepathy] ReadMessageBlocking: possible header attack with a header of: " + size + " bytes.");
             return false;
         }
